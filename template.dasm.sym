@@ -1,0 +1,21 @@
+--- Symbol List (sorted by symbol)
+0.bg1                    f031              (R )
+0.waitForOverscan        f049              (R )
+0.waitForVBlank          f024              (R )
+AUDV0                    0000 ????         (R )
+AUDV1                    0000 ????         (R )
+bgcolor                  0080              (R )
+BLACK                    0000                  
+COLUBK                   0000 ????         (R )
+DrawScreen               f02f                  
+frame                    0081                  
+INTIM                    0000 ????         (R )
+macro.h                  0000 ????         (R )
+MainLoop                 f008              (R )
+Start                    f000              (R )
+TIM64T                   0000 ????         (R )
+VBLANK                   0000 ????         (R )
+vcs.h                    0000 ????         (R )
+VSYNC                    0000 ????         (R )
+WSYNC                    0000 ????         (R )
+--- End of Symbol List.
