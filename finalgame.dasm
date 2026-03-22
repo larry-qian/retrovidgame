@@ -13,6 +13,9 @@
 ;------------------------------------------------
 BLACK = #$00
 SCORE_HEIGHT = #7
+BIKE_HEIGHT = #6
+PLAY_HEIGHT = #158
+
 ;------------------------------------------------
 ; RAM
 ;------------------------------------------------
@@ -21,26 +24,42 @@ SCORE_HEIGHT = #7
 
 bgcolor		.byte
 frame		.byte
+p0x         .byte
+p0y         .byte
 
 score               ds 2 
 scorepointers       ds 12
 scoreHeight			.byte
-temp               	.byte	; used in the 6-digit display
-temp2				.byte	; used in a subroutine
+temp               	.byte
+temp2				.byte
+
+sprite0gfx	ds 2
+p0gfx		.byte
+p0color		.byte
+p0ycounter	.byte
 
 ;------------------------------------------------
 ; Start of ROM
 ;------------------------------------------------
 	SEG   Bank0
-	ORG   $F000       	; 4k ROM start point
+	ORG   $F000
 
 Start 
-	CLEAN_START			; Clear RAM and Registers
+	CLEAN_START
 	lda		#$FF
 	sta		AUDV0
 	sta		AUDV1
 
-; Initialize score pointers
+	lda		#80
+	sta		p0x
+	lda		#60
+	sta		p0y
+
+	lda		#<PlayerGfx
+	sta		sprite0gfx
+	lda		#>PlayerGfx
+	sta		sprite0gfx+1
+
     ldx     #7
 .initScore
     lda     #>scoretable
@@ -62,40 +81,100 @@ Start
 ; Vertical Blank
 ;------------------------------------------------
 MainLoop
-	;***** Vertical Sync routine
 	lda		#2
-	sta  	VSYNC 	; begin vertical sync, hold for 3 lines
-	sta  	WSYNC 	; 1st line of vsync
-	sta  	WSYNC 	; 2nd line of vsync
-	sta  	WSYNC 	; 3rd line of vsync
-	lda  	#43   	; set up timer for end of vblank
+	sta  	VSYNC
+	sta  	WSYNC
+	sta  	WSYNC
+	sta  	WSYNC
+	lda  	#43
 	sta  	TIM64T
 	lda 	#0
-	sta  	VSYNC 	; turn off vertical sync - also start of vertical blank
+	sta  	VSYNC
 
-	;***** Vertical Blank code goes here
 	lda		#$0E
 	sta		bgcolor
 
 	inc		frame
 	lda		frame
 	cmp		#2
-	bne		.waitForVBlank
+	bne		.skipScore
 		
 	jsr		LoadScorePointers
-	; "parameters" for the subroutine
-	lda		#1		; tens place
-	ldx		#0		; hundreds place
-	ldy		#0		; thousands place
+	lda		#1
+	ldx		#0
+	ldy		#0
 	jsr		AddScore
-	;jsr		SubtractScore	; for subtraction instead
 	lda		#0
-	sta		frame	; reset the frame counter
+	sta		frame
 	
+.skipScore
+
+; ===================
+; Joystick Input
+; ===================
+	lda		frame
+	and		#%00000001
+	bne		EndInput
+
+CheckUp
+    lda     #%00010000
+    bit     SWCHA
+    bne     .endUp
+    lda     p0y
+    cmp     #PLAY_HEIGHT-2
+    bcs     .endUp
+    inc     p0y
+    inc     p0y
+.endUp
+CheckDown
+    lda     #%00100000
+    bit     SWCHA
+    bne     .endDown
+    lda     p0y
+    cmp     #BIKE_HEIGHT+2
+    bcc     .endDown
+    dec     p0y
+    dec     p0y
+.endDown
+CheckRight
+    lda     #%10000000
+    bit     SWCHA
+    bne     .endRight
+    lda     #0
+    sta     REFP0
+    lda     p0x
+    cmp     #152
+    bcs     .endRight
+    inc     p0x
+    inc     p0x
+.endRight
+CheckLeft
+    lda     #%01000000
+    bit     SWCHA
+    bne     EndInput
+    lda     #%00001000
+    sta     REFP0
+    lda     p0x
+    cmp     #2
+    bcc     EndInput
+    dec     p0x
+    dec     p0x
+EndInput
+
+; ===================
+; Position Sprite
+; ===================
+	lda		p0x
+	ldx		#0
+	jsr		SetHorizPos
+	sta		WSYNC
+	sta		HMOVE
+
+	jsr 	LoadScorePointers
+
 .waitForVBlank
 	lda		INTIM
 	bne		.waitForVBlank
-	jsr LoadScorePointers
 	sta		WSYNC
 	sta		VBLANK
 
@@ -113,8 +192,8 @@ DrawScreen
 	bne		.topSpacer
 
 ; initialize the score 
-	lda		#0			; reset everything
-	sta		WSYNC		; one scanline
+	lda		#0
+	sta		WSYNC
 	sta		REFP0
 	sta		REFP1
 	sta		GRP0
@@ -122,39 +201,38 @@ DrawScreen
 	sta		ENAM0
 	sta		ENAM1
 	sta		ENABL
-	sta		WSYNC		; two
-	nop					; needed for timing
+	sta		WSYNC
+	nop
 	sta		GRP0
 	sta		GRP1
 	ldy		#SCORE_HEIGHT
 	sty		scoreHeight
 	lda		#$03
-	sta		NUSIZ0		; close-spaced triple sprites
+	sta		NUSIZ0
 	sta		NUSIZ1
-	sta		VDELP0		; Hex $03 = %011 which sets the D1 of VDELPx as neeed
+	sta		VDELP0
 	sta		VDELP1	
-	lda		#$F0		; fine adjust
+	lda		#$F0
 	sta		HMP0
-	lda		#0			; both this
-	nop					; …and this for timing
-	sta		RESP0		; sprite0 reset
-	sta		RESP1		; sprite1 reset
-	sta		WSYNC		; three
+	lda		#0
+	nop
+	sta		RESP0
+	sta		RESP1
+	sta		WSYNC
 	sta		HMOVE
-	sta		WSYNC		; four scanlines that we're burning to do this setup
+	sta		WSYNC
 
 ; display the score
-	
                       															;Cycles  Pixel    GRP0   GRP0A   GRP1   GRP1A
 .scoreLoop
 	ldy  	scoreHeight    													     ;+3  63  189
 	lda  	(scorepointers),y     												 ;+5  68  204
-	sta  	GRP0					; digit 1 -> GRP0							 ;+3  71  213      D1     --      --     --
+	sta  	GRP0																 ;+3  71  213      D1     --      --     --
 	sta 	WSYNC           		
 	lda  	(scorepointers+2),y  												 ;+5   5   15
-	sta  	GRP1            		; digit 2 -> GRP1, digit 1 = GRP0 -> GRP0A	 ;+3   8   24      D1     D1      D2     --
+	sta  	GRP1            													 ;+3   8   24      D1     D1      D2     --
 	lda  	(scorepointers+4),y  												 ;+5  13   39
-	sta  	GRP0            		; digit 3 -> GRP0, digit 2 = GRP1 -> GRP1A	 ;+3  16   48      D3     D1      D2     D2
+	sta  	GRP0            													 ;+3  16   48      D3     D1      D2     D2
 	lda  	(scorepointers+6),y  												 ;+5  21   63
 	sta  	temp         														 ;+3  24   72
 	lda  	(scorepointers+8),y  												 ;+5  29   87
@@ -162,10 +240,10 @@ DrawScreen
 	lda  	(scorepointers+10),y  												 ;+5  36  108
 	tay                  														 ;+2  38  114
 	lda 	temp         														 ;+3  41  123              !
-	sta  	GRP1            		; digit 4 -> GRP1, digit 3 = GRP0 -> GRP0A	 ;+3  44  132      D3     D3      D4     D2!
-	stx  	GRP0            		; digit 5 -> GRP0, digit 4 = GRP1 -> GRP1A	 ;+3  47  141      D5     D3!     D4     D4
-	sty  	GRP1            		; digit 6 -> GRP1, digit 5 = GRP0 -> GRP0A	 ;+3  50  150      D5     D5      D6     D4!
-	sta		GRP0            		; anything-> GRP0, digit 6 = GRP1 -> GRP1A	 ;+3  53  159      D4*    D5!     D6     D6!
+	sta  	GRP1            													 ;+3  44  132      D3     D3      D4     D2!
+	stx  	GRP0            													 ;+3  47  141      D5     D3!     D4     D4
+	sty  	GRP1            													 ;+3  50  150      D5     D5      D6     D4!
+	sta		GRP0            													 ;+3  53  159      D4*    D5!     D6     D6!
 	dec  	scoreHeight     													 ;+5  58  174                             !
 	bpl  	.scoreLoop     													     ;+2  60  180
  
@@ -178,11 +256,67 @@ DrawScreen
     sta 	NUSIZ0
     sta 	NUSIZ1
 
-	ldx		#171
-.botSpacer
+; ===================
+; Transition to play area
+; ===================
+	lda		p0x
+	ldx		#0
+	jsr		SetHorizPos
+	sta		WSYNC
+	sta		HMOVE
+	sta		WSYNC
+
+	lda		#0
+	sta		GRP0
+	sta		NUSIZ0
+	sta		p0gfx
+	lda		#$0E
+	sta		COLUP0
+
+	lda		#$FF
+	sta		p0ycounter
+
+; ===================
+; Play Area
+; ===================
+	ldx		#PLAY_HEIGHT
+.playArea
+	lda		p0gfx
+	sta		GRP0
+
+	ldy		p0ycounter
+	cpx		p0y
+	bne		.noTrigP0
+	ldy		#BIKE_HEIGHT
+.noTrigP0
+	cpy		#$FF
+	beq		.noDrawP0
+	lda		(sprite0gfx),y
+	sta		p0gfx
+	dey
+	jmp		.doneP0
+.noDrawP0
+	lda		#0
+	sta		p0gfx
+.doneP0
+	sty		p0ycounter
+
 	dex
 	sta		WSYNC
-	bne		.botSpacer	
+	bne		.playArea
+
+; pad to hit 192 scanlines
+	sta		WSYNC
+	sta		WSYNC
+	sta		WSYNC
+	sta		WSYNC
+	sta		WSYNC
+	sta WSYNC
+	sta		WSYNC
+	sta		WSYNC
+	sta		WSYNC
+	sta		WSYNC
+
 ;------------------------------------------------
 ; Overscan
 ;------------------------------------------------
@@ -192,7 +326,8 @@ DrawScreen
     lda		#36
     sta		TIM64T
 
-	;***** Overscan Code goes here
+	lda		#0
+	sta		GRP0
 
 .waitForOverscan
 	lda     INTIM
@@ -203,9 +338,7 @@ DrawScreen
 ;------------------------------------------------
 ; Subroutines
 ;------------------------------------------------
-;***** Subroutines go here
 AddScore
-	; a = ones/tens, x = hundreds/thousands
 	sed
 	clc
 	adc		score+1
@@ -217,36 +350,30 @@ AddScore
 	rts
 
 SubtractScore
-	; inputs:
-	; a = BCD value to subtract from 1s place
-	; x = BCD value to subtract from 100s place
-	; y = BCD value to subtract from 1000s place 
-	sed					; set decimal mode
-	sec					; set carry flag
-	sta		temp2		; just put it somewhere
-	lda		score+2		; load the value
-	sbc		temp2		; subtract what we wanted
-	sta		score+2		; store the value
-	stx		temp2		; hundreds, put in the temp
+	sed
+	sec
+	sta		temp2
+	lda		score+2
+	sbc		temp2
+	sta		score+2
+	stx		temp2
 	lda		score+1
-	sbc		temp2		; subtract the value to the middle digits, with carry
-	sta		score+1		; store it
-	sty		temp2		; thousands, same thing
+	sbc		temp2
+	sta		score+1
+	sty		temp2
 	lda		score
-	sbc		temp2		; subtract the accumulator to the high digits, with carry
-	sta		score		; store it
-	cld					; clear decimal mode	
+	sbc		temp2
+	sta		score
+	cld
 	rts
 
 LoadScorePointers
-	; ones place
 	lda		score+1
 	and		#$0F
 	tax
 	lda		scoretableIndex,x
 	sta		scorepointers+6
 
-	; tens place
 	lda		score+1
 	and		#$F0
 	lsr
@@ -257,14 +384,12 @@ LoadScorePointers
 	lda		scoretableIndex,x
 	sta		scorepointers+4
 
-	; hundreds place
 	lda		score
 	and		#$0F
 	tax
 	lda		scoretableIndex,x
 	sta		scorepointers+2
 
-	; thousands place
 	lda		score
 	and		#$F0
 	lsr
@@ -276,10 +401,25 @@ LoadScorePointers
 	sta		scorepointers
 	
 	rts
+
+SetHorizPos subroutine
+	sta		WSYNC
+	sec
+.divLoop
+	sbc		#15
+	bcs		.divLoop
+	eor		#7
+	asl
+	asl
+	asl
+	asl
+	sta		HMP0,x
+	sta		RESP0,x
+	rts
+
 ;------------------------------------------------
 ; ROM Tables
 ;------------------------------------------------
-	;***** ROM tables go here
 scoretableIndex
 	.byte	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
 	
@@ -383,13 +523,25 @@ blank
 	.byte	%00000000
 	.byte	%00000000
 	.byte	%00000000
+
+	align 256
+PlayerGfx
+	.byte	%00000000
+	.byte	%01100110
+	.byte	%11111111
+	.byte	%01111110
+	.byte	%00111100
+	.byte	%00111110
+	.byte	%00011000
+	.byte	%00000000
+
 ;------------------------------------------------
 ; Interrupt Vectors
 ;------------------------------------------------
 	echo [*-$F000]d, " ROM bytes used"
 	ORG    $FFFA
-	.word  Start         ; NMI
-	.word  Start         ; RESET
-	.word  Start         ; IRQ
+	.word  Start
+	.word  Start
+	.word  Start
     
 	END
