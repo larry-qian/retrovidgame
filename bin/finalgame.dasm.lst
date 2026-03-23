@@ -2,7 +2,7 @@
       1  10000 ????						;------------------------------------------------
       2  10000 ????						;
       3  10000 ????						; Atari VCS Game - Dodge!
-      4  10000 ????						; 
+      4  10000 ????						;
       5  10000 ????						;------------------------------------------------
       6  10000 ????				       processor	6502
 ------- FILE vcs.h LEVEL 2 PASS 2
@@ -34,7 +34,7 @@
      25  10000 ????						;			    used for code assembly.
      26  10000 ????						; 1.04  12/NOV/2003	 Added TIA_BASE_WRITE_ADDRESS and TIA_BASE_READ_ADDRESS for
      27  10000 ????						;			 convenient disassembly/reassembly compatibility for hardware
-     28  10000 ????						;			 mirrored reading/writing differences.	This is more a 
+     28  10000 ????						;			 mirrored reading/writing differences.	This is more a
      29  10000 ????						;			 readability issue, and binary compatibility with disassembled
      30  10000 ????						;			 and reassembled sources.  Per Manuel Rotschkar's suggestion.
      31  10000 ????						; 1.03  12/MAY/2003	 Added SEG segment at end of file to fix old-code compatibility
@@ -76,7 +76,7 @@
      67  10000 ????						; for the mirrored ROM hardware registers.
      68  10000 ????
      69  10000 ????						; Usage: As per above, define the TIA_BASE_READ_ADDRESS and/or TIA_BASE_WRITE_ADDRESS
-     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined, 
+     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined,
      71  10000 ????						; they defaut to the TIA_BASE_ADDRESS.
      72  10000 ????
      73  10000 ????			   -	       IFNCONST	TIA_BASE_READ_ADDRESS
@@ -243,13 +243,13 @@
      31  0000 ????						;
      32  0000 ????						; 1.02  14/JUN/2003	 - VERTICAL_SYNC macro added
      33  0000 ????						;			   (standardised macro for vertical synch code)
-     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added. 
+     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added.
      35  0000 ????						;			 - NO_ILLEGAL_OPCODES switch implemented
      36  0000 ????						; 1.0	22/MAR/2003		Initial release
      37  0000 ????
-     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage, 
+     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage,
      39  0000 ????						;   define the symbol NO_ILLEGAL_OPCODES (-DNO_ILLEGAL_OPCODES=1 on command-line).
-     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file 
+     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file
      41  0000 ????						;   *after* including VCS.H (as the non-illegal opcodes access hardware
      42  0000 ????						;   registers and require them to be defined first).
      43  0000 ????
@@ -626,7 +626,7 @@
     236  f106
     237  f106							;------------------------------------------------
     238  f106							; Kernel
-    239  f106							;------------------------------------------------	
+    239  f106							;------------------------------------------------
     240  f106				   DrawScreen
     241  f106		       a2 09		      ldx	#9
     242  f108				   .topSpacer
@@ -637,7 +637,7 @@
     247  f10f		       85 02		      sta	WSYNC
     248  f111		       d0 f5		      bne	.topSpacer
     249  f113
-    250  f113							; initialize the score 
+    250  f113							; initialize the score
     251  f113		       a9 00		      lda	#0
     252  f115		       85 02		      sta	WSYNC
     253  f117		       85 0b		      sta	REFP0

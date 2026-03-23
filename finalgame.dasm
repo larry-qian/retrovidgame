@@ -1,7 +1,24 @@
+; Notes:
+; 1. Missile probably shouldnt spawn immediately as the game starts
+; 2. there is some kind of shifting in the screen that is happening as the
+; missile spawns? its adding an extra scan line for some reason.
+; 3. missile also glitchy with how it will show the wrong location for 
+; where it spawns at first?
+; 4. the sprite stretch out when hitting the right side of the screen,
+;    and also stretches when it hits the bottom of the screen as well.
+; 5. points reset after hitting max (make it so that the max is harder
+;    to hit)
+; Next steps:
+; 1. add delay to missile spawn
+; 2. add lives to player, and make the player lose lives when they are hit
+; by a projectile
+; 3. add some kind of background to the game
+; 4. change points from per frame to per second? (wait how many fps are
+;    there in atari 2600 games?)
 ;------------------------------------------------
 ;
-; Atari VCS Game - Dodge!
-; 
+; Atari VCS Game
+; by
 ;------------------------------------------------
 	processor 	6502
 	include 	vcs.h
