@@ -8,6 +8,9 @@
 ;    and also stretches when it hits the bottom of the screen as well.
 ; 5. points reset after hitting max (make it so that the max is harder
 ;    to hit)
+; 6. keep idea of collecting objects around the screen, perhaps give a
+;    timer (shown by them flashing) and if the player fails to collect
+;    them they lose a life?
 ; Next steps:
 ; 1. add delay to missile spawn
 ; 2. add lives to player, and make the player lose lives when they are hit
@@ -19,6 +22,7 @@
 ;
 ; Atari VCS Game
 ; by
+;
 ;------------------------------------------------
 	processor 	6502
 	include 	vcs.h
