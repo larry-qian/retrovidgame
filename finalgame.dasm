@@ -1,8 +1,7 @@
 ;------------------------------------------------
 ;
-; Atari VCS Game 
-; by
-;
+; Atari VCS Game - Dodge!
+; 
 ;------------------------------------------------
 	processor 	6502
 	include 	vcs.h
@@ -15,6 +14,7 @@ BLACK = #$00
 SCORE_HEIGHT = #7
 BIKE_HEIGHT = #6
 PLAY_HEIGHT = #158
+MISSILE_HEIGHT = #4
 
 ;------------------------------------------------
 ; RAM
@@ -38,6 +38,12 @@ p0gfx		.byte
 p0color		.byte
 p0ycounter	.byte
 
+; --- Missile enemy variables ---
+m0x			.byte
+m0y			.byte
+m0speed		.byte
+m0active	.byte
+
 ;------------------------------------------------
 ; Start of ROM
 ;------------------------------------------------
@@ -46,9 +52,6 @@ p0ycounter	.byte
 
 Start 
 	CLEAN_START
-	lda		#$FF
-	sta		AUDV0
-	sta		AUDV1
 
 	lda		#80
 	sta		p0x
@@ -77,6 +80,16 @@ Start
     sta     scorepointers+9
     sta     scorepointers+11
 
+; --- Initialize missile ---
+	lda		#0
+	sta		m0x
+	lda		#80
+	sta		m0y
+	lda		#2
+	sta		m0speed
+	lda		#1
+	sta		m0active
+
 ;------------------------------------------------
 ; Vertical Blank
 ;------------------------------------------------
@@ -94,9 +107,16 @@ MainLoop
 	lda		#$0E
 	sta		bgcolor
 
+; --- Clear collision registers ---
+	sta		CXCLR
+
 	inc		frame
+
+; ===================
+; Score - increment every 2 frames
+; ===================
 	lda		frame
-	cmp		#2
+	and		#%00000001
 	bne		.skipScore
 		
 	jsr		LoadScorePointers
@@ -104,18 +124,49 @@ MainLoop
 	ldx		#0
 	ldy		#0
 	jsr		AddScore
-	lda		#0
-	sta		frame
 	
 .skipScore
 
 ; ===================
+; Move Missile
+; ===================
+MoveMissile
+	lda		m0active
+	beq		.respawnMissile
+
+	lda		m0x
+	clc
+	adc		m0speed
+	sta		m0x
+
+	cmp		#160
+	bcc		.missileDone
+
+.respawnMissile
+	lda		#0
+	sta		m0x
+
+	lda		frame
+	asl
+	asl
+	asl
+	eor		frame
+	and		#$7F
+	clc
+	adc		#BIKE_HEIGHT+4
+	cmp		#PLAY_HEIGHT-4
+	bcc		.yOk
+	lda		#80
+.yOk
+	sta		m0y
+	lda		#1
+	sta		m0active
+
+.missileDone
+
+; ===================
 ; Joystick Input
 ; ===================
-	lda		frame
-	and		#%00000001
-	bne		EndInput
-
 CheckUp
     lda     #%00010000
     bit     SWCHA
@@ -162,11 +213,16 @@ CheckLeft
 EndInput
 
 ; ===================
-; Position Sprite
+; Position Sprites
 ; ===================
 	lda		p0x
 	ldx		#0
 	jsr		SetHorizPos
+
+	lda		m0x
+	ldx		#3
+	jsr		SetHorizPos
+
 	sta		WSYNC
 	sta		HMOVE
 
@@ -262,6 +318,11 @@ DrawScreen
 	lda		p0x
 	ldx		#0
 	jsr		SetHorizPos
+
+	lda		m0x
+	ldx		#3
+	jsr		SetHorizPos
+
 	sta		WSYNC
 	sta		HMOVE
 	sta		WSYNC
@@ -273,8 +334,17 @@ DrawScreen
 	lda		#$0E
 	sta		COLUP0
 
+	lda		#$36
+	sta		COLUP1
+
+	lda		#%00100000
+	sta		NUSIZ1
+
 	lda		#$FF
 	sta		p0ycounter
+
+	lda		#0
+	sta		ENAM1
 
 ; ===================
 ; Play Area
@@ -284,6 +354,21 @@ DrawScreen
 	lda		p0gfx
 	sta		GRP0
 
+	; --- Missile drawing ---
+	txa
+	sec
+	sbc		m0y
+	cmp		#MISSILE_HEIGHT
+	bcc		.drawMissile
+	lda		#0
+	sta		ENAM1
+	jmp		.missileDraw_done
+.drawMissile
+	lda		#2
+	sta		ENAM1
+.missileDraw_done
+
+	; --- Player sprite drawing ---
 	ldy		p0ycounter
 	cpx		p0y
 	bne		.noTrigP0
@@ -306,12 +391,12 @@ DrawScreen
 	bne		.playArea
 
 ; pad to hit 192 scanlines
+;	sta		WSYNC
+;	sta		WSYNC
 	sta		WSYNC
 	sta		WSYNC
 	sta		WSYNC
 	sta		WSYNC
-	sta		WSYNC
-	sta WSYNC
 	sta		WSYNC
 	sta		WSYNC
 	sta		WSYNC
@@ -328,6 +413,18 @@ DrawScreen
 
 	lda		#0
 	sta		GRP0
+	sta		ENAM1
+
+; ===================
+; Collision Detection
+; ===================
+	lda		CXM1P
+	bpl		.noCollision
+
+	lda		#$42
+	sta		bgcolor
+
+.noCollision
 
 .waitForOverscan
 	lda     INTIM
