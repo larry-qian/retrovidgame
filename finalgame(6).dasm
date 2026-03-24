@@ -1,16 +1,18 @@
 ; Notes:
-; 1. [FIXED] Obstacle no longer spawns immediately - 2 second delay
-; 2. [FIXED] Replaced missile with ball object - no more scanline shifting
-; 3. [FIXED] Ball uses 2-frame spawn hide to avoid wrong position on first frame
-; 4. [FIXED] Sprite boundary clamping tightened to prevent edge stretching
-; 5. [FIXED] Score now increments once per second (60-frame counter)
+; 1. [FIXED] Missile now has a 2-second spawn delay at game start
+; 2. there is some kind of shifting in the screen that is happening as the
+; missile spawns? its adding an extra scan line for some reason.
+; 3. missile also glitchy with how it will show the wrong location for 
+; where it spawns at first?
+; 4. [FIXED] sprite no longer stretches at bottom of screen (tightened bottom boundary)
+; 5. [FIXED] Score now increments once per second (~60 frames) instead of every 2 frames
 ; 6. keep idea of collecting objects around the screen, perhaps give a
 ;    timer (shown by them flashing) and if the player fails to collect
 ;    them they lose a life?
 ; Next steps:
-; 1. [DONE] add delay to obstacle spawn
+; 1. [DONE] add delay to missile spawn
 ; 2. add lives to player, and make the player lose lives when they are hit
-;    by a projectile
+; by a projectile
 ; 3. add some kind of background to the game
 ; 4. [DONE] change points from per frame to per second (NTSC = ~60fps)
 ;------------------------------------------------
@@ -30,7 +32,7 @@ BLACK = #$00
 SCORE_HEIGHT = #7
 BIKE_HEIGHT = #6
 PLAY_HEIGHT = #158
-BALL_HEIGHT = #4
+MISSILE_HEIGHT = #4
 
 ;------------------------------------------------
 ; RAM
@@ -54,15 +56,15 @@ p0gfx		.byte
 p0color		.byte
 p0ycounter	.byte
 
-; --- Ball obstacle variables ---
-ballx		.byte
-bally		.byte
-ballspeed	.byte
-ballactive	.byte		; 0=inactive, 1=visible, 2=just spawned (hidden 1 frame)
-balldelay	.byte		; delay before first spawn / between respawns
+; --- Missile enemy variables ---
+m0x			.byte
+m0y			.byte
+m0speed		.byte
+m0active	.byte
+m0delay		.byte		; countdown before missile spawns
 
-; --- Score timer ---
-scoreTimer	.byte		; counts frames, increments score at 60
+; --- Scoring ---
+scoreTimer	.byte		; counts frames, score increments each 60
 
 ;------------------------------------------------
 ; Start of ROM
@@ -100,20 +102,16 @@ Start
     sta     scorepointers+9
     sta     scorepointers+11
 
-; --- Initialize ball obstacle ---
+; --- Initialize missile ---
 	lda		#0
-	sta		ballx
-	sta		ballactive
+	sta		m0x
+	sta		m0active		; start inactive
 	lda		#80
-	sta		bally
+	sta		m0y
 	lda		#2
-	sta		ballspeed
+	sta		m0speed
 	lda		#120			; ~2 second delay before first spawn
-	sta		balldelay
-
-; --- Initialize score timer ---
-	lda		#0
-	sta		scoreTimer
+	sta		m0delay
 
 ;------------------------------------------------
 ; Vertical Blank
@@ -138,7 +136,7 @@ MainLoop
 	inc		frame
 
 ; ===================
-; Score - increment once per second (every 60 frames)
+; Score - increment every 60 frames (~1 per second)
 ; ===================
 	inc		scoreTimer
 	lda		scoreTimer
@@ -147,7 +145,7 @@ MainLoop
 
 	lda		#0
 	sta		scoreTimer
-
+		
 	jsr		LoadScorePointers
 	lda		#1
 	ldx		#0
@@ -157,41 +155,46 @@ MainLoop
 .skipScore
 
 ; ===================
-; Move Ball Obstacle
+; Move Missile
 ; ===================
-MoveBall
-	; Check if we're in a delay period
-	lda		balldelay
+MoveMissile
+	; --- Check if we're in a spawn delay ---
+	lda		m0delay
 	beq		.noDelay
-	dec		balldelay
-	jmp		.ballDone
+	dec		m0delay
+	lda		#0
+	sta		ENAM1			; keep missile disabled during delay
+	jmp		.missileDone
 .noDelay
 
-	lda		ballactive
-	beq		.respawnBall
+	lda		m0active
+	beq		.respawnMissile
 
-	; If ballactive == 2, it was just spawned last frame
-	; Transition it to fully visible now that HMOVE has placed it
+	; active=2 means "just spawned, position being set this frame"
+	; active=3 means "position set, wait one more frame for HMOVE"
+	cmp		#3
+	bne		.notPhase3
+	lda		#1				; now fully visible
+	sta		m0active
+	jmp		.missileDone
+.notPhase3
 	cmp		#2
-	bne		.ballIsVisible
-	lda		#1
-	sta		ballactive
-	jmp		.ballDone
+	bne		.moveNormally
+	lda		#3				; advance to next hidden phase
+	sta		m0active
+	jmp		.missileDone
+.moveNormally
 
-.ballIsVisible
-	lda		ballx
+	lda		m0x
 	clc
-	adc		ballspeed
-	sta		ballx
+	adc		m0speed
+	sta		m0x
 
 	cmp		#160
-	bcc		.ballDone
+	bcc		.missileDone
 
-.respawnBall
-	lda		#0
-	sta		ballx
-
-	; Pseudo-random Y position
+.respawnMissile
+	; Pick new Y position
 	lda		frame
 	asl
 	asl
@@ -199,18 +202,20 @@ MoveBall
 	eor		frame
 	and		#$7F
 	clc
-	adc		#BIKE_HEIGHT+6
-	cmp		#PLAY_HEIGHT-6
+	adc		#BIKE_HEIGHT+4
+	cmp		#PLAY_HEIGHT-4
 	bcc		.yOk
 	lda		#80
 .yOk
-	sta		bally
-	lda		#2				; hidden for 1 frame while position settles
-	sta		ballactive
-	lda		#30				; ~0.5 sec delay between respawns
-	sta		balldelay
+	sta		m0y
+	lda		#1				; start at X=1 (will be positioned next frame)
+	sta		m0x
+	lda		#2				; hidden phase: 2 -> 3 -> 1
+	sta		m0active
+	lda		#30				; short delay between respawns (~0.5s)
+	sta		m0delay
 
-.ballDone
+.missileDone
 
 ; ===================
 ; Joystick Input
@@ -220,7 +225,7 @@ CheckUp
     bit     SWCHA
     bne     .endUp
     lda     p0y
-    cmp     #PLAY_HEIGHT-BIKE_HEIGHT
+    cmp     #PLAY_HEIGHT-2
     bcs     .endUp
     inc     p0y
     inc     p0y
@@ -242,7 +247,7 @@ CheckRight
     lda     #0
     sta     REFP0
     lda     p0x
-    cmp     #148
+    cmp     #152
     bcs     .endRight
     inc     p0x
     inc     p0x
@@ -267,8 +272,8 @@ EndInput
 	ldx		#0
 	jsr		SetHorizPos
 
-	lda		ballx
-	ldx		#4			; ball is object index 4 (RESBL)
+	lda		m0x
+	ldx		#3
 	jsr		SetHorizPos
 
 	sta		WSYNC
@@ -363,6 +368,16 @@ DrawScreen
 ; ===================
 ; Transition to play area
 ; ===================
+	lda		p0x
+	ldx		#0
+	jsr		SetHorizPos
+
+	lda		m0x
+	ldx		#3
+	jsr		SetHorizPos
+
+	sta		WSYNC
+	sta		HMOVE
 	sta		WSYNC
 
 	lda		#0
@@ -372,19 +387,17 @@ DrawScreen
 	lda		#$0E
 	sta		COLUP0
 
-	; Ball color - bright red/orange to stand out
 	lda		#$36
-	sta		COLUPF
+	sta		COLUP1
 
-	; Ball size: use CTRLPF to set ball width to 4 clocks
-	lda		#%00100000		; ball size = 4 clocks wide
-	sta		CTRLPF
+	lda		#%00100000
+	sta		NUSIZ1
 
 	lda		#$FF
 	sta		p0ycounter
 
 	lda		#0
-	sta		ENABL
+	sta		ENAM1
 
 ; ===================
 ; Play Area
@@ -394,27 +407,19 @@ DrawScreen
 	lda		p0gfx
 	sta		GRP0
 
-	; --- Ball drawing ---
+	; --- Missile drawing ---
 	txa
 	sec
-	sbc		bally
-	cmp		#BALL_HEIGHT
-	bcc		.drawBall
+	sbc		m0y
+	cmp		#MISSILE_HEIGHT
+	bcc		.drawMissile
 	lda		#0
-	sta		ENABL
-	jmp		.ballDraw_done
-.drawBall
-	; Only draw if ballactive == 1 (fully visible)
-	lda		ballactive
-	cmp		#1
-	bne		.hideBall
+	sta		ENAM1
+	jmp		.missileDraw_done
+.drawMissile
 	lda		#2
-	sta		ENABL
-	jmp		.ballDraw_done
-.hideBall
-	lda		#0
-	sta		ENABL
-.ballDraw_done
+	sta		ENAM1
+.missileDraw_done
 
 	; --- Player sprite drawing ---
 	ldy		p0ycounter
@@ -439,6 +444,8 @@ DrawScreen
 	bne		.playArea
 
 ; pad to hit 192 scanlines
+;	sta		WSYNC
+;	sta		WSYNC
 	sta		WSYNC
 	sta		WSYNC
 	sta		WSYNC
@@ -459,15 +466,13 @@ DrawScreen
 
 	lda		#0
 	sta		GRP0
-	sta		ENABL
+	sta		ENAM1
 
 ; ===================
-; Collision Detection (Ball-Player)
+; Collision Detection
 ; ===================
-	; Ball-to-Player0 collision is bit 6 of CXP0FB
-	lda		CXP0FB
-	and		#%01000000
-	beq		.noCollision
+	lda		CXM1P
+	bpl		.noCollision
 
 	lda		#$42
 	sta		bgcolor

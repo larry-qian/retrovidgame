@@ -1,63 +1,72 @@
 --- Symbol List (sorted by symbol)
-0.doneP0                 f1e4              (R )
-0.drawMissile            f1c8              (R )
-0.endDown                f0be              (R )
-0.endRight               f0d3              (R )
-0.endUp                  f0ad              (R )
+0.ballDone               f0c0              (R )
+0.ballDraw_done          f1eb              (R )
+0.ballIsVisible          f095              (R )
+0.doneP0                 f203              (R )
+0.drawBall               f1da              (R )
+0.endDown                f0e2              (R )
+0.endRight               f0f7              (R )
+0.endUp                  f0d1              (R )
 0.FREE_BYTES             0000                  
+0.hideBall               f1e7              (R )
 0.initScore              f01c              (R )
-0.missileDone            f09c              (R )
-0.missileDraw_done       f1cc              (R )
-0.noCollision            f214              (R )
-0.noDrawP0               f1e0              (R )
-0.noTrigP0               f1d4              (R )
-0.playArea               f1b5              (R )
-0.respawnMissile         f080              (R )
-0.scoreLoop              f14b              (R )
-0.skipScore              f071              (R )
-0.topSpacer              f108              (R )
-0.waitForOverscan        f214              (R )
-0.waitForVBlank          f0fd              (R )
-0.yOk                    f096              (R )
+0.noCollision            f235              (R )
+0.noDelay                f086              (R )
+0.noDrawP0               f1ff              (R )
+0.noTrigP0               f1f3              (R )
+0.playArea               f1c7              (R )
+0.respawnBall            f0a0              (R )
+0.scoreLoop              f16f              (R )
+0.skipScore              f07d              (R )
+0.topSpacer              f12c              (R )
+0.waitForOverscan        f235              (R )
+0.waitForVBlank          f121              (R )
+0.yOk                    f0b6              (R )
 1.CLEAR_STACK            f005              (R )
-2.divLoop                f279              (R )
-AddScore                 f21c              (R )
+2.divLoop                f29a              (R )
+AddScore                 f23d              (R )
 AUDC0                    0015                  
 AUDC1                    0016                  
 AUDF0                    0017                  
 AUDF1                    0018                  
 AUDV0                    0019                  
 AUDV1                    001a                  
+BALL_HEIGHT              0004              (R )
+ballactive               009d              (R )
+balldelay                009e              (R )
+ballspeed                009c              (R )
+ballx                    009a              (R )
+bally                    009b              (R )
 bgcolor                  0080              (R )
 BIKE_HEIGHT              0006              (R )
 BLACK                    0000                  
-blank                    f2e2              (R )
-CheckDown                f0ad                  
-CheckLeft                f0d3                  
-CheckRight               f0be                  
-CheckUp                  f09c                  
+blank                    f303              (R )
+CheckDown                f0d1                  
+CheckLeft                f0f7                  
+CheckRight               f0e2                  
+CheckUp                  f0c0                  
 COLUBK                   0009                  
 COLUP0                   0006              (R )
 COLUP1                   0007              (R )
-COLUPF                   0008                  
-CTRLPF                   000a                  
+COLUPF                   0008              (R )
+CTRLPF                   000a              (R )
 CXBLPF                   0006                  
 CXCLR                    002c              (R )
 CXM0FB                   0004                  
 CXM0P                    0000                  
 CXM1FB                   0005                  
-CXM1P                    0001              (R )
-CXP0FB                   0002                  
+CXM1P                    0001                  
+CXP0FB                   0002              (R )
 CXP1FB                   0003                  
 CXPPMM                   0007                  
-DrawScreen               f106                  
-eight                    f2d2              (R )
+DrawScreen               f12a                  
+eight                    f2f3              (R )
 ENABL                    001f              (R )
 ENAM0                    001d              (R )
 ENAM1                    001e              (R )
-EndInput                 f0e8              (R )
-five                     f2ba              (R )
-four                     f2b2              (R )
+EndInput                 f10c              (R )
+five                     f2db              (R )
+four                     f2d3              (R )
 frame                    0081              (R )
 GRP0                     001b              (R )
 GRP1                     001c              (R )
@@ -75,20 +84,15 @@ INPT3                    000b
 INPT4                    000c                  
 INPT5                    000d                  
 INTIM                    0284              (R )
-LoadScorePointers        f245              (R )
-m0active                 009d              (R )
-m0speed                  009c              (R )
-m0x                      009a              (R )
-m0y                      009b              (R )
+LoadScorePointers        f266              (R )
 macro.h                  0000 ????         (R )
-MainLoop                 f044              (R )
-MISSILE_HEIGHT           0004              (R )
-MoveMissile              f071                  
-nine                     f2da              (R )
+MainLoop                 f04a              (R )
+MoveBall                 f07d                  
+nine                     f2fb              (R )
 NO_ILLEGAL_OPCODES       0000 ????         (R )
 NUSIZ0                   0004              (R )
 NUSIZ1                   0005              (R )
-one                      f29a              (R )
+one                      f2bb              (R )
 p0color                  0098                  
 p0gfx                    0097              (R )
 p0x                      0082              (R )
@@ -98,7 +102,7 @@ PF0                      000d
 PF1                      000e                  
 PF2                      000f                  
 PLAY_HEIGHT              009e              (R )
-PlayerGfx                f300              (R )
+PlayerGfx                f400              (R )
 REFP0                    000b              (R )
 REFP1                    000c              (R )
 RESBL                    0014                  
@@ -113,14 +117,15 @@ score                    0084              (R )
 SCORE_HEIGHT             0007              (R )
 scoreHeight              0092              (R )
 scorepointers            0086              (R )
-scoretable               f292              (R )
-scoretableIndex          f288              (R )
-SetHorizPos              f276              (R )
-seven                    f2ca              (R )
-six                      f2c2              (R )
+scoretable               f2b3              (R )
+scoretableIndex          f2a9              (R )
+scoreTimer               009f              (R )
+SetHorizPos              f297              (R )
+seven                    f2eb              (R )
+six                      f2e3              (R )
 sprite0gfx               0095              (R )
 Start                    f000              (R )
-SubtractScore            f229                  
+SubtractScore            f24a                  
 SWACNT                   0281                  
 SWBCNT                   0283                  
 SWCHA                    0280              (R )
@@ -128,7 +133,7 @@ SWCHB                    0282
 T1024T                   0297                  
 temp                     0093              (R )
 temp2                    0094              (R )
-three                    f2aa              (R )
+three                    f2cb              (R )
 TIA_BASE_ADDRESS         0000              (R )
 TIA_BASE_READ_ADDRESS    0000              (R )
 TIA_BASE_WRITE_ADDRESS   0000              (R )
@@ -136,7 +141,7 @@ TIM1T                    0294
 TIM64T                   0296              (R )
 TIM8T                    0295                  
 TIMINT                   0285                  
-two                      f2a2              (R )
+two                      f2c3              (R )
 VBLANK                   0001              (R )
 vcs.h                    0000 ????         (R )
 VDELBL                   0027                  
@@ -146,5 +151,5 @@ VERSION_MACRO            006d
 VERSION_VCS              006a                  
 VSYNC                    0000              (R )
 WSYNC                    0002              (R )
-zero                     f292              (R )
+zero                     f2b3              (R )
 --- End of Symbol List.
