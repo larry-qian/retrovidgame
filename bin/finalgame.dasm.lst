@@ -567,7 +567,7 @@
     177  f08a							; Timer expired — ball has crossed the screen
     178  f08a		       a9 00		      lda	#0
     179  f08c		       85 9b		      sta	ballactive
-    180  f08e		       a9 1e		      lda	#30	; ~0.5 sec delay before next spawn
+    180  f08e		       a9 78		      lda	#120	; FIXED: 2 sec delay before next spawn (was 30)
     181  f090		       85 9c		      sta	balldelay
     182  f092		       4c ae f0 	      jmp	.ballLogicDone
     183  f095
@@ -577,7 +577,7 @@
     187  f097		       85 9b		      sta	ballactive
     188  f099		       a9 02		      lda	#2
     189  f09b		       85 9d		      sta	ballneedpos	; 2 = reposition this frame, 1 = still hidden next frame
-    190  f09d		       a9 a0		      lda	#160	; 160 frames at 1px/frame = 160px travel
+    190  f09d		       a9 4b		      lda	#75	; FIXED: 75 frames * 2px/frame = 150px total travel!
     191  f09f		       85 9e		      sta	balltimer
     192  f0a1
     193  f0a1							; Step Y down by 12 each spawn, wrap around

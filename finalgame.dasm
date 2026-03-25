@@ -177,7 +177,7 @@ MoveBall
 	; Timer expired — ball has crossed the screen
 	lda		#0
 	sta		ballactive
-	lda		#30				; ~0.5 sec delay before next spawn
+	lda		#120			; FIXED: 2 sec delay before next spawn (was 30)
 	sta		balldelay
 	jmp		.ballLogicDone
 
@@ -187,7 +187,7 @@ MoveBall
 	sta		ballactive
 	lda		#2
 	sta		ballneedpos		; 2 = reposition this frame, 1 = still hidden next frame
-	lda		#160			; 160 frames at 1px/frame = 160px travel
+	lda		#75				; FIXED: 75 frames * 2px/frame = 150px total travel!
 	sta		balltimer
 
 	; Step Y down by 12 each spawn, wrap around
