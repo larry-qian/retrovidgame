@@ -55,11 +55,11 @@ p0color		.byte
 p0ycounter	.byte
 
 ; --- Ball obstacle variables ---
-ballx		.byte
-bally		.byte
-ballspeed	.byte
-ballactive	.byte		; 0=inactive, 1=visible, 2=just spawned (hidden 1 frame)
-balldelay	.byte		; delay before first spawn / between respawns
+bally		.byte			; Y position in play area
+ballactive	.byte			; 0=inactive, 1=visible
+balldelay	.byte			; frame countdown before next spawn
+ballneedpos	.byte			; 1=ball needs coarse repositioning this frame
+balltimer	.byte			; frames remaining in current flight
 
 ; --- Score timer ---
 scoreTimer	.byte		; counts frames, increments score at 60
@@ -102,12 +102,10 @@ Start
 
 ; --- Initialize ball obstacle ---
 	lda		#0
-	sta		ballx
 	sta		ballactive
-	lda		#80
-	sta		bally
-	lda		#2
-	sta		ballspeed
+	sta		ballneedpos
+	lda		#20
+	sta		bally			; first Y position near top
 	lda		#120			; ~2 second delay before first spawn
 	sta		balldelay
 
@@ -148,69 +146,60 @@ MainLoop
 	lda		#0
 	sta		scoreTimer
 
-	jsr		LoadScorePointers
 	lda		#1
 	ldx		#0
 	ldy		#0
 	jsr		AddScore
-	
+	jsr		LoadScorePointers
+
 .skipScore
 
 ; ===================
 ; Move Ball Obstacle
 ; ===================
+; Pure game logic — no sta WSYNC here.
+; The VBlank timer (TIM64T) handles all VBlank timing.
+; Ball moves via HMOVE in the kernel, not by recalculating position.
 MoveBall
-	; Check if we're in a delay period
+	; If in delay, count down and skip
 	lda		balldelay
 	beq		.noDelay
 	dec		balldelay
-	jmp		.ballDone
+	jmp		.ballLogicDone
 .noDelay
-
 	lda		ballactive
-	beq		.respawnBall
+	beq		.spawnBall
 
-	; If ballactive == 2, it was just spawned last frame
-	; Transition it to fully visible now that HMOVE has placed it
-	cmp		#2
-	bne		.ballIsVisible
+	; Ball is active — count down flight timer
+	dec		balltimer
+	bne		.ballLogicDone
+
+	; Timer expired — ball has crossed the screen
+	lda		#0
+	sta		ballactive
+	lda		#30				; ~0.5 sec delay before next spawn
+	sta		balldelay
+	jmp		.ballLogicDone
+
+.spawnBall
+	; Activate ball, flag for coarse positioning
 	lda		#1
 	sta		ballactive
-	jmp		.ballDone
+	sta		ballneedpos		; flag: need coarse position in kernel setup
+	lda		#80				; 80 frames at 2px/frame = 160px travel
+	sta		balltimer
 
-.ballIsVisible
-	lda		ballx
+	; Step Y down by 12 each spawn, wrap around
+	lda		bally
 	clc
-	adc		ballspeed
-	sta		ballx
-
-	cmp		#160
-	bcc		.ballDone
-
-.respawnBall
-	lda		#0
-	sta		ballx
-
-	; Pseudo-random Y position
-	lda		frame
-	asl
-	asl
-	asl
-	eor		frame
-	and		#$7F
-	clc
-	adc		#BIKE_HEIGHT+6
+	adc		#12
 	cmp		#PLAY_HEIGHT-6
 	bcc		.yOk
-	lda		#80
+	lda		#20
 .yOk
 	sta		bally
-	lda		#2				; hidden for 1 frame while position settles
-	sta		ballactive
-	lda		#30				; ~0.5 sec delay between respawns
-	sta		balldelay
 
-.ballDone
+.ballLogicDone
 
 ; ===================
 ; Joystick Input
@@ -260,22 +249,7 @@ CheckLeft
     dec     p0x
 EndInput
 
-; ===================
-; Position Sprites
-; ===================
-	lda		p0x
-	ldx		#0
-	jsr		SetHorizPos
-
-	lda		ballx
-	ldx		#4			; ball is object index 4 (RESBL)
-	jsr		SetHorizPos
-
-	sta		WSYNC
-	sta		HMOVE
-
-	jsr 	LoadScorePointers
-
+	sta		WSYNC			; sync before timer wait to stabilize VBlank duration
 .waitForVBlank
 	lda		INTIM
 	bne		.waitForVBlank
@@ -284,7 +258,7 @@ EndInput
 
 ;------------------------------------------------
 ; Kernel
-;------------------------------------------------	
+;------------------------------------------------
 DrawScreen
     ldx		#9
 .topSpacer
@@ -351,18 +325,56 @@ DrawScreen
 	dec  	scoreHeight     													 ;+5  58  174                             !
 	bpl  	.scoreLoop     													     ;+2  60  180
  
-	sta 	WSYNC       
-	lda 	#0   
+	sta 	WSYNC
+	lda 	#0
     sta 	GRP0
     sta 	GRP1
-    sta 	VDELP0		
-    sta 	VDELP1		
+    sta 	VDELP0
+    sta 	VDELP1
     sta 	NUSIZ0
     sta 	NUSIZ1
 
 ; ===================
 ; Transition to play area
 ; ===================
+	; Position player 0 with coarse positioning
+	lda		p0x
+	ldx		#0
+	jsr		SetHorizPos
+
+	; Ball: if it needs coarse repositioning, do it now
+	; Otherwise just set its HMOVE value
+	lda		ballneedpos
+	beq		.noRepos
+	; Reset ball to left edge during HBLANK
+	; Per Stella guide sec 7.0: RESBL during hblank places ball at left edge
+	sta		WSYNC
+	sta		RESBL			; coarse position ball at left edge (color clock 2)
+	lda		#0
+	sta		ballneedpos		; clear flag
+	jmp		.donePos
+.noRepos
+	sta		WSYNC			; keep scanline count consistent
+.donePos
+
+	; Set ball horizontal motion: move 2 pixels right per frame
+	; Per Stella guide sec 8.0: $E0 = move 2 right
+	lda		ballactive
+	beq		.noMotion
+	lda		#$E0			; 2 pixels right
+	sta		HMBL
+	jmp		.motionSet
+.noMotion
+	lda		#0
+	sta		HMBL
+.motionSet
+
+	; Clear player 0 motion so it doesn't drift
+	lda		#0
+	sta		HMP0
+
+	sta		WSYNC
+	sta		HMOVE			; apply all motion (player + ball)
 	sta		WSYNC
 
 	lda		#0
@@ -404,10 +416,8 @@ DrawScreen
 	sta		ENABL
 	jmp		.ballDraw_done
 .drawBall
-	; Only draw if ballactive == 1 (fully visible)
 	lda		ballactive
-	cmp		#1
-	bne		.hideBall
+	beq		.hideBall
 	lda		#2
 	sta		ENABL
 	jmp		.ballDraw_done
@@ -567,7 +577,8 @@ SetHorizPos subroutine
 ;------------------------------------------------
 scoretableIndex
 	.byte	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
-	
+
+	align 256
 scoretable
 zero
 	.byte	%00111100
