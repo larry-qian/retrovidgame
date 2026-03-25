@@ -1,26 +1,15 @@
 ------- FILE finalgame.dasm LEVEL 1 PASS 2
       1  10000 ????						; Notes:
-      2  10000 ????						; 1. [FIXED] Obstacle no longer spawns immediately - 2 second delay
-      3  10000 ????						; 2. [FIXED] Replaced missile with ball object - no more scanline shifting
-      4  10000 ????						; 3. [FIXED] Ball uses 2-frame spawn hide to avoid wrong position on first frame
-      5  10000 ????						; 4. [FIXED] Sprite boundary clamping tightened to prevent edge stretching
-      6  10000 ????						; 5. [FIXED] Score now increments once per second (60-frame counter)
-      7  10000 ????						; 6. keep idea of collecting objects around the screen, perhaps give a
-      8  10000 ????						;    timer (shown by them flashing) and if the player fails to collect
-      9  10000 ????						;    them they lose a life?
-     10  10000 ????						; Next steps:
-     11  10000 ????						; 1. [DONE] add delay to obstacle spawn
-     12  10000 ????						; 2. add lives to player, and make the player lose lives when they are hit
-     13  10000 ????						;    by a projectile
-     14  10000 ????						; 3. add some kind of background to the game
-     15  10000 ????						; 4. [DONE] change points from per frame to per second (NTSC = ~60fps)
-     16  10000 ????						;------------------------------------------------
-     17  10000 ????						;
-     18  10000 ????						; Atari VCS Game
-     19  10000 ????						; by
-     20  10000 ????						;
-     21  10000 ????						;------------------------------------------------
-     22  10000 ????				       processor	6502
+      2  10000 ????						;
+      3  10000 ????						; TODO:
+      4  10000 ????						;
+      5  10000 ????						;------------------------------------------------
+      6  10000 ????						;
+      7  10000 ????						; Atari VCS Game
+      8  10000 ????						; by
+      9  10000 ????						;
+     10  10000 ????						;------------------------------------------------
+     11  10000 ????				       processor	6502
 ------- FILE vcs.h LEVEL 2 PASS 2
       0  10000 ????				       include	vcs.h
       1  10000 ????						; VCS.H
@@ -50,7 +39,7 @@
      25  10000 ????						;			    used for code assembly.
      26  10000 ????						; 1.04  12/NOV/2003	 Added TIA_BASE_WRITE_ADDRESS and TIA_BASE_READ_ADDRESS for
      27  10000 ????						;			 convenient disassembly/reassembly compatibility for hardware
-     28  10000 ????						;			 mirrored reading/writing differences.	This is more a 
+     28  10000 ????						;			 mirrored reading/writing differences.	This is more a
      29  10000 ????						;			 readability issue, and binary compatibility with disassembled
      30  10000 ????						;			 and reassembled sources.  Per Manuel Rotschkar's suggestion.
      31  10000 ????						; 1.03  12/MAY/2003	 Added SEG segment at end of file to fix old-code compatibility
@@ -92,7 +81,7 @@
      67  10000 ????						; for the mirrored ROM hardware registers.
      68  10000 ????
      69  10000 ????						; Usage: As per above, define the TIA_BASE_READ_ADDRESS and/or TIA_BASE_WRITE_ADDRESS
-     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined, 
+     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined,
      71  10000 ????						; they defaut to the TIA_BASE_ADDRESS.
      72  10000 ????
      73  10000 ????			   -	       IFNCONST	TIA_BASE_READ_ADDRESS
@@ -259,13 +248,13 @@
      31  0000 ????						;
      32  0000 ????						; 1.02  14/JUN/2003	 - VERTICAL_SYNC macro added
      33  0000 ????						;			   (standardised macro for vertical synch code)
-     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added. 
+     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added.
      35  0000 ????						;			 - NO_ILLEGAL_OPCODES switch implemented
      36  0000 ????						; 1.0	22/MAR/2003		Initial release
      37  0000 ????
-     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage, 
+     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage,
      39  0000 ????						;   define the symbol NO_ILLEGAL_OPCODES (-DNO_ILLEGAL_OPCODES=1 on command-line).
-     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file 
+     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file
      41  0000 ????						;   *after* including VCS.H (as the non-illegal opcodes access hardware
      42  0000 ????						;   registers and require them to be defined first).
      43  0000 ????
@@ -397,55 +386,55 @@
     169  0000 ????
     170  0000 ????						; EOF
 ------- FILE finalgame.dasm
-     25  0000 ????
+     14  0000 ????
+     15  0000 ????						;------------------------------------------------
+     16  0000 ????						; Constants
+     17  0000 ????						;------------------------------------------------
+     18  0000 ????	       00 00	   BLACK      =	#$00
+     19  0000 ????	       00 07	   SCORE_HEIGHT =	#7
+     20  0000 ????	       00 06	   BIKE_HEIGHT =	#6
+     21  0000 ????	       00 9e	   PLAY_HEIGHT =	#158
+     22  0000 ????	       00 04	   BALL_HEIGHT =	#4
+     23  0000 ????
+     24  0000 ????						;------------------------------------------------
+     25  0000 ????						; RAM
      26  0000 ????						;------------------------------------------------
-     27  0000 ????						; Constants
-     28  0000 ????						;------------------------------------------------
-     29  0000 ????	       00 00	   BLACK      =	#$00
-     30  0000 ????	       00 07	   SCORE_HEIGHT =	#7
-     31  0000 ????	       00 06	   BIKE_HEIGHT =	#6
-     32  0000 ????	       00 9e	   PLAY_HEIGHT =	#158
-     33  0000 ????	       00 04	   BALL_HEIGHT =	#4
-     34  0000 ????
-     35  0000 ????						;------------------------------------------------
-     36  0000 ????						; RAM
-     37  0000 ????						;------------------------------------------------
-     38 U00a0 ????				      SEG.U	variables
-     39 U0080					      ORG	$80
-     40 U0080
-     41 U0080		       00	   bgcolor    .byte.b
-     42 U0081		       00	   frame      .byte.b
-     43 U0082		       00	   p0x	      .byte.b
-     44 U0083		       00	   p0y	      .byte.b
-     45 U0084
-     46 U0084		       00 00	   score      ds	2
-     47 U0086		       00 00 00 00*scorepointers ds	12
-     48 U0092		       00	   scoreHeight .byte.b
-     49 U0093		       00	   temp       .byte.b
-     50 U0094		       00	   temp2      .byte.b
-     51 U0095
-     52 U0095		       00 00	   sprite0gfx ds	2
-     53 U0097		       00	   p0gfx      .byte.b
-     54 U0098		       00	   p0color    .byte.b
-     55 U0099		       00	   p0ycounter .byte.b
-     56 U009a
-     57 U009a							; --- Ball obstacle variables ---
-     58 U009a		       00	   bally      .byte.b		; Y position in play area
-     59 U009b		       00	   ballactive .byte.b		; 0=inactive, 1=visible
-     60 U009c		       00	   balldelay  .byte.b		; frame countdown before next spawn
-     61 U009d		       00	   ballneedpos .byte.b		; >0 = frames until ball becomes visible after reposition
-     62 U009e		       00	   balltimer  .byte.b		; frames remaining in current flight
-     63 U009f
-     64 U009f							; --- Score timer ---
-     65 U009f		       00	   scoreTimer .byte.b		; counts frames, increments score at 60
-     66 U00a0
-     67 U00a0							;------------------------------------------------
-     68 U00a0							; Start of ROM
-     69 U00a0							;------------------------------------------------
-     70  10000 ????				       SEG	Bank0
-     71  f000					      ORG	$F000
-     72  f000
-     73  f000				   Start
+     27 U00a0 ????				      SEG.U	variables
+     28 U0080					      ORG	$80
+     29 U0080
+     30 U0080		       00	   bgcolor    .byte.b
+     31 U0081		       00	   frame      .byte.b
+     32 U0082		       00	   p0x	      .byte.b
+     33 U0083		       00	   p0y	      .byte.b
+     34 U0084
+     35 U0084		       00 00	   score      ds	2
+     36 U0086		       00 00 00 00*scorepointers ds	12
+     37 U0092		       00	   scoreHeight .byte.b
+     38 U0093		       00	   temp       .byte.b
+     39 U0094		       00	   temp2      .byte.b
+     40 U0095
+     41 U0095		       00 00	   sprite0gfx ds	2
+     42 U0097		       00	   p0gfx      .byte.b
+     43 U0098		       00	   p0color    .byte.b
+     44 U0099		       00	   p0ycounter .byte.b
+     45 U009a
+     46 U009a							; --- Ball obstacle variables ---
+     47 U009a		       00	   bally      .byte.b		; Y position in play area
+     48 U009b		       00	   ballactive .byte.b		; 0=inactive, 1=visible
+     49 U009c		       00	   balldelay  .byte.b		; frame countdown before next spawn
+     50 U009d		       00	   ballneedpos .byte.b		; >0 = frames until ball becomes visible after reposition
+     51 U009e		       00	   balltimer  .byte.b		; frames remaining in current flight
+     52 U009f
+     53 U009f							; --- Score timer ---
+     54 U009f		       00	   scoreTimer .byte.b		; counts frames, increments score at 60
+     55 U00a0
+     56 U00a0							;------------------------------------------------
+     57 U00a0							; Start of ROM
+     58 U00a0							;------------------------------------------------
+     59  10000 ????				       SEG	Bank0
+     60  f000					      ORG	$F000
+     61  f000
+     62  f000				   Start
       0  f000					      CLEAN_START
       1  f000		       78		      sei
       2  f001		       d8		      cld
@@ -462,645 +451,645 @@
      13  f007		       48		      pha
      14  f008		       d0 fb		      bne	.CLEAR_STACK
      15  f00a
-     75  f00a
-     76  f00a		       a9 50		      lda	#80
-     77  f00c		       85 82		      sta	p0x
-     78  f00e		       a9 3c		      lda	#60
-     79  f010		       85 83		      sta	p0y
-     80  f012
-     81  f012		       a9 00		      lda	#<PlayerGfx
-     82  f014		       85 95		      sta	sprite0gfx
-     83  f016		       a9 f4		      lda	#>PlayerGfx
-     84  f018		       85 96		      sta	sprite0gfx+1
-     85  f01a
-     86  f01a		       a2 07		      ldx	#7
-     87  f01c				   .initScore
-     88  f01c		       a9 f3		      lda	#>scoretable
-     89  f01e		       95 86		      sta	scorepointers,x
-     90  f020		       ca		      dex
-     91  f021		       a9 00		      lda	#<scoretable
-     92  f023		       95 86		      sta	scorepointers,x
-     93  f025		       ca		      dex
-     94  f026		       10 f4		      bpl	.initScore
-     95  f028
-     96  f028		       a9 50		      lda	#<blank
-     97  f02a		       85 8e		      sta	scorepointers+8
-     98  f02c		       85 90		      sta	scorepointers+10
-     99  f02e		       a9 f3		      lda	#>blank
-    100  f030		       85 8f		      sta	scorepointers+9
-    101  f032		       85 91		      sta	scorepointers+11
-    102  f034
-    103  f034							; --- Initialize ball obstacle ---
-    104  f034		       a9 00		      lda	#0
-    105  f036		       85 9b		      sta	ballactive
-    106  f038		       85 9d		      sta	ballneedpos
-    107  f03a		       a9 14		      lda	#20
-    108  f03c		       85 9a		      sta	bally	; first Y position near top
-    109  f03e		       a9 78		      lda	#120	; ~2 second delay before first spawn
-    110  f040		       85 9c		      sta	balldelay
-    111  f042
-    112  f042							; --- Initialize score timer ---
-    113  f042		       a9 00		      lda	#0
-    114  f044		       85 9f		      sta	scoreTimer
-    115  f046
-    116  f046							;------------------------------------------------
-    117  f046							; Vertical Blank
-    118  f046							;------------------------------------------------
-    119  f046				   MainLoop
-    120  f046		       a9 02		      lda	#2
-    121  f048		       85 00		      sta	VSYNC
-    122  f04a		       85 02		      sta	WSYNC
-    123  f04c		       85 02		      sta	WSYNC
-    124  f04e		       85 02		      sta	WSYNC
-    125  f050		       a9 2b		      lda	#43
-    126  f052		       8d 96 02 	      sta	TIM64T
-    127  f055		       a9 00		      lda	#0
-    128  f057		       85 00		      sta	VSYNC
-    129  f059
-    130  f059		       a9 0e		      lda	#$0E
-    131  f05b		       85 80		      sta	bgcolor
-    132  f05d
-    133  f05d							; --- Clear collision registers ---
-    134  f05d		       85 2c		      sta	CXCLR
-    135  f05f
-    136  f05f		       e6 81		      inc	frame
-    137  f061
-    138  f061							; ===================
-    139  f061							; Score - increment once per second (every 60 frames)
-    140  f061							; ===================
-    141  f061		       e6 9f		      inc	scoreTimer
-    142  f063		       a5 9f		      lda	scoreTimer
-    143  f065		       c9 3c		      cmp	#60
-    144  f067		       90 10		      bcc	.skipScore
-    145  f069
-    146  f069		       a9 00		      lda	#0
-    147  f06b		       85 9f		      sta	scoreTimer
-    148  f06d
-    149  f06d		       a9 01		      lda	#1
-    150  f06f		       a2 00		      ldx	#0
-    151  f071		       a0 00		      ldy	#0
-    152  f073		       20 52 f2 	      jsr	AddScore
-    153  f076		       20 7b f2 	      jsr	LoadScorePointers
-    154  f079
-    155  f079				   .skipScore
-    156  f079
-    157  f079							; ===================
-    158  f079							; Move Ball Obstacle
-    159  f079							; ===================
-    160  f079							; Pure game logic — no sta WSYNC here.
-    161  f079							; The VBlank timer (TIM64T) handles all VBlank timing.
-    162  f079							; Ball moves via HMOVE in the kernel, not by recalculating position.
-    163  f079				   MoveBall
-    164  f079							; If in delay, count down and skip
-    165  f079		       a5 9c		      lda	balldelay
-    166  f07b		       f0 05		      beq	.noDelay
-    167  f07d		       c6 9c		      dec	balldelay
-    168  f07f		       4c ae f0 	      jmp	.ballLogicDone
-    169  f082				   .noDelay
-    170  f082		       a5 9b		      lda	ballactive
-    171  f084		       f0 0f		      beq	.spawnBall
-    172  f086
-    173  f086							; Ball is active — count down flight timer
-    174  f086		       c6 9e		      dec	balltimer
-    175  f088		       d0 24		      bne	.ballLogicDone
-    176  f08a
-    177  f08a							; Timer expired — ball has crossed the screen
-    178  f08a		       a9 00		      lda	#0
-    179  f08c		       85 9b		      sta	ballactive
-    180  f08e		       a9 78		      lda	#120	; FIXED: 2 sec delay before next spawn (was 30)
-    181  f090		       85 9c		      sta	balldelay
-    182  f092		       4c ae f0 	      jmp	.ballLogicDone
-    183  f095
-    184  f095				   .spawnBall
-    185  f095							; Activate ball, flag for coarse positioning
-    186  f095		       a9 01		      lda	#1
-    187  f097		       85 9b		      sta	ballactive
-    188  f099		       a9 02		      lda	#2
-    189  f09b		       85 9d		      sta	ballneedpos	; 2 = reposition this frame, 1 = still hidden next frame
-    190  f09d		       a9 4b		      lda	#75	; FIXED: 75 frames * 2px/frame = 150px total travel!
-    191  f09f		       85 9e		      sta	balltimer
-    192  f0a1
-    193  f0a1							; Step Y down by 12 each spawn, wrap around
-    194  f0a1		       a5 9a		      lda	bally
-    195  f0a3		       18		      clc
-    196  f0a4		       69 0c		      adc	#12
-    197  f0a6		       c9 98		      cmp	#PLAY_HEIGHT-6
-    198  f0a8		       90 02		      bcc	.yOk
-    199  f0aa		       a9 14		      lda	#20
-    200  f0ac				   .yOk
-    201  f0ac		       85 9a		      sta	bally
-    202  f0ae
-    203  f0ae				   .ballLogicDone
-    204  f0ae
-    205  f0ae							; ===================
-    206  f0ae							; Joystick Input
-    207  f0ae							; ===================
-    208  f0ae				   CheckUp
-    209  f0ae		       a9 10		      lda	#%00010000
-    210  f0b0		       2c 80 02 	      bit	SWCHA
-    211  f0b3		       d0 0a		      bne	.endUp
-    212  f0b5		       a5 83		      lda	p0y
-    213  f0b7		       c9 98		      cmp	#PLAY_HEIGHT-BIKE_HEIGHT
-    214  f0b9		       b0 04		      bcs	.endUp
-    215  f0bb		       e6 83		      inc	p0y
-    216  f0bd		       e6 83		      inc	p0y
-    217  f0bf				   .endUp
-    218  f0bf				   CheckDown
-    219  f0bf		       a9 20		      lda	#%00100000
-    220  f0c1		       2c 80 02 	      bit	SWCHA
-    221  f0c4		       d0 0a		      bne	.endDown
-    222  f0c6		       a5 83		      lda	p0y
-    223  f0c8		       c9 0c		      cmp	#BIKE_HEIGHT+BIKE_HEIGHT
-    224  f0ca		       90 04		      bcc	.endDown
-    225  f0cc		       c6 83		      dec	p0y
-    226  f0ce		       c6 83		      dec	p0y
-    227  f0d0				   .endDown
-    228  f0d0				   CheckRight
-    229  f0d0		       a9 80		      lda	#%10000000
-    230  f0d2		       2c 80 02 	      bit	SWCHA
-    231  f0d5		       d0 0e		      bne	.endRight
-    232  f0d7		       a9 00		      lda	#0
-    233  f0d9		       85 0b		      sta	REFP0
-    234  f0db		       a5 82		      lda	p0x
-    235  f0dd		       c9 94		      cmp	#148
-    236  f0df		       b0 04		      bcs	.endRight
-    237  f0e1		       e6 82		      inc	p0x
-    238  f0e3		       e6 82		      inc	p0x
-    239  f0e5				   .endRight
-    240  f0e5				   CheckLeft
-    241  f0e5		       a9 40		      lda	#%01000000
-    242  f0e7		       2c 80 02 	      bit	SWCHA
-    243  f0ea		       d0 0e		      bne	EndInput
-    244  f0ec		       a9 08		      lda	#%00001000
-    245  f0ee		       85 0b		      sta	REFP0
-    246  f0f0		       a5 82		      lda	p0x
-    247  f0f2		       c9 02		      cmp	#2
-    248  f0f4		       90 04		      bcc	EndInput
-    249  f0f6		       c6 82		      dec	p0x
-    250  f0f8		       c6 82		      dec	p0x
-    251  f0fa				   EndInput
-    252  f0fa
-    253  f0fa		       85 02		      sta	WSYNC	; sync before timer wait to stabilize VBlank duration
-    254  f0fc				   .waitForVBlank
-    255  f0fc		       ad 84 02 	      lda	INTIM
-    256  f0ff		       d0 fb		      bne	.waitForVBlank
-    257  f101		       85 02		      sta	WSYNC
-    258  f103		       85 01		      sta	VBLANK
-    259  f105
-    260  f105							;------------------------------------------------
-    261  f105							; Kernel
-    262  f105							;------------------------------------------------
-    263  f105				   DrawScreen
-    264  f105		       a2 09		      ldx	#9
-    265  f107				   .topSpacer
-    266  f107		       a5 80		      lda	bgcolor
-    267  f109		       85 06		      sta	COLUP0
-    268  f10b		       85 07		      sta	COLUP1
-    269  f10d		       ca		      dex
-    270  f10e		       85 02		      sta	WSYNC
-    271  f110		       d0 f5		      bne	.topSpacer
-    272  f112
-    273  f112							; initialize the score 
-    274  f112		       a9 00		      lda	#0
-    275  f114		       85 02		      sta	WSYNC
-    276  f116		       85 0b		      sta	REFP0
-    277  f118		       85 0c		      sta	REFP1
-    278  f11a		       85 1b		      sta	GRP0
-    279  f11c		       85 1c		      sta	GRP1
-    280  f11e		       85 1d		      sta	ENAM0
-    281  f120		       85 1e		      sta	ENAM1
-    282  f122		       85 1f		      sta	ENABL
-    283  f124		       85 02		      sta	WSYNC
-    284  f126		       ea		      nop
-    285  f127		       85 1b		      sta	GRP0
-    286  f129		       85 1c		      sta	GRP1
-    287  f12b		       a0 07		      ldy	#SCORE_HEIGHT
-    288  f12d		       84 92		      sty	scoreHeight
-    289  f12f		       a9 03		      lda	#$03
-    290  f131		       85 04		      sta	NUSIZ0
-    291  f133		       85 05		      sta	NUSIZ1
-    292  f135		       85 25		      sta	VDELP0
-    293  f137		       85 26		      sta	VDELP1
-    294  f139		       a9 f0		      lda	#$F0
-    295  f13b		       85 20		      sta	HMP0
-    296  f13d		       a9 00		      lda	#0
-    297  f13f		       ea		      nop
-    298  f140		       85 10		      sta	RESP0
-    299  f142		       85 11		      sta	RESP1
-    300  f144		       85 02		      sta	WSYNC
-    301  f146		       85 2a		      sta	HMOVE
-    302  f148		       85 02		      sta	WSYNC
-    303  f14a
-    304  f14a							; display the score
-    305  f14a							;Cycles  Pixel    GRP0   GRP0A   GRP1	 GRP1A
-    306  f14a				   .scoreLoop
-    307  f14a		       a4 92		      ldy	scoreHeight	;+3  63  189
-    308  f14c		       b1 86		      lda	(scorepointers),y	;+5  68  204
-    309  f14e		       85 1b		      sta	GRP0	;+3  71  213	   D1	  --	  --	 --
-    310  f150		       85 02		      sta	WSYNC
-    311  f152		       b1 88		      lda	(scorepointers+2),y	;+5   5   15
-    312  f154		       85 1c		      sta	GRP1	;+3   8   24	   D1	  D1	  D2	 --
-    313  f156		       b1 8a		      lda	(scorepointers+4),y	;+5  13   39
-    314  f158		       85 1b		      sta	GRP0	;+3  16   48	   D3	  D1	  D2	 D2
-    315  f15a		       b1 8c		      lda	(scorepointers+6),y	;+5  21   63
-    316  f15c		       85 93		      sta	temp	;+3  24   72
-    317  f15e		       b1 8e		      lda	(scorepointers+8),y	;+5  29   87
-    318  f160		       aa		      tax		;+2  31   93
-    319  f161		       b1 90		      lda	(scorepointers+10),y	;+5  36  108
-    320  f163		       a8		      tay		;+2  38  114
-    321  f164		       a5 93		      lda	temp	;+3  41  123		   !
-    322  f166		       85 1c		      sta	GRP1	;+3  44  132	   D3	  D3	  D4	 D2!
-    323  f168		       86 1b		      stx	GRP0	;+3  47  141	   D5	  D3!	  D4	 D4
-    324  f16a		       84 1c		      sty	GRP1	;+3  50  150	   D5	  D5	  D6	 D4!
-    325  f16c		       85 1b		      sta	GRP0	;+3  53  159	   D4*	  D5!	  D6	 D6!
-    326  f16e		       c6 92		      dec	scoreHeight	;+5  58  174				  !
-    327  f170		       10 d8		      bpl	.scoreLoop	;+2  60  180
-    328  f172
-    329  f172		       85 02		      sta	WSYNC
-    330  f174		       a9 00		      lda	#0
-    331  f176		       85 1b		      sta	GRP0
-    332  f178		       85 1c		      sta	GRP1
-    333  f17a		       85 25		      sta	VDELP0
-    334  f17c		       85 26		      sta	VDELP1
-    335  f17e		       85 04		      sta	NUSIZ0
-    336  f180		       85 05		      sta	NUSIZ1
-    337  f182
-    338  f182							; ===================
-    339  f182							; Transition to play area
-    340  f182							; ===================
-    341  f182							; Clear all motion registers before positioning
-    342  f182		       85 2b		      sta	HMCLR
-    343  f184
-    344  f184							; Position player 0 with coarse positioning
-    345  f184							; SetHorizPos sets both RESP0 (coarse) and HMP0 (fine) 
-    346  f184		       a5 82		      lda	p0x
-    347  f186		       a2 00		      ldx	#0
-    348  f188		       20 ac f2 	      jsr	SetHorizPos
-    349  f18b
-    350  f18b							; Ball: handle positioning and visibility
-    351  f18b							; ballneedpos: 2 = do RESBL this frame (hidden), 1 = still hidden, 0 = normal
-    352  f18b		       a5 9d		      lda	ballneedpos
-    353  f18d		       c9 02		      cmp	#2
-    354  f18f		       d0 09		      bne	.checkSettle
-    355  f191							; Reset ball to left edge during HBLANK
-    356  f191		       85 02		      sta	WSYNC
-    357  f193		       85 14		      sta	RESBL	; coarse position ball at left edge
-    358  f195		       c6 9d		      dec	ballneedpos	; now 1 = hidden next frame too
-    359  f197		       4c a7 f1 	      jmp	.donePos
-    360  f19a				   .checkSettle
-    361  f19a		       c9 01		      cmp	#1
-    362  f19c		       d0 07		      bne	.noRepos
-    363  f19e							; Ball was repositioned last frame — keep hidden one more frame
-    364  f19e							; so position fully settles before becoming visible
-    365  f19e		       85 02		      sta	WSYNC
-    366  f1a0		       c6 9d		      dec	ballneedpos	; now 0 = visible next frame
-    367  f1a2		       4c a7 f1 	      jmp	.donePos
-    368  f1a5				   .noRepos
-    369  f1a5		       85 02		      sta	WSYNC	; keep scanline count consistent
-    370  f1a7				   .donePos
-    371  f1a7
-    372  f1a7							; Set ball horizontal motion: move 2 pixels right per frame
-    373  f1a7							; Only apply motion when ball is fully visible (ballneedpos == 0)
-    374  f1a7		       a5 9b		      lda	ballactive
-    375  f1a9		       f0 0b		      beq	.noMotion
-    376  f1ab		       a5 9d		      lda	ballneedpos
-    377  f1ad		       d0 07		      bne	.noMotion	; don't move while settling
-    378  f1af		       a9 f0		      lda	#$F0	; 1 pixel right per Stella guide motion table
-    379  f1b1		       85 24		      sta	HMBL
-    380  f1b3		       4c b6 f1 	      jmp	.motionSet
-    381  f1b6				   .noMotion
-    382  f1b6							; HMBL already 0 from HMCLR
-    383  f1b6				   .motionSet
-    384  f1b6
-    385  f1b6		       85 02		      sta	WSYNC
-    386  f1b8		       85 2a		      sta	HMOVE	; apply player fine position + ball motion
-    387  f1ba		       85 02		      sta	WSYNC
-    388  f1bc
-    389  f1bc		       a9 00		      lda	#0
-    390  f1be		       85 1b		      sta	GRP0
-    391  f1c0		       85 04		      sta	NUSIZ0
-    392  f1c2		       85 97		      sta	p0gfx
-    393  f1c4		       a9 0e		      lda	#$0E
-    394  f1c6		       85 06		      sta	COLUP0
-    395  f1c8
-    396  f1c8							; Ball color - bright red/orange to stand out
-    397  f1c8		       a9 36		      lda	#$36
-    398  f1ca		       85 08		      sta	COLUPF
-    399  f1cc
-    400  f1cc							; Ball size: use CTRLPF to set ball width to 4 clocks
-    401  f1cc		       a9 20		      lda	#%00100000	; ball size = 4 clocks wide
-    402  f1ce		       85 0a		      sta	CTRLPF
-    403  f1d0
-    404  f1d0		       a9 ff		      lda	#$FF
-    405  f1d2		       85 99		      sta	p0ycounter
-    406  f1d4
-    407  f1d4		       a9 00		      lda	#0
-    408  f1d6		       85 1f		      sta	ENABL
-    409  f1d8
-    410  f1d8							; ===================
-    411  f1d8							; Play Area
-    412  f1d8							; ===================
-    413  f1d8		       a2 9e		      ldx	#PLAY_HEIGHT
-    414  f1da				   .playArea
-    415  f1da		       a5 97		      lda	p0gfx
-    416  f1dc		       85 1b		      sta	GRP0
-    417  f1de
-    418  f1de							; --- Ball drawing ---
-    419  f1de		       8a		      txa
-    420  f1df		       38		      sec
-    421  f1e0		       e5 9a		      sbc	bally
-    422  f1e2		       c9 04		      cmp	#BALL_HEIGHT
-    423  f1e4		       90 07		      bcc	.drawBall
-    424  f1e6		       a9 00		      lda	#0
-    425  f1e8		       85 1f		      sta	ENABL
-    426  f1ea		       4c 00 f2 	      jmp	.ballDraw_done
-    427  f1ed				   .drawBall
-    428  f1ed							; Only draw if active AND not settling (ballneedpos == 0)
-    429  f1ed		       a5 9b		      lda	ballactive
-    430  f1ef		       f0 0b		      beq	.hideBall
-    431  f1f1		       a5 9d		      lda	ballneedpos
-    432  f1f3		       d0 07		      bne	.hideBall
-    433  f1f5		       a9 02		      lda	#2
-    434  f1f7		       85 1f		      sta	ENABL
-    435  f1f9		       4c 00 f2 	      jmp	.ballDraw_done
-    436  f1fc				   .hideBall
-    437  f1fc		       a9 00		      lda	#0
-    438  f1fe		       85 1f		      sta	ENABL
-    439  f200				   .ballDraw_done
-    440  f200
-    441  f200							; --- Player sprite drawing ---
-    442  f200		       a4 99		      ldy	p0ycounter
-    443  f202		       e4 83		      cpx	p0y
-    444  f204		       d0 02		      bne	.noTrigP0
-    445  f206		       a0 06		      ldy	#BIKE_HEIGHT
-    446  f208				   .noTrigP0
-    447  f208		       c0 ff		      cpy	#$FF
-    448  f20a		       f0 08		      beq	.noDrawP0
-    449  f20c		       b1 95		      lda	(sprite0gfx),y
-    450  f20e		       85 97		      sta	p0gfx
-    451  f210		       88		      dey
-    452  f211		       4c 18 f2 	      jmp	.doneP0
-    453  f214				   .noDrawP0
-    454  f214		       a9 00		      lda	#0
-    455  f216		       85 97		      sta	p0gfx
-    456  f218				   .doneP0
-    457  f218		       84 99		      sty	p0ycounter
-    458  f21a
-    459  f21a		       ca		      dex
-    460  f21b		       85 02		      sta	WSYNC
-    461  f21d		       d0 bb		      bne	.playArea
-    462  f21f
-    463  f21f							; pad to hit 192 scanlines
-    464  f21f		       85 02		      sta	WSYNC
-    465  f221		       85 02		      sta	WSYNC
-    466  f223		       85 02		      sta	WSYNC
-    467  f225		       85 02		      sta	WSYNC
-    468  f227		       85 02		      sta	WSYNC
-    469  f229		       85 02		      sta	WSYNC
-    470  f22b		       85 02		      sta	WSYNC
-    471  f22d		       85 02		      sta	WSYNC
-    472  f22f
-    473  f22f							;------------------------------------------------
-    474  f22f							; Overscan
-    475  f22f							;------------------------------------------------
-    476  f22f		       a9 42		      lda	#%01000010
-    477  f231		       85 02		      sta	WSYNC
-    478  f233		       85 01		      sta	VBLANK
-    479  f235		       a9 24		      lda	#36
-    480  f237		       8d 96 02 	      sta	TIM64T
-    481  f23a
-    482  f23a		       a9 00		      lda	#0
-    483  f23c		       85 1b		      sta	GRP0
-    484  f23e		       85 1f		      sta	ENABL
-    485  f240
-    486  f240							; ===================
-    487  f240							; Collision Detection (Ball-Player)
-    488  f240							; ===================
-    489  f240							; Ball-to-Player0 collision is bit 6 of CXP0FB
-    490  f240		       a5 02		      lda	CXP0FB
-    491  f242		       29 40		      and	#%01000000
-    492  f244		       f0 04		      beq	.noCollision
-    493  f246
-    494  f246		       a9 42		      lda	#$42
-    495  f248		       85 80		      sta	bgcolor
-    496  f24a
-    497  f24a				   .noCollision
-    498  f24a
-    499  f24a				   .waitForOverscan
-    500  f24a		       ad 84 02 	      lda	INTIM
-    501  f24d		       d0 fb		      bne	.waitForOverscan
-    502  f24f
-    503  f24f		       4c 46 f0 	      jmp	MainLoop
-    504  f252
-    505  f252							;------------------------------------------------
-    506  f252							; Subroutines
-    507  f252							;------------------------------------------------
-    508  f252				   AddScore
-    509  f252		       f8		      sed
-    510  f253		       18		      clc
-    511  f254		       65 85		      adc	score+1
-    512  f256		       85 85		      sta	score+1
-    513  f258		       8a		      txa
-    514  f259		       65 84		      adc	score
-    515  f25b		       85 84		      sta	score
-    516  f25d		       d8		      cld
-    517  f25e		       60		      rts
-    518  f25f
-    519  f25f				   SubtractScore
-    520  f25f		       f8		      sed
-    521  f260		       38		      sec
-    522  f261		       85 94		      sta	temp2
-    523  f263		       a5 86		      lda	score+2
-    524  f265		       e5 94		      sbc	temp2
-    525  f267		       85 86		      sta	score+2
-    526  f269		       86 94		      stx	temp2
-    527  f26b		       a5 85		      lda	score+1
-    528  f26d		       e5 94		      sbc	temp2
-    529  f26f		       85 85		      sta	score+1
-    530  f271		       84 94		      sty	temp2
-    531  f273		       a5 84		      lda	score
-    532  f275		       e5 94		      sbc	temp2
-    533  f277		       85 84		      sta	score
-    534  f279		       d8		      cld
-    535  f27a		       60		      rts
-    536  f27b
-    537  f27b				   LoadScorePointers
-    538  f27b		       a5 85		      lda	score+1
-    539  f27d		       29 0f		      and	#$0F
-    540  f27f		       aa		      tax
-    541  f280		       bd be f2 	      lda	scoretableIndex,x
-    542  f283		       85 8c		      sta	scorepointers+6
-    543  f285
-    544  f285		       a5 85		      lda	score+1
-    545  f287		       29 f0		      and	#$F0
-    546  f289		       4a		      lsr
-    547  f28a		       4a		      lsr
-    548  f28b		       4a		      lsr
-    549  f28c		       4a		      lsr
-    550  f28d		       aa		      tax
-    551  f28e		       bd be f2 	      lda	scoretableIndex,x
-    552  f291		       85 8a		      sta	scorepointers+4
-    553  f293
-    554  f293		       a5 84		      lda	score
-    555  f295		       29 0f		      and	#$0F
-    556  f297		       aa		      tax
-    557  f298		       bd be f2 	      lda	scoretableIndex,x
-    558  f29b		       85 88		      sta	scorepointers+2
-    559  f29d
-    560  f29d		       a5 84		      lda	score
-    561  f29f		       29 f0		      and	#$F0
-    562  f2a1		       4a		      lsr
-    563  f2a2		       4a		      lsr
-    564  f2a3		       4a		      lsr
-    565  f2a4		       4a		      lsr
-    566  f2a5		       aa		      tax
-    567  f2a6		       bd be f2 	      lda	scoretableIndex,x
-    568  f2a9		       85 86		      sta	scorepointers
-    569  f2ab
-    570  f2ab		       60		      rts
-    571  f2ac
-    572  f2ac				   SetHorizPos subroutine
-    573  f2ac		       85 02		      sta	WSYNC
-    574  f2ae		       38		      sec
-    575  f2af				   .divLoop
-    576  f2af		       e9 0f		      sbc	#15
-    577  f2b1		       b0 fc		      bcs	.divLoop
-    578  f2b3		       49 07		      eor	#7
-    579  f2b5		       0a		      asl
-    580  f2b6		       0a		      asl
-    581  f2b7		       0a		      asl
-    582  f2b8		       0a		      asl
-    583  f2b9		       95 20		      sta	HMP0,x
-    584  f2bb		       95 10		      sta	RESP0,x
-    585  f2bd		       60		      rts
-    586  f2be
-    587  f2be							;------------------------------------------------
-    588  f2be							; ROM Tables
-    589  f2be							;------------------------------------------------
-    590  f2be				   scoretableIndex
-    591  f2be		       00 08 10 18*	      .byte.b	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
-    592  f2c8
-    593  f300		       00 00 00 00*	      align	256
-    594  f300				   scoretable
-    595  f300				   zero
-    596  f300		       3c		      .byte.b	%00111100
-    597  f301		       66		      .byte.b	%01100110
-    598  f302		       66		      .byte.b	%01100110
-    599  f303		       66		      .byte.b	%01100110
-    600  f304		       66		      .byte.b	%01100110
-    601  f305		       66		      .byte.b	%01100110
-    602  f306		       66		      .byte.b	%01100110
-    603  f307		       3c		      .byte.b	%00111100
-    604  f308				   one
-    605  f308		       3c		      .byte.b	%00111100
-    606  f309		       18		      .byte.b	%00011000
-    607  f30a		       18		      .byte.b	%00011000
-    608  f30b		       18		      .byte.b	%00011000
-    609  f30c		       18		      .byte.b	%00011000
-    610  f30d		       18		      .byte.b	%00011000
-    611  f30e		       38		      .byte.b	%00111000
-    612  f30f		       18		      .byte.b	%00011000
-    613  f310				   two
-    614  f310		       7e		      .byte.b	%01111110
-    615  f311		       60		      .byte.b	%01100000
-    616  f312		       60		      .byte.b	%01100000
-    617  f313		       3c		      .byte.b	%00111100
-    618  f314		       06		      .byte.b	%00000110
-    619  f315		       06		      .byte.b	%00000110
-    620  f316		       46		      .byte.b	%01000110
-    621  f317		       3c		      .byte.b	%00111100
-    622  f318				   three
-    623  f318		       3c		      .byte.b	%00111100
-    624  f319		       46		      .byte.b	%01000110
-    625  f31a		       06		      .byte.b	%00000110
-    626  f31b		       0c		      .byte.b	%00001100
-    627  f31c		       0c		      .byte.b	%00001100
-    628  f31d		       06		      .byte.b	%00000110
-    629  f31e		       46		      .byte.b	%01000110
-    630  f31f		       3c		      .byte.b	%00111100
-    631  f320				   four
-    632  f320		       0c		      .byte.b	%00001100
-    633  f321		       0c		      .byte.b	%00001100
-    634  f322		       0c		      .byte.b	%00001100
-    635  f323		       7e		      .byte.b	%01111110
-    636  f324		       4c		      .byte.b	%01001100
-    637  f325		       2c		      .byte.b	%00101100
-    638  f326		       1c		      .byte.b	%00011100
-    639  f327		       0c		      .byte.b	%00001100
-    640  f328				   five
-    641  f328		       7c		      .byte.b	%01111100
-    642  f329		       46		      .byte.b	%01000110
-    643  f32a		       06		      .byte.b	%00000110
-    644  f32b		       06		      .byte.b	%00000110
-    645  f32c		       7c		      .byte.b	%01111100
-    646  f32d		       60		      .byte.b	%01100000
-    647  f32e		       60		      .byte.b	%01100000
-    648  f32f		       7e		      .byte.b	%01111110
-    649  f330				   six
-    650  f330		       3c		      .byte.b	%00111100
-    651  f331		       66		      .byte.b	%01100110
-    652  f332		       66		      .byte.b	%01100110
-    653  f333		       66		      .byte.b	%01100110
-    654  f334		       7c		      .byte.b	%01111100
-    655  f335		       60		      .byte.b	%01100000
-    656  f336		       62		      .byte.b	%01100010
-    657  f337		       3c		      .byte.b	%00111100
-    658  f338				   seven
-    659  f338		       18		      .byte.b	%00011000
-    660  f339		       18		      .byte.b	%00011000
-    661  f33a		       18		      .byte.b	%00011000
-    662  f33b		       18		      .byte.b	%00011000
-    663  f33c		       0c		      .byte.b	%00001100
-    664  f33d		       06		      .byte.b	%00000110
-    665  f33e		       42		      .byte.b	%01000010
-    666  f33f		       7e		      .byte.b	%01111110
-    667  f340				   eight
-    668  f340		       3c		      .byte.b	%00111100
-    669  f341		       66		      .byte.b	%01100110
-    670  f342		       66		      .byte.b	%01100110
-    671  f343		       3c		      .byte.b	%00111100
-    672  f344		       3c		      .byte.b	%00111100
-    673  f345		       66		      .byte.b	%01100110
-    674  f346		       66		      .byte.b	%01100110
-    675  f347		       3c		      .byte.b	%00111100
-    676  f348				   nine
-    677  f348		       3c		      .byte.b	%00111100
-    678  f349		       46		      .byte.b	%01000110
-    679  f34a		       06		      .byte.b	%00000110
-    680  f34b		       3e		      .byte.b	%00111110
-    681  f34c		       66		      .byte.b	%01100110
-    682  f34d		       66		      .byte.b	%01100110
-    683  f34e		       66		      .byte.b	%01100110
-    684  f34f		       3c		      .byte.b	%00111100
-    685  f350				   blank
-    686  f350		       00		      .byte.b	%00000000
-    687  f351		       00		      .byte.b	%00000000
-    688  f352		       00		      .byte.b	%00000000
-    689  f353		       00		      .byte.b	%00000000
-    690  f354		       00		      .byte.b	%00000000
-    691  f355		       00		      .byte.b	%00000000
-    692  f356		       00		      .byte.b	%00000000
-    693  f357		       00		      .byte.b	%00000000
-    694  f358
-    695  f400		       00 00 00 00*	      align	256
-    696  f400				   PlayerGfx
-    697  f400		       00		      .byte.b	%00000000
-    698  f401		       66		      .byte.b	%01100110
-    699  f402		       ff		      .byte.b	%11111111
-    700  f403		       7e		      .byte.b	%01111110
-    701  f404		       3c		      .byte.b	%00111100
-    702  f405		       3e		      .byte.b	%00111110
-    703  f406		       18		      .byte.b	%00011000
-    704  f407		       00		      .byte.b	%00000000
-    705  f408
-    706  f408							;------------------------------------------------
-    707  f408							; Interrupt Vectors
-    708  f408							;------------------------------------------------
+     64  f00a
+     65  f00a		       a9 50		      lda	#80
+     66  f00c		       85 82		      sta	p0x
+     67  f00e		       a9 3c		      lda	#60
+     68  f010		       85 83		      sta	p0y
+     69  f012
+     70  f012		       a9 00		      lda	#<PlayerGfx
+     71  f014		       85 95		      sta	sprite0gfx
+     72  f016		       a9 f4		      lda	#>PlayerGfx
+     73  f018		       85 96		      sta	sprite0gfx+1
+     74  f01a
+     75  f01a		       a2 07		      ldx	#7
+     76  f01c				   .initScore
+     77  f01c		       a9 f3		      lda	#>scoretable
+     78  f01e		       95 86		      sta	scorepointers,x
+     79  f020		       ca		      dex
+     80  f021		       a9 00		      lda	#<scoretable
+     81  f023		       95 86		      sta	scorepointers,x
+     82  f025		       ca		      dex
+     83  f026		       10 f4		      bpl	.initScore
+     84  f028
+     85  f028		       a9 50		      lda	#<blank
+     86  f02a		       85 8e		      sta	scorepointers+8
+     87  f02c		       85 90		      sta	scorepointers+10
+     88  f02e		       a9 f3		      lda	#>blank
+     89  f030		       85 8f		      sta	scorepointers+9
+     90  f032		       85 91		      sta	scorepointers+11
+     91  f034
+     92  f034							; --- Initialize ball obstacle ---
+     93  f034		       a9 00		      lda	#0
+     94  f036		       85 9b		      sta	ballactive
+     95  f038		       85 9d		      sta	ballneedpos
+     96  f03a		       a9 14		      lda	#20
+     97  f03c		       85 9a		      sta	bally	; first Y position near top
+     98  f03e		       a9 78		      lda	#120	; ~2 second delay before first spawn
+     99  f040		       85 9c		      sta	balldelay
+    100  f042
+    101  f042							; --- Initialize score timer ---
+    102  f042		       a9 00		      lda	#0
+    103  f044		       85 9f		      sta	scoreTimer
+    104  f046
+    105  f046							;------------------------------------------------
+    106  f046							; Vertical Blank
+    107  f046							;------------------------------------------------
+    108  f046				   MainLoop
+    109  f046		       a9 02		      lda	#2
+    110  f048		       85 00		      sta	VSYNC
+    111  f04a		       85 02		      sta	WSYNC
+    112  f04c		       85 02		      sta	WSYNC
+    113  f04e		       85 02		      sta	WSYNC
+    114  f050		       a9 2b		      lda	#43
+    115  f052		       8d 96 02 	      sta	TIM64T
+    116  f055		       a9 00		      lda	#0
+    117  f057		       85 00		      sta	VSYNC
+    118  f059
+    119  f059		       a9 0e		      lda	#$0E
+    120  f05b		       85 80		      sta	bgcolor
+    121  f05d
+    122  f05d							; --- Clear collision registers ---
+    123  f05d		       85 2c		      sta	CXCLR
+    124  f05f
+    125  f05f		       e6 81		      inc	frame
+    126  f061
+    127  f061							; ===================
+    128  f061							; Score - increment once per second (every 60 frames)
+    129  f061							; ===================
+    130  f061		       e6 9f		      inc	scoreTimer
+    131  f063		       a5 9f		      lda	scoreTimer
+    132  f065		       c9 3c		      cmp	#60
+    133  f067		       90 10		      bcc	.skipScore
+    134  f069
+    135  f069		       a9 00		      lda	#0
+    136  f06b		       85 9f		      sta	scoreTimer
+    137  f06d
+    138  f06d		       a9 01		      lda	#1
+    139  f06f		       a2 00		      ldx	#0
+    140  f071		       a0 00		      ldy	#0
+    141  f073		       20 52 f2 	      jsr	AddScore
+    142  f076		       20 7b f2 	      jsr	LoadScorePointers
+    143  f079
+    144  f079				   .skipScore
+    145  f079
+    146  f079							; ===================
+    147  f079							; Move Ball Obstacle
+    148  f079							; ===================
+    149  f079							; Pure game logic — no sta WSYNC here.
+    150  f079							; The VBlank timer (TIM64T) handles all VBlank timing.
+    151  f079							; Ball moves via HMOVE in the kernel, not by recalculating position.
+    152  f079				   MoveBall
+    153  f079							; If in delay, count down and skip
+    154  f079		       a5 9c		      lda	balldelay
+    155  f07b		       f0 05		      beq	.noDelay
+    156  f07d		       c6 9c		      dec	balldelay
+    157  f07f		       4c ae f0 	      jmp	.ballLogicDone
+    158  f082				   .noDelay
+    159  f082		       a5 9b		      lda	ballactive
+    160  f084		       f0 0f		      beq	.spawnBall
+    161  f086
+    162  f086							; Ball is active — count down flight timer
+    163  f086		       c6 9e		      dec	balltimer
+    164  f088		       d0 24		      bne	.ballLogicDone
+    165  f08a
+    166  f08a							; Timer expired — ball has crossed the screen
+    167  f08a		       a9 00		      lda	#0
+    168  f08c		       85 9b		      sta	ballactive
+    169  f08e		       a9 78		      lda	#120	; FIXED: 2 sec delay before next spawn (was 30)
+    170  f090		       85 9c		      sta	balldelay
+    171  f092		       4c ae f0 	      jmp	.ballLogicDone
+    172  f095
+    173  f095				   .spawnBall
+    174  f095							; Activate ball, flag for coarse positioning
+    175  f095		       a9 01		      lda	#1
+    176  f097		       85 9b		      sta	ballactive
+    177  f099		       a9 02		      lda	#2
+    178  f09b		       85 9d		      sta	ballneedpos	; 2 = reposition this frame, 1 = still hidden next frame
+    179  f09d		       a9 4b		      lda	#75	; FIXED: 75 frames * 2px/frame = 150px total travel!
+    180  f09f		       85 9e		      sta	balltimer
+    181  f0a1
+    182  f0a1							; Step Y down by 12 each spawn, wrap around
+    183  f0a1		       a5 9a		      lda	bally
+    184  f0a3		       18		      clc
+    185  f0a4		       69 0c		      adc	#12
+    186  f0a6		       c9 98		      cmp	#PLAY_HEIGHT-6
+    187  f0a8		       90 02		      bcc	.yOk
+    188  f0aa		       a9 14		      lda	#20
+    189  f0ac				   .yOk
+    190  f0ac		       85 9a		      sta	bally
+    191  f0ae
+    192  f0ae				   .ballLogicDone
+    193  f0ae
+    194  f0ae							; ===================
+    195  f0ae							; Joystick Input
+    196  f0ae							; ===================
+    197  f0ae				   CheckUp
+    198  f0ae		       a9 10		      lda	#%00010000
+    199  f0b0		       2c 80 02 	      bit	SWCHA
+    200  f0b3		       d0 0a		      bne	.endUp
+    201  f0b5		       a5 83		      lda	p0y
+    202  f0b7		       c9 98		      cmp	#PLAY_HEIGHT-BIKE_HEIGHT
+    203  f0b9		       b0 04		      bcs	.endUp
+    204  f0bb		       e6 83		      inc	p0y
+    205  f0bd		       e6 83		      inc	p0y
+    206  f0bf				   .endUp
+    207  f0bf				   CheckDown
+    208  f0bf		       a9 20		      lda	#%00100000
+    209  f0c1		       2c 80 02 	      bit	SWCHA
+    210  f0c4		       d0 0a		      bne	.endDown
+    211  f0c6		       a5 83		      lda	p0y
+    212  f0c8		       c9 0c		      cmp	#BIKE_HEIGHT+BIKE_HEIGHT
+    213  f0ca		       90 04		      bcc	.endDown
+    214  f0cc		       c6 83		      dec	p0y
+    215  f0ce		       c6 83		      dec	p0y
+    216  f0d0				   .endDown
+    217  f0d0				   CheckRight
+    218  f0d0		       a9 80		      lda	#%10000000
+    219  f0d2		       2c 80 02 	      bit	SWCHA
+    220  f0d5		       d0 0e		      bne	.endRight
+    221  f0d7		       a9 00		      lda	#0
+    222  f0d9		       85 0b		      sta	REFP0
+    223  f0db		       a5 82		      lda	p0x
+    224  f0dd		       c9 94		      cmp	#148
+    225  f0df		       b0 04		      bcs	.endRight
+    226  f0e1		       e6 82		      inc	p0x
+    227  f0e3		       e6 82		      inc	p0x
+    228  f0e5				   .endRight
+    229  f0e5				   CheckLeft
+    230  f0e5		       a9 40		      lda	#%01000000
+    231  f0e7		       2c 80 02 	      bit	SWCHA
+    232  f0ea		       d0 0e		      bne	EndInput
+    233  f0ec		       a9 08		      lda	#%00001000
+    234  f0ee		       85 0b		      sta	REFP0
+    235  f0f0		       a5 82		      lda	p0x
+    236  f0f2		       c9 02		      cmp	#2
+    237  f0f4		       90 04		      bcc	EndInput
+    238  f0f6		       c6 82		      dec	p0x
+    239  f0f8		       c6 82		      dec	p0x
+    240  f0fa				   EndInput
+    241  f0fa
+    242  f0fa		       85 02		      sta	WSYNC	; sync before timer wait to stabilize VBlank duration
+    243  f0fc				   .waitForVBlank
+    244  f0fc		       ad 84 02 	      lda	INTIM
+    245  f0ff		       d0 fb		      bne	.waitForVBlank
+    246  f101		       85 02		      sta	WSYNC
+    247  f103		       85 01		      sta	VBLANK
+    248  f105
+    249  f105							;------------------------------------------------
+    250  f105							; Kernel
+    251  f105							;------------------------------------------------
+    252  f105				   DrawScreen
+    253  f105		       a2 09		      ldx	#9
+    254  f107				   .topSpacer
+    255  f107		       a5 80		      lda	bgcolor
+    256  f109		       85 06		      sta	COLUP0
+    257  f10b		       85 07		      sta	COLUP1
+    258  f10d		       ca		      dex
+    259  f10e		       85 02		      sta	WSYNC
+    260  f110		       d0 f5		      bne	.topSpacer
+    261  f112
+    262  f112							; initialize the score
+    263  f112		       a9 00		      lda	#0
+    264  f114		       85 02		      sta	WSYNC
+    265  f116		       85 0b		      sta	REFP0
+    266  f118		       85 0c		      sta	REFP1
+    267  f11a		       85 1b		      sta	GRP0
+    268  f11c		       85 1c		      sta	GRP1
+    269  f11e		       85 1d		      sta	ENAM0
+    270  f120		       85 1e		      sta	ENAM1
+    271  f122		       85 1f		      sta	ENABL
+    272  f124		       85 02		      sta	WSYNC
+    273  f126		       ea		      nop
+    274  f127		       85 1b		      sta	GRP0
+    275  f129		       85 1c		      sta	GRP1
+    276  f12b		       a0 07		      ldy	#SCORE_HEIGHT
+    277  f12d		       84 92		      sty	scoreHeight
+    278  f12f		       a9 03		      lda	#$03
+    279  f131		       85 04		      sta	NUSIZ0
+    280  f133		       85 05		      sta	NUSIZ1
+    281  f135		       85 25		      sta	VDELP0
+    282  f137		       85 26		      sta	VDELP1
+    283  f139		       a9 f0		      lda	#$F0
+    284  f13b		       85 20		      sta	HMP0
+    285  f13d		       a9 00		      lda	#0
+    286  f13f		       ea		      nop
+    287  f140		       85 10		      sta	RESP0
+    288  f142		       85 11		      sta	RESP1
+    289  f144		       85 02		      sta	WSYNC
+    290  f146		       85 2a		      sta	HMOVE
+    291  f148		       85 02		      sta	WSYNC
+    292  f14a
+    293  f14a							; display the score
+    294  f14a							;Cycles  Pixel    GRP0   GRP0A   GRP1	 GRP1A
+    295  f14a				   .scoreLoop
+    296  f14a		       a4 92		      ldy	scoreHeight	;+3  63  189
+    297  f14c		       b1 86		      lda	(scorepointers),y	;+5  68  204
+    298  f14e		       85 1b		      sta	GRP0	;+3  71  213	   D1	  --	  --	 --
+    299  f150		       85 02		      sta	WSYNC
+    300  f152		       b1 88		      lda	(scorepointers+2),y	;+5   5   15
+    301  f154		       85 1c		      sta	GRP1	;+3   8   24	   D1	  D1	  D2	 --
+    302  f156		       b1 8a		      lda	(scorepointers+4),y	;+5  13   39
+    303  f158		       85 1b		      sta	GRP0	;+3  16   48	   D3	  D1	  D2	 D2
+    304  f15a		       b1 8c		      lda	(scorepointers+6),y	;+5  21   63
+    305  f15c		       85 93		      sta	temp	;+3  24   72
+    306  f15e		       b1 8e		      lda	(scorepointers+8),y	;+5  29   87
+    307  f160		       aa		      tax		;+2  31   93
+    308  f161		       b1 90		      lda	(scorepointers+10),y	;+5  36  108
+    309  f163		       a8		      tay		;+2  38  114
+    310  f164		       a5 93		      lda	temp	;+3  41  123		   !
+    311  f166		       85 1c		      sta	GRP1	;+3  44  132	   D3	  D3	  D4	 D2!
+    312  f168		       86 1b		      stx	GRP0	;+3  47  141	   D5	  D3!	  D4	 D4
+    313  f16a		       84 1c		      sty	GRP1	;+3  50  150	   D5	  D5	  D6	 D4!
+    314  f16c		       85 1b		      sta	GRP0	;+3  53  159	   D4*	  D5!	  D6	 D6!
+    315  f16e		       c6 92		      dec	scoreHeight	;+5  58  174				  !
+    316  f170		       10 d8		      bpl	.scoreLoop	;+2  60  180
+    317  f172
+    318  f172		       85 02		      sta	WSYNC
+    319  f174		       a9 00		      lda	#0
+    320  f176		       85 1b		      sta	GRP0
+    321  f178		       85 1c		      sta	GRP1
+    322  f17a		       85 25		      sta	VDELP0
+    323  f17c		       85 26		      sta	VDELP1
+    324  f17e		       85 04		      sta	NUSIZ0
+    325  f180		       85 05		      sta	NUSIZ1
+    326  f182
+    327  f182							; ===================
+    328  f182							; Transition to play area
+    329  f182							; ===================
+    330  f182							; Clear all motion registers before positioning
+    331  f182		       85 2b		      sta	HMCLR
+    332  f184
+    333  f184							; Position player 0 with coarse positioning
+    334  f184							; SetHorizPos sets both RESP0 (coarse) and HMP0 (fine)
+    335  f184		       a5 82		      lda	p0x
+    336  f186		       a2 00		      ldx	#0
+    337  f188		       20 ac f2 	      jsr	SetHorizPos
+    338  f18b
+    339  f18b							; Ball: handle positioning and visibility
+    340  f18b							; ballneedpos: 2 = do RESBL this frame (hidden), 1 = still hidden, 0 = normal
+    341  f18b		       a5 9d		      lda	ballneedpos
+    342  f18d		       c9 02		      cmp	#2
+    343  f18f		       d0 09		      bne	.checkSettle
+    344  f191							; Reset ball to left edge during HBLANK
+    345  f191		       85 02		      sta	WSYNC
+    346  f193		       85 14		      sta	RESBL	; coarse position ball at left edge
+    347  f195		       c6 9d		      dec	ballneedpos	; now 1 = hidden next frame too
+    348  f197		       4c a7 f1 	      jmp	.donePos
+    349  f19a				   .checkSettle
+    350  f19a		       c9 01		      cmp	#1
+    351  f19c		       d0 07		      bne	.noRepos
+    352  f19e							; Ball was repositioned last frame — keep hidden one more frame
+    353  f19e							; so position fully settles before becoming visible
+    354  f19e		       85 02		      sta	WSYNC
+    355  f1a0		       c6 9d		      dec	ballneedpos	; now 0 = visible next frame
+    356  f1a2		       4c a7 f1 	      jmp	.donePos
+    357  f1a5				   .noRepos
+    358  f1a5		       85 02		      sta	WSYNC	; keep scanline count consistent
+    359  f1a7				   .donePos
+    360  f1a7
+    361  f1a7							; Set ball horizontal motion: move 2 pixels right per frame
+    362  f1a7							; Only apply motion when ball is fully visible (ballneedpos == 0)
+    363  f1a7		       a5 9b		      lda	ballactive
+    364  f1a9		       f0 0b		      beq	.noMotion
+    365  f1ab		       a5 9d		      lda	ballneedpos
+    366  f1ad		       d0 07		      bne	.noMotion	; don't move while settling
+    367  f1af		       a9 f0		      lda	#$F0	; 1 pixel right per Stella guide motion table
+    368  f1b1		       85 24		      sta	HMBL
+    369  f1b3		       4c b6 f1 	      jmp	.motionSet
+    370  f1b6				   .noMotion
+    371  f1b6							; HMBL already 0 from HMCLR
+    372  f1b6				   .motionSet
+    373  f1b6
+    374  f1b6		       85 02		      sta	WSYNC
+    375  f1b8		       85 2a		      sta	HMOVE	; apply player fine position + ball motion
+    376  f1ba		       85 02		      sta	WSYNC
+    377  f1bc
+    378  f1bc		       a9 00		      lda	#0
+    379  f1be		       85 1b		      sta	GRP0
+    380  f1c0		       85 04		      sta	NUSIZ0
+    381  f1c2		       85 97		      sta	p0gfx
+    382  f1c4		       a9 0e		      lda	#$0E
+    383  f1c6		       85 06		      sta	COLUP0
+    384  f1c8
+    385  f1c8							; Ball color - bright red/orange to stand out
+    386  f1c8		       a9 36		      lda	#$36
+    387  f1ca		       85 08		      sta	COLUPF
+    388  f1cc
+    389  f1cc							; Ball size: use CTRLPF to set ball width to 4 clocks
+    390  f1cc		       a9 20		      lda	#%00100000	; ball size = 4 clocks wide
+    391  f1ce		       85 0a		      sta	CTRLPF
+    392  f1d0
+    393  f1d0		       a9 ff		      lda	#$FF
+    394  f1d2		       85 99		      sta	p0ycounter
+    395  f1d4
+    396  f1d4		       a9 00		      lda	#0
+    397  f1d6		       85 1f		      sta	ENABL
+    398  f1d8
+    399  f1d8							; ===================
+    400  f1d8							; Play Area
+    401  f1d8							; ===================
+    402  f1d8		       a2 9e		      ldx	#PLAY_HEIGHT
+    403  f1da				   .playArea
+    404  f1da		       a5 97		      lda	p0gfx
+    405  f1dc		       85 1b		      sta	GRP0
+    406  f1de
+    407  f1de							; --- Ball drawing ---
+    408  f1de		       8a		      txa
+    409  f1df		       38		      sec
+    410  f1e0		       e5 9a		      sbc	bally
+    411  f1e2		       c9 04		      cmp	#BALL_HEIGHT
+    412  f1e4		       90 07		      bcc	.drawBall
+    413  f1e6		       a9 00		      lda	#0
+    414  f1e8		       85 1f		      sta	ENABL
+    415  f1ea		       4c 00 f2 	      jmp	.ballDraw_done
+    416  f1ed				   .drawBall
+    417  f1ed							; Only draw if active AND not settling (ballneedpos == 0)
+    418  f1ed		       a5 9b		      lda	ballactive
+    419  f1ef		       f0 0b		      beq	.hideBall
+    420  f1f1		       a5 9d		      lda	ballneedpos
+    421  f1f3		       d0 07		      bne	.hideBall
+    422  f1f5		       a9 02		      lda	#2
+    423  f1f7		       85 1f		      sta	ENABL
+    424  f1f9		       4c 00 f2 	      jmp	.ballDraw_done
+    425  f1fc				   .hideBall
+    426  f1fc		       a9 00		      lda	#0
+    427  f1fe		       85 1f		      sta	ENABL
+    428  f200				   .ballDraw_done
+    429  f200
+    430  f200							; --- Player sprite drawing ---
+    431  f200		       a4 99		      ldy	p0ycounter
+    432  f202		       e4 83		      cpx	p0y
+    433  f204		       d0 02		      bne	.noTrigP0
+    434  f206		       a0 06		      ldy	#BIKE_HEIGHT
+    435  f208				   .noTrigP0
+    436  f208		       c0 ff		      cpy	#$FF
+    437  f20a		       f0 08		      beq	.noDrawP0
+    438  f20c		       b1 95		      lda	(sprite0gfx),y
+    439  f20e		       85 97		      sta	p0gfx
+    440  f210		       88		      dey
+    441  f211		       4c 18 f2 	      jmp	.doneP0
+    442  f214				   .noDrawP0
+    443  f214		       a9 00		      lda	#0
+    444  f216		       85 97		      sta	p0gfx
+    445  f218				   .doneP0
+    446  f218		       84 99		      sty	p0ycounter
+    447  f21a
+    448  f21a		       ca		      dex
+    449  f21b		       85 02		      sta	WSYNC
+    450  f21d		       d0 bb		      bne	.playArea
+    451  f21f
+    452  f21f							; pad to hit 192 scanlines
+    453  f21f		       85 02		      sta	WSYNC
+    454  f221		       85 02		      sta	WSYNC
+    455  f223		       85 02		      sta	WSYNC
+    456  f225		       85 02		      sta	WSYNC
+    457  f227		       85 02		      sta	WSYNC
+    458  f229		       85 02		      sta	WSYNC
+    459  f22b		       85 02		      sta	WSYNC
+    460  f22d		       85 02		      sta	WSYNC
+    461  f22f
+    462  f22f							;------------------------------------------------
+    463  f22f							; Overscan
+    464  f22f							;------------------------------------------------
+    465  f22f		       a9 42		      lda	#%01000010
+    466  f231		       85 02		      sta	WSYNC
+    467  f233		       85 01		      sta	VBLANK
+    468  f235		       a9 24		      lda	#36
+    469  f237		       8d 96 02 	      sta	TIM64T
+    470  f23a
+    471  f23a		       a9 00		      lda	#0
+    472  f23c		       85 1b		      sta	GRP0
+    473  f23e		       85 1f		      sta	ENABL
+    474  f240
+    475  f240							; ===================
+    476  f240							; Collision Detection (Ball-Player)
+    477  f240							; ===================
+    478  f240							; Ball-to-Player0 collision is bit 6 of CXP0FB
+    479  f240		       a5 02		      lda	CXP0FB
+    480  f242		       29 40		      and	#%01000000
+    481  f244		       f0 04		      beq	.noCollision
+    482  f246
+    483  f246		       a9 42		      lda	#$42
+    484  f248		       85 80		      sta	bgcolor
+    485  f24a
+    486  f24a				   .noCollision
+    487  f24a
+    488  f24a				   .waitForOverscan
+    489  f24a		       ad 84 02 	      lda	INTIM
+    490  f24d		       d0 fb		      bne	.waitForOverscan
+    491  f24f
+    492  f24f		       4c 46 f0 	      jmp	MainLoop
+    493  f252
+    494  f252							;------------------------------------------------
+    495  f252							; Subroutines
+    496  f252							;------------------------------------------------
+    497  f252				   AddScore
+    498  f252		       f8		      sed
+    499  f253		       18		      clc
+    500  f254		       65 85		      adc	score+1
+    501  f256		       85 85		      sta	score+1
+    502  f258		       8a		      txa
+    503  f259		       65 84		      adc	score
+    504  f25b		       85 84		      sta	score
+    505  f25d		       d8		      cld
+    506  f25e		       60		      rts
+    507  f25f
+    508  f25f				   SubtractScore
+    509  f25f		       f8		      sed
+    510  f260		       38		      sec
+    511  f261		       85 94		      sta	temp2
+    512  f263		       a5 86		      lda	score+2
+    513  f265		       e5 94		      sbc	temp2
+    514  f267		       85 86		      sta	score+2
+    515  f269		       86 94		      stx	temp2
+    516  f26b		       a5 85		      lda	score+1
+    517  f26d		       e5 94		      sbc	temp2
+    518  f26f		       85 85		      sta	score+1
+    519  f271		       84 94		      sty	temp2
+    520  f273		       a5 84		      lda	score
+    521  f275		       e5 94		      sbc	temp2
+    522  f277		       85 84		      sta	score
+    523  f279		       d8		      cld
+    524  f27a		       60		      rts
+    525  f27b
+    526  f27b				   LoadScorePointers
+    527  f27b		       a5 85		      lda	score+1
+    528  f27d		       29 0f		      and	#$0F
+    529  f27f		       aa		      tax
+    530  f280		       bd be f2 	      lda	scoretableIndex,x
+    531  f283		       85 8c		      sta	scorepointers+6
+    532  f285
+    533  f285		       a5 85		      lda	score+1
+    534  f287		       29 f0		      and	#$F0
+    535  f289		       4a		      lsr
+    536  f28a		       4a		      lsr
+    537  f28b		       4a		      lsr
+    538  f28c		       4a		      lsr
+    539  f28d		       aa		      tax
+    540  f28e		       bd be f2 	      lda	scoretableIndex,x
+    541  f291		       85 8a		      sta	scorepointers+4
+    542  f293
+    543  f293		       a5 84		      lda	score
+    544  f295		       29 0f		      and	#$0F
+    545  f297		       aa		      tax
+    546  f298		       bd be f2 	      lda	scoretableIndex,x
+    547  f29b		       85 88		      sta	scorepointers+2
+    548  f29d
+    549  f29d		       a5 84		      lda	score
+    550  f29f		       29 f0		      and	#$F0
+    551  f2a1		       4a		      lsr
+    552  f2a2		       4a		      lsr
+    553  f2a3		       4a		      lsr
+    554  f2a4		       4a		      lsr
+    555  f2a5		       aa		      tax
+    556  f2a6		       bd be f2 	      lda	scoretableIndex,x
+    557  f2a9		       85 86		      sta	scorepointers
+    558  f2ab
+    559  f2ab		       60		      rts
+    560  f2ac
+    561  f2ac				   SetHorizPos subroutine
+    562  f2ac		       85 02		      sta	WSYNC
+    563  f2ae		       38		      sec
+    564  f2af				   .divLoop
+    565  f2af		       e9 0f		      sbc	#15
+    566  f2b1		       b0 fc		      bcs	.divLoop
+    567  f2b3		       49 07		      eor	#7
+    568  f2b5		       0a		      asl
+    569  f2b6		       0a		      asl
+    570  f2b7		       0a		      asl
+    571  f2b8		       0a		      asl
+    572  f2b9		       95 20		      sta	HMP0,x
+    573  f2bb		       95 10		      sta	RESP0,x
+    574  f2bd		       60		      rts
+    575  f2be
+    576  f2be							;------------------------------------------------
+    577  f2be							; ROM Tables
+    578  f2be							;------------------------------------------------
+    579  f2be				   scoretableIndex
+    580  f2be		       00 08 10 18*	      .byte.b	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
+    581  f2c8
+    582  f300		       00 00 00 00*	      align	256
+    583  f300				   scoretable
+    584  f300				   zero
+    585  f300		       3c		      .byte.b	%00111100
+    586  f301		       66		      .byte.b	%01100110
+    587  f302		       66		      .byte.b	%01100110
+    588  f303		       66		      .byte.b	%01100110
+    589  f304		       66		      .byte.b	%01100110
+    590  f305		       66		      .byte.b	%01100110
+    591  f306		       66		      .byte.b	%01100110
+    592  f307		       3c		      .byte.b	%00111100
+    593  f308				   one
+    594  f308		       3c		      .byte.b	%00111100
+    595  f309		       18		      .byte.b	%00011000
+    596  f30a		       18		      .byte.b	%00011000
+    597  f30b		       18		      .byte.b	%00011000
+    598  f30c		       18		      .byte.b	%00011000
+    599  f30d		       18		      .byte.b	%00011000
+    600  f30e		       38		      .byte.b	%00111000
+    601  f30f		       18		      .byte.b	%00011000
+    602  f310				   two
+    603  f310		       7e		      .byte.b	%01111110
+    604  f311		       60		      .byte.b	%01100000
+    605  f312		       60		      .byte.b	%01100000
+    606  f313		       3c		      .byte.b	%00111100
+    607  f314		       06		      .byte.b	%00000110
+    608  f315		       06		      .byte.b	%00000110
+    609  f316		       46		      .byte.b	%01000110
+    610  f317		       3c		      .byte.b	%00111100
+    611  f318				   three
+    612  f318		       3c		      .byte.b	%00111100
+    613  f319		       46		      .byte.b	%01000110
+    614  f31a		       06		      .byte.b	%00000110
+    615  f31b		       0c		      .byte.b	%00001100
+    616  f31c		       0c		      .byte.b	%00001100
+    617  f31d		       06		      .byte.b	%00000110
+    618  f31e		       46		      .byte.b	%01000110
+    619  f31f		       3c		      .byte.b	%00111100
+    620  f320				   four
+    621  f320		       0c		      .byte.b	%00001100
+    622  f321		       0c		      .byte.b	%00001100
+    623  f322		       0c		      .byte.b	%00001100
+    624  f323		       7e		      .byte.b	%01111110
+    625  f324		       4c		      .byte.b	%01001100
+    626  f325		       2c		      .byte.b	%00101100
+    627  f326		       1c		      .byte.b	%00011100
+    628  f327		       0c		      .byte.b	%00001100
+    629  f328				   five
+    630  f328		       7c		      .byte.b	%01111100
+    631  f329		       46		      .byte.b	%01000110
+    632  f32a		       06		      .byte.b	%00000110
+    633  f32b		       06		      .byte.b	%00000110
+    634  f32c		       7c		      .byte.b	%01111100
+    635  f32d		       60		      .byte.b	%01100000
+    636  f32e		       60		      .byte.b	%01100000
+    637  f32f		       7e		      .byte.b	%01111110
+    638  f330				   six
+    639  f330		       3c		      .byte.b	%00111100
+    640  f331		       66		      .byte.b	%01100110
+    641  f332		       66		      .byte.b	%01100110
+    642  f333		       66		      .byte.b	%01100110
+    643  f334		       7c		      .byte.b	%01111100
+    644  f335		       60		      .byte.b	%01100000
+    645  f336		       62		      .byte.b	%01100010
+    646  f337		       3c		      .byte.b	%00111100
+    647  f338				   seven
+    648  f338		       18		      .byte.b	%00011000
+    649  f339		       18		      .byte.b	%00011000
+    650  f33a		       18		      .byte.b	%00011000
+    651  f33b		       18		      .byte.b	%00011000
+    652  f33c		       0c		      .byte.b	%00001100
+    653  f33d		       06		      .byte.b	%00000110
+    654  f33e		       42		      .byte.b	%01000010
+    655  f33f		       7e		      .byte.b	%01111110
+    656  f340				   eight
+    657  f340		       3c		      .byte.b	%00111100
+    658  f341		       66		      .byte.b	%01100110
+    659  f342		       66		      .byte.b	%01100110
+    660  f343		       3c		      .byte.b	%00111100
+    661  f344		       3c		      .byte.b	%00111100
+    662  f345		       66		      .byte.b	%01100110
+    663  f346		       66		      .byte.b	%01100110
+    664  f347		       3c		      .byte.b	%00111100
+    665  f348				   nine
+    666  f348		       3c		      .byte.b	%00111100
+    667  f349		       46		      .byte.b	%01000110
+    668  f34a		       06		      .byte.b	%00000110
+    669  f34b		       3e		      .byte.b	%00111110
+    670  f34c		       66		      .byte.b	%01100110
+    671  f34d		       66		      .byte.b	%01100110
+    672  f34e		       66		      .byte.b	%01100110
+    673  f34f		       3c		      .byte.b	%00111100
+    674  f350				   blank
+    675  f350		       00		      .byte.b	%00000000
+    676  f351		       00		      .byte.b	%00000000
+    677  f352		       00		      .byte.b	%00000000
+    678  f353		       00		      .byte.b	%00000000
+    679  f354		       00		      .byte.b	%00000000
+    680  f355		       00		      .byte.b	%00000000
+    681  f356		       00		      .byte.b	%00000000
+    682  f357		       00		      .byte.b	%00000000
+    683  f358
+    684  f400		       00 00 00 00*	      align	256
+    685  f400				   PlayerGfx
+    686  f400		       00		      .byte.b	%00000000
+    687  f401		       66		      .byte.b	%01100110
+    688  f402		       ff		      .byte.b	%11111111
+    689  f403		       7e		      .byte.b	%01111110
+    690  f404		       3c		      .byte.b	%00111100
+    691  f405		       3e		      .byte.b	%00111110
+    692  f406		       18		      .byte.b	%00011000
+    693  f407		       00		      .byte.b	%00000000
+    694  f408
+    695  f408							;------------------------------------------------
+    696  f408							; Interrupt Vectors
+    697  f408							;------------------------------------------------
  1032  ROM bytes used
-    709  f408					      echo	[*-$F000]d, " ROM bytes used"
-    710  fffa					      ORG	$FFFA
-    711  fffa		       00 f0		      .word.w	Start
-    712  fffc		       00 f0		      .word.w	Start
-    713  fffe		       00 f0		      .word.w	Start
-    714  10000
-    715  10000					       END
+    698  f408					      echo	[*-$F000]d, " ROM bytes used"
+    699  fffa					      ORG	$FFFA
+    700  fffa		       00 f0		      .word.w	Start
+    701  fffc		       00 f0		      .word.w	Start
+    702  fffe		       00 f0		      .word.w	Start
+    703  10000
+    704  10000					       END

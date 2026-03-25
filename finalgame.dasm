@@ -1,18 +1,20 @@
 ; Notes:
-; 1. [FIXED] Obstacle no longer spawns immediately - 2 second delay
-; 2. [FIXED] Replaced missile with ball object - no more scanline shifting
-; 3. [FIXED] Ball uses 2-frame spawn hide to avoid wrong position on first frame
-; 4. [FIXED] Sprite boundary clamping tightened to prevent edge stretching
-; 5. [FIXED] Score now increments once per second (60-frame counter)
-; 6. keep idea of collecting objects around the screen, perhaps give a
-;    timer (shown by them flashing) and if the player fails to collect
-;    them they lose a life?
-; Next steps:
-; 1. [DONE] add delay to obstacle spawn
-; 2. add lives to player, and make the player lose lives when they are hit
-;    by a projectile
-; 3. add some kind of background to the game
-; 4. [DONE] change points from per frame to per second (NTSC = ~60fps)
+; too many scan lines (263 > 262)
+; WHAT IS THE CORE LOOP OF THE GAME?
+; maybe have a monster that is hungry (perhaps shown at the top of the
+; screen) and you are trying to collect food to feed it, but you have to
+; avoid the intergalactic saliva and stuff coming out of the monsters
+; mouth or you will lose lives. also if you touch the left side of the
+; screen you will also lose a life. if you do not collect the food fast
+; enough the monster will get hungry and chomp on you or something like
+; that. every second you survive you will get 1 point, and if you
+; collect the food you will get 50 points or something like that...
+; the monster will move in from the left side of the screen. if you feed
+; it, it will move back to the left side of the screen, but as play time
+; progresses, the monster will permanently move in a certain percentage
+; and decrease the play area in order to increase the difficulty.
+; TODO:
+;
 ;------------------------------------------------
 ;
 ; Atari VCS Game
