@@ -337,19 +337,23 @@ DrawScreen
 ; ===================
 ; Transition to play area
 ; ===================
+	; Clear all motion registers before positioning
+	sta		HMCLR
+
 	; Position player 0 with coarse positioning
+	; SetHorizPos sets both RESP0 (coarse) and HMP0 (fine) 
 	lda		p0x
 	ldx		#0
 	jsr		SetHorizPos
 
 	; Ball: if it needs coarse repositioning, do it now
-	; Otherwise just set its HMOVE value
+	; Otherwise just keep its current position
 	lda		ballneedpos
 	beq		.noRepos
 	; Reset ball to left edge during HBLANK
 	; Per Stella guide sec 7.0: RESBL during hblank places ball at left edge
 	sta		WSYNC
-	sta		RESBL			; coarse position ball at left edge (color clock 2)
+	sta		RESBL			; coarse position ball at left edge
 	lda		#0
 	sta		ballneedpos		; clear flag
 	jmp		.donePos
@@ -365,16 +369,11 @@ DrawScreen
 	sta		HMBL
 	jmp		.motionSet
 .noMotion
-	lda		#0
-	sta		HMBL
+	; HMBL already 0 from HMCLR
 .motionSet
 
-	; Clear player 0 motion so it doesn't drift
-	lda		#0
-	sta		HMP0
-
 	sta		WSYNC
-	sta		HMOVE			; apply all motion (player + ball)
+	sta		HMOVE			; apply player fine position + ball motion
 	sta		WSYNC
 
 	lda		#0
