@@ -58,7 +58,7 @@ p0ycounter	.byte
 bally		.byte			; Y position in play area
 ballactive	.byte			; 0=inactive, 1=visible
 balldelay	.byte			; frame countdown before next spawn
-ballneedpos	.byte			; 1=ball needs coarse repositioning this frame
+ballneedpos	.byte			; >0 = frames until ball becomes visible after reposition
 balltimer	.byte			; frames remaining in current flight
 
 ; --- Score timer ---
@@ -185,8 +185,9 @@ MoveBall
 	; Activate ball, flag for coarse positioning
 	lda		#1
 	sta		ballactive
-	sta		ballneedpos		; flag: need coarse position in kernel setup
-	lda		#80				; 80 frames at 2px/frame = 160px travel
+	lda		#2
+	sta		ballneedpos		; 2 = reposition this frame, 1 = still hidden next frame
+	lda		#160			; 160 frames at 1px/frame = 160px travel
 	sta		balltimer
 
 	; Step Y down by 12 each spawn, wrap around
@@ -346,26 +347,35 @@ DrawScreen
 	ldx		#0
 	jsr		SetHorizPos
 
-	; Ball: if it needs coarse repositioning, do it now
-	; Otherwise just keep its current position
+	; Ball: handle positioning and visibility
+	; ballneedpos: 2 = do RESBL this frame (hidden), 1 = still hidden, 0 = normal
 	lda		ballneedpos
-	beq		.noRepos
+	cmp		#2
+	bne		.checkSettle
 	; Reset ball to left edge during HBLANK
-	; Per Stella guide sec 7.0: RESBL during hblank places ball at left edge
 	sta		WSYNC
 	sta		RESBL			; coarse position ball at left edge
-	lda		#0
-	sta		ballneedpos		; clear flag
+	dec		ballneedpos		; now 1 = hidden next frame too
+	jmp		.donePos
+.checkSettle
+	cmp		#1
+	bne		.noRepos
+	; Ball was repositioned last frame — keep hidden one more frame
+	; so position fully settles before becoming visible
+	sta		WSYNC
+	dec		ballneedpos		; now 0 = visible next frame
 	jmp		.donePos
 .noRepos
 	sta		WSYNC			; keep scanline count consistent
 .donePos
 
 	; Set ball horizontal motion: move 2 pixels right per frame
-	; Per Stella guide sec 8.0: $E0 = move 2 right
+	; Only apply motion when ball is fully visible (ballneedpos == 0)
 	lda		ballactive
 	beq		.noMotion
-	lda		#$E0			; 2 pixels right
+	lda		ballneedpos
+	bne		.noMotion		; don't move while settling
+	lda		#$F0			; 1 pixel right per Stella guide motion table
 	sta		HMBL
 	jmp		.motionSet
 .noMotion
@@ -415,8 +425,11 @@ DrawScreen
 	sta		ENABL
 	jmp		.ballDraw_done
 .drawBall
+	; Only draw if active AND not settling (ballneedpos == 0)
 	lda		ballactive
 	beq		.hideBall
+	lda		ballneedpos
+	bne		.hideBall
 	lda		#2
 	sta		ENABL
 	jmp		.ballDraw_done
