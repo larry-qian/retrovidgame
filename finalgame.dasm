@@ -1,24 +1,5 @@
-; Notes:
-; WHAT IS THE CORE LOOP OF THE GAME?
-; maybe have a monster that is hungry (perhaps shown at the top of the
-; screen) and you are trying to collect food to feed it, but you have to
-; avoid the intergalactic saliva and stuff coming out of the monsters
-; mouth or you will lose lives. also if you touch the left side of the
-; screen you will also lose a life. if you do not collect the food fast
-; enough the monster will get hungry and chomp on you or something like
-; that. every second you survive you will get 1 point, and if you
-; collect the food you will get 50 points or something like that...
-; the monster will move in from the left side of the screen. if you feed
-; it, it will move back to the left side of the screen, but as play time
-; progresses, the monster will permanently move in a certain percentage
-; and decrease the play area in order to increase the difficulty.
-; TODO:
-;
 ;------------------------------------------------
-;
 ; Atari VCS Game
-; by
-;
 ;------------------------------------------------
 	processor 	6502
 	include 	vcs.h
@@ -30,7 +11,7 @@
 BLACK = #$00
 SCORE_HEIGHT = #7
 BIKE_HEIGHT = #6
-PLAY_HEIGHT = #158
+PLAY_HEIGHT = #159
 BALL_HEIGHT = #4
 
 ;------------------------------------------------
@@ -43,6 +24,10 @@ bgcolor		.byte
 frame		.byte
 p0x         .byte
 p0y         .byte
+
+; --- Monster variables ---
+p1x         .byte           ; Monster X position
+monsterTimer .byte          ; Timer for monster creeping right
 
 score               ds 2 
 scorepointers       ds 12
@@ -57,13 +42,14 @@ p0ycounter	.byte
 
 ; --- Ball obstacle variables ---
 bally		.byte			; Y position in play area
+temp_bally  .byte           ; Temp value for cycle optimization
 ballactive	.byte			; 0=inactive, 1=visible
 balldelay	.byte			; frame countdown before next spawn
 ballneedpos	.byte			; >0 = frames until ball becomes visible after reposition
 balltimer	.byte			; frames remaining in current flight
 
 ; --- Score timer ---
-scoreTimer	.byte		; counts frames, increments score at 60
+scoreTimer	.byte		    ; counts frames, increments score at 60
 
 ;------------------------------------------------
 ; Start of ROM
@@ -78,6 +64,12 @@ Start
 	sta		p0x
 	lda		#60
 	sta		p0y
+
+; --- Initialize Monster ---
+	lda		#8              
+	sta		p1x
+	lda		#0
+	sta		monsterTimer
 
 	lda		#<PlayerGfx
 	sta		sprite0gfx
@@ -106,8 +98,8 @@ Start
 	sta		ballactive
 	sta		ballneedpos
 	lda		#20
-	sta		bally			; first Y position near top
-	lda		#120			; ~2 second delay before first spawn
+	sta		bally			
+	lda		#120			
 	sta		balldelay
 
 ; --- Initialize score timer ---
@@ -131,13 +123,14 @@ MainLoop
 	lda		#$0E
 	sta		bgcolor
 
-; --- Clear collision registers ---
+; --- Clear collision registers and motion ---
 	sta		CXCLR
+    sta     HMCLR           
 
 	inc		frame
 
 ; ===================
-; Score - increment once per second (every 60 frames)
+; Score Logic
 ; ===================
 	inc		scoreTimer
 	lda		scoreTimer
@@ -156,13 +149,25 @@ MainLoop
 .skipScore
 
 ; ===================
+; Move Monster
+; ===================
+	inc		monsterTimer
+	lda		monsterTimer
+	cmp		#120            
+	bcc		.skipMonster
+	
+	lda		#0
+	sta		monsterTimer
+	lda		p1x
+	cmp		#60             
+	bcs		.skipMonster
+	inc		p1x             
+.skipMonster
+
+; ===================
 ; Move Ball Obstacle
 ; ===================
-; Pure game logic — no sta WSYNC here.
-; The VBlank timer (TIM64T) handles all VBlank timing.
-; Ball moves via HMOVE in the kernel, not by recalculating position.
 MoveBall
-	; If in delay, count down and skip
 	lda		balldelay
 	beq		.noDelay
 	dec		balldelay
@@ -171,27 +176,23 @@ MoveBall
 	lda		ballactive
 	beq		.spawnBall
 
-	; Ball is active — count down flight timer
 	dec		balltimer
 	bne		.ballLogicDone
 
-	; Timer expired — ball has crossed the screen
 	lda		#0
 	sta		ballactive
-	lda		#120			; FIXED: 2 sec delay before next spawn (was 30)
+	lda		#120			
 	sta		balldelay
 	jmp		.ballLogicDone
 
 .spawnBall
-	; Activate ball, flag for coarse positioning
 	lda		#1
 	sta		ballactive
 	lda		#2
-	sta		ballneedpos		; 2 = reposition this frame, 1 = still hidden next frame
-	lda		#75				; FIXED: 75 frames * 2px/frame = 150px total travel!
+	sta		ballneedpos		
+	lda		#75				
 	sta		balltimer
 
-	; Step Y down by 12 each spawn, wrap around
 	lda		bally
 	clc
 	adc		#12
@@ -233,7 +234,8 @@ CheckRight
     lda     #0
     sta     REFP0
     lda     p0x
-    cmp     #148
+    ; FIX: Safely restored full right-side movement to 148!
+    cmp     #148        
     bcs     .endRight
     inc     p0x
     inc     p0x
@@ -251,17 +253,25 @@ CheckLeft
     dec     p0x
 EndInput
 
-	sta		WSYNC			; sync before timer wait to stabilize VBlank duration
+	sta		WSYNC			
 .waitForVBlank
 	lda		INTIM
 	bne		.waitForVBlank
 	sta		WSYNC
 	sta		VBLANK
 
+    jmp     StartDrawScreen
+
 ;------------------------------------------------
 ; Kernel
 ;------------------------------------------------
+    align 256
+StartDrawScreen
 DrawScreen
+    lda     #0
+    sta     GRP0
+    sta     GRP1
+
     ldx		#9
 .topSpacer
 	lda		bgcolor
@@ -303,48 +313,48 @@ DrawScreen
 	sta		WSYNC
 
 ; display the score
-                      															;Cycles  Pixel    GRP0   GRP0A   GRP1   GRP1A
 .scoreLoop
-	ldy  	scoreHeight    													     ;+3  63  189
-	lda  	(scorepointers),y     												 ;+5  68  204
-	sta  	GRP0																 ;+3  71  213      D1     --      --     --
-	sta 	WSYNC           		
-	lda  	(scorepointers+2),y  												 ;+5   5   15
-	sta  	GRP1            													 ;+3   8   24      D1     D1      D2     --
-	lda  	(scorepointers+4),y  												 ;+5  13   39
-	sta  	GRP0            													 ;+3  16   48      D3     D1      D2     D2
-	lda  	(scorepointers+6),y  												 ;+5  21   63
-	sta  	temp         														 ;+3  24   72
-	lda  	(scorepointers+8),y  												 ;+5  29   87
-	tax                 	 													 ;+2  31   93
-	lda  	(scorepointers+10),y  												 ;+5  36  108
-	tay                  														 ;+2  38  114
-	lda 	temp         														 ;+3  41  123              !
-	sta  	GRP1            													 ;+3  44  132      D3     D3      D4     D2!
-	stx  	GRP0            													 ;+3  47  141      D5     D3!     D4     D4
-	sty  	GRP1            													 ;+3  50  150      D5     D5      D6     D4!
-	sta		GRP0            													 ;+3  53  159      D4*    D5!     D6     D6!
-	dec  	scoreHeight     													 ;+5  58  174                             !
-	bpl  	.scoreLoop     													     ;+2  60  180
+	ldy  	scoreHeight    													     
+	lda  	(scorepointers),y     												 
+	sta  	GRP0																 
+	sta 	WSYNC    			
+	lda  	(scorepointers+2),y  												 
+	sta  	GRP1            													 
+	lda  	(scorepointers+4),y  												 
+	sta  	GRP0            													 
+	lda  	(scorepointers+6),y  												 
+	sta  	temp         														 
+	lda  	(scorepointers+8),y  												 
+	tax                 	 													 
+	lda  	(scorepointers+10),y  												 
+	tay                 														 
+	lda 	temp         														 
+	sta  	GRP1            													 
+	stx  	GRP0            													 
+	sty  	GRP1            													 
+	sta		GRP0            													 
+	dec  	scoreHeight     													 
+	bpl  	.scoreLoop     													     
  
 	sta 	WSYNC
 	lda 	#0
-    sta 	GRP0
-    sta 	GRP1
+    sta     COLUP0
+    sta     COLUP1
     sta 	VDELP0
     sta 	VDELP1
+    sta 	GRP0
+    sta 	GRP1
+    sta     GRP0        
     sta 	NUSIZ0
     sta 	NUSIZ1
 
 ; ===================
 ; Transition to play area
 ; ===================
-	sta		HMCLR
-
-	; 1. Position player 0 inline (saves the 6-cycle 'rts')
+	; 1. Position player 0 inline
 	lda		p0x
 	ldx		#0
-	sta		WSYNC           ; Sync to start of scanline
+	sta		WSYNC       
 	sec
 .divLoop
 	sbc		#15
@@ -356,17 +366,29 @@ DrawScreen
 	asl
 	sta		HMP0,x
 	sta		RESP0,x
-	
-	; Force a consistent sync right here! 
-	; Even at max p0x, we finish at cycle 69, safely hitting this WSYNC on the same line.
-	sta		WSYNC           
+    ; FIX: End the scanline here so P0 math never overflows into P1 math!
+	sta		WSYNC       
 
-	; 2. Now handle the ball logic on a fresh, safe scanline
+	; 2. Position Player 1 (Monster) inline
+	lda		p1x
+	ldx		#1          
+	sec
+.divLoopM
+	sbc		#15
+	bcs		.divLoopM
+	eor		#7
+	asl
+	asl
+	asl
+	asl
+	sta		HMP0,x      
+	sta		RESP0,x     
+	sta		WSYNC       
+
+	; 3. Handle ball settling
 	lda		ballneedpos
 	cmp		#2
 	bne		.checkSettle
-	
-	; Coarse position ball near left edge
 	sta		RESBL			
 	dec		ballneedpos		
 	jmp		.donePos
@@ -381,18 +403,17 @@ DrawScreen
 	beq		.noMotion
 	lda		ballneedpos
 	bne		.noMotion		
-	lda		#$F0			
+	lda		#$E0			
 	sta		HMBL
 	jmp		.motionSet
 
 .noMotion
-	; HMBL already 0 from HMCLR
-
 .motionSet
 	sta		WSYNC
-	sta		HMOVE			; Apply player fine position + ball motion
-	sta		WSYNC           ; Sync before entering the play area loop
+	sta		HMOVE		
+	sta		WSYNC       
 
+	; Setup Player 0
 	lda		#0
 	sta		GRP0
 	sta		NUSIZ0
@@ -400,19 +421,34 @@ DrawScreen
 	lda		#$0E
 	sta		COLUP0
 
-	; Ball color - bright red/orange to stand out
+	; Setup Player 1 (Monster)
+	lda		#$07            
+	sta		NUSIZ1
+	lda		#$C4            
+	sta		COLUP1
+
+	; Ball Setup
 	lda		#$36
 	sta		COLUPF
-
-	; Ball size: use CTRLPF to set ball width to 4 clocks
-	lda		#%00100000		; ball size = 4 clocks wide
+	lda		#%00100100		
 	sta		CTRLPF
 
-	lda		#$FF
-	sta		p0ycounter
-
+    ; --- Ball Pre-calculation ---
+	lda		ballactive
+	beq		.disableBall
+	lda		ballneedpos
+	bne		.disableBall
+	lda		bally
+	sta		temp_bally
+	jmp		.ballSetupDone
+.disableBall:
+	lda		#200        
+	sta		temp_bally
 	lda		#0
 	sta		ENABL
+
+.ballSetupDone:
+    sta     WSYNC       
 
 ; ===================
 ; Play Area
@@ -422,60 +458,49 @@ DrawScreen
 	lda		p0gfx
 	sta		GRP0
 
+	; --- Monster Drawing ---
+	lda		MonsterGfx,x  
+	sta		GRP1
+
 	; --- Ball drawing ---
 	txa
 	sec
-	sbc		bally
+	sbc		temp_bally
 	cmp		#BALL_HEIGHT
-	bcc		.drawBall
-	lda		#0
-	sta		ENABL
-	jmp		.ballDraw_done
-.drawBall
-	; Only draw if active AND not settling (ballneedpos == 0)
-	lda		ballactive
-	beq		.hideBall
-	lda		ballneedpos
-	bne		.hideBall
+	bcs		.hideBall
 	lda		#2
+	bne     .storeBall      
+.hideBall:
+    lda     #0
+.storeBall:
 	sta		ENABL
-	jmp		.ballDraw_done
-.hideBall
-	lda		#0
-	sta		ENABL
-.ballDraw_done
 
 	; --- Player sprite drawing ---
-	ldy		p0ycounter
 	cpx		p0y
-	bne		.noTrigP0
-	ldy		#BIKE_HEIGHT
-.noTrigP0
-	cpy		#$FF
-	beq		.noDrawP0
+	bne		.skipTrig
+	lda		#BIKE_HEIGHT
+	sta		p0ycounter
+.skipTrig
+    lda     #0          
+	ldy		p0ycounter
+    bmi     .storeP0
 	lda		(sprite0gfx),y
+	dec		p0ycounter
+.storeP0:
 	sta		p0gfx
-	dey
-	jmp		.doneP0
-.noDrawP0
-	lda		#0
-	sta		p0gfx
-.doneP0
-	sty		p0ycounter
 
 	dex
 	sta		WSYNC
 	bne		.playArea
 
-; pad to hit 192 scanlines
+; ===================
+; Padding to hit exactly 192 scanlines
+; ===================
+    ldx     #6          
+.padLoop
 	sta		WSYNC
-	sta		WSYNC
-	sta		WSYNC
-	sta		WSYNC
-	sta		WSYNC
-	sta		WSYNC
-	sta		WSYNC
-	sta		WSYNC
+    dex
+    bne     .padLoop
 
 ;------------------------------------------------
 ; Overscan
@@ -488,12 +513,13 @@ DrawScreen
 
 	lda		#0
 	sta		GRP0
+    sta     GRP1        
 	sta		ENABL
 
 ; ===================
-; Collision Detection (Ball-Player)
+; Collision Detection 
 ; ===================
-	; Ball-to-Player0 collision is bit 6 of CXP0FB
+	; Ball-to-Player0 collision
 	lda		CXP0FB
 	and		#%01000000
 	beq		.noCollision
@@ -519,24 +545,6 @@ AddScore
 	sta		score+1
 	txa
 	adc		score
-	sta		score
-	cld
-	rts
-
-SubtractScore
-	sed
-	sec
-	sta		temp2
-	lda		score+2
-	sbc		temp2
-	sta		score+2
-	stx		temp2
-	lda		score+1
-	sbc		temp2
-	sta		score+1
-	sty		temp2
-	lda		score
-	sbc		temp2
 	sta		score
 	cld
 	rts
@@ -574,21 +582,6 @@ LoadScorePointers
 	lda		scoretableIndex,x
 	sta		scorepointers
 	
-	rts
-
-SetHorizPos subroutine
-	sta		WSYNC
-	sec
-.divLoop
-	sbc		#15
-	bcs		.divLoop
-	eor		#7
-	asl
-	asl
-	asl
-	asl
-	sta		HMP0,x
-	sta		RESP0,x
 	rts
 
 ;------------------------------------------------
@@ -709,6 +702,53 @@ PlayerGfx
 	.byte	%00111110
 	.byte	%00011000
 	.byte	%00000000
+
+    align 256
+MonsterGfx
+	.byte	%11111111, %11111111, %11111111, %11111111
+	.byte	%11111110, %11111110, %11111110, %11111110
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11110000, %11110000, %11110000, %11110000
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111110, %11111110, %11111110, %11111110
+
+	.byte	%11111111, %11111111, %11111111, %11111111
+	.byte	%11111110, %11111110, %11111110, %11111110
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11110000, %11110000, %11110000, %11110000
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111110, %11111110, %11111110, %11111110
+
+	.byte	%11111111, %11111111, %11111111, %11111111
+	.byte	%11111110, %11111110, %11111110, %11111110
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11110000, %11110000, %11110000, %11110000
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111110, %11111110, %11111110, %11111110
+
+	.byte	%11111111, %11111111, %11111111, %11111111
+	.byte	%11111110, %11111110, %11111110, %11111110
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11110000, %11110000, %11110000, %11110000
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111110, %11111110, %11111110, %11111110
+
+	.byte	%11111111, %11111111, %11111111, %11111111
+	.byte	%11111110, %11111110, %11111110, %11111110
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11110000, %11110000, %11110000, %11110000
+	.byte	%11111000, %11111000, %11111000, %11111000
+	.byte	%11111100, %11111100, %11111100, %11111100
+	.byte	%11111110, %11111110, %11111110, %11111110
 
 ;------------------------------------------------
 ; Interrupt Vectors
