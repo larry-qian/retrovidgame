@@ -1,5 +1,4 @@
 ; Notes:
-; too many scan lines (263 > 262)
 ; WHAT IS THE CORE LOOP OF THE GAME?
 ; maybe have a monster that is hungry (perhaps shown at the top of the
 ; screen) and you are trying to collect food to feed it, but you have to
