@@ -66,7 +66,8 @@ Start
 	sta		p0y
 
 ; --- Initialize Monster ---
-	lda		#8              
+    ; FIX: Start absolutely flush against the left wall!
+	lda		#0              
 	sta		p1x
 	lda		#0
 	sta		monsterTimer
@@ -234,7 +235,6 @@ CheckRight
     lda     #0
     sta     REFP0
     lda     p0x
-    ; FIX: Safely restored full right-side movement to 148!
     cmp     #148        
     bcs     .endRight
     inc     p0x
@@ -366,12 +366,13 @@ DrawScreen
 	asl
 	sta		HMP0,x
 	sta		RESP0,x
-    ; FIX: End the scanline here so P0 math never overflows into P1 math!
+
 	sta		WSYNC       
 
 	; 2. Position Player 1 (Monster) inline
 	lda		p1x
 	ldx		#1          
+	sta		WSYNC
 	sec
 .divLoopM
 	sbc		#15
@@ -496,7 +497,7 @@ DrawScreen
 ; ===================
 ; Padding to hit exactly 192 scanlines
 ; ===================
-    ldx     #6          
+    ldx     #5          
 .padLoop
 	sta		WSYNC
     dex
