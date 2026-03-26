@@ -340,53 +340,59 @@ DrawScreen
 ; ===================
 ; Transition to play area
 ; ===================
-	; Clear all motion registers before positioning
 	sta		HMCLR
 
-	; Position player 0 with coarse positioning
-	; SetHorizPos sets both RESP0 (coarse) and HMP0 (fine) 
+	; 1. Position player 0 inline (saves the 6-cycle 'rts')
 	lda		p0x
 	ldx		#0
-	jsr		SetHorizPos
+	sta		WSYNC           ; Sync to start of scanline
+	sec
+.divLoop
+	sbc		#15
+	bcs		.divLoop
+	eor		#7
+	asl
+	asl
+	asl
+	asl
+	sta		HMP0,x
+	sta		RESP0,x
+	
+	; Force a consistent sync right here! 
+	; Even at max p0x, we finish at cycle 69, safely hitting this WSYNC on the same line.
+	sta		WSYNC           
 
-	; Ball: handle positioning and visibility
-	; ballneedpos: 2 = do RESBL this frame (hidden), 1 = still hidden, 0 = normal
+	; 2. Now handle the ball logic on a fresh, safe scanline
 	lda		ballneedpos
 	cmp		#2
 	bne		.checkSettle
-	; Reset ball to left edge during HBLANK
-	sta		WSYNC
-	sta		RESBL			; coarse position ball at left edge
-	dec		ballneedpos		; now 1 = hidden next frame too
+	
+	; Coarse position ball near left edge
+	sta		RESBL			
+	dec		ballneedpos		
 	jmp		.donePos
+
 .checkSettle
 	cmp		#1
-	bne		.noRepos
-	; Ball was repositioned last frame — keep hidden one more frame
-	; so position fully settles before becoming visible
-	sta		WSYNC
-	dec		ballneedpos		; now 0 = visible next frame
-	jmp		.donePos
-.noRepos
-	sta		WSYNC			; keep scanline count consistent
-.donePos
+	bne		.donePos
+	dec		ballneedpos		
 
-	; Set ball horizontal motion: move 2 pixels right per frame
-	; Only apply motion when ball is fully visible (ballneedpos == 0)
+.donePos
 	lda		ballactive
 	beq		.noMotion
 	lda		ballneedpos
-	bne		.noMotion		; don't move while settling
-	lda		#$F0			; 1 pixel right per Stella guide motion table
+	bne		.noMotion		
+	lda		#$F0			
 	sta		HMBL
 	jmp		.motionSet
+
 .noMotion
 	; HMBL already 0 from HMCLR
-.motionSet
 
+.motionSet
 	sta		WSYNC
-	sta		HMOVE			; apply player fine position + ball motion
-	sta		WSYNC
+	sta		HMOVE			; Apply player fine position + ball motion
+	sta		WSYNC           ; Sync before entering the play area loop
 
 	lda		#0
 	sta		GRP0
