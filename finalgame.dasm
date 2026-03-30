@@ -1,3 +1,14 @@
+; notes:
+; the monster does not go past the halfway line, even though I probably
+; want it to go past the halfway line.
+; to do:
+; 1. add life system, 3 lives, player lose life on collision with monster,
+; or ball. Losing life should push the monster back a certain distance
+; 2. make the monster move faster as the score increases
+; 3. add the collectible item that will also push the monster back a
+;    certain distance
+; 4. make other things that could be obstacles for the player as well?
+;    this should be a very last thing to do I think.
 ;------------------------------------------------
 ; Atari VCS Game
 ;------------------------------------------------
