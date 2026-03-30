@@ -7,7 +7,9 @@
 ;    distance (MEDIUM PRIORITY))
 ; 2. make the monster move faster as the score increases (LOW PRIORITY)
 ; 3. add the collectible item that will also push the monster back a
-;    certain distance (HIGH PRIORITY)
+;    certain distance (HIGH PRIORITY) What should I use for the
+;    collectible item? another projectile or ball? it cant be another
+;    sprite because of how we setup the player and monster sprites.
 ;    3b. maybe when collecting the collectible item, you must shoot it
 ;    at the monster in order to push it back? (VERY LOW PRIORITY)
 ; 4. make other things that could be obstacles for the player as well?
