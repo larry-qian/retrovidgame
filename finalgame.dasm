@@ -3,12 +3,15 @@
 ; want it to go past the halfway line.
 ; to do:
 ; 1. add life system, 3 lives, player lose life on collision with monster,
-; or ball. Losing life should push the monster back a certain distance
-; 2. make the monster move faster as the score increases
+;    or ball. Losing life should push the monster back a certain
+;    distance (MEDIUM PRIORITY))
+; 2. make the monster move faster as the score increases (LOW PRIORITY)
 ; 3. add the collectible item that will also push the monster back a
-;    certain distance
+;    certain distance (HIGH PRIORITY)
+;    3b. maybe when collecting the collectible item, you must shoot it
+;    at the monster in order to push it back? (VERY LOW PRIORITY)
 ; 4. make other things that could be obstacles for the player as well?
-;    this should be a very last thing to do I think.
+;    this should be a very last thing to do I think. (LOW PRIORITY)
 ;------------------------------------------------
 ; Atari VCS Game
 ;------------------------------------------------
