@@ -1,36 +1,49 @@
 --- Symbol List (sorted by symbol)
-0.ballLogicDone          f0cc              (R )
-0.ballSetupDone          f312              (R )
-0.checkSettle            f2c4              (R )
-0.disableBall            f30a              (R )
+0.ballLogicDone          f0d4              (R )
+0.ballSetupDone          f332              (R )
+0.checkSettle            f2e4              (R )
+0.collectLogicDone       f0fb              (R )
+0.collectSetupDone       f341              (R )
+0.disableBall            f32a              (R )
+0.disableCollect         f33d              (R )
 0.divLoop                f290              (R )
+0.divLoopC               f2c0              (R )
 0.divLoopM               f2a7              (R )
-0.donePos                f2ca              (R )
-0.endDown                f0ee              (R )
-0.endRight               f103              (R )
-0.endUp                  f0dd              (R )
+0.doneM0Pos              f2d7              (R )
+0.donePos                f2ea              (R )
+0.endDown                f11d              (R )
+0.endRight               f132              (R )
+0.endUp                  f10c              (R )
 0.FREE_BYTES             0000                  
-0.hideBall               f32b              (R )
+0.hideBall               f36e              (R )
+0.hideCollect            f3a3              (R )
+0.hideP0_1               f35d              (R )
+0.hideP0_2               f392              (R )
+0.indexOk                f0eb              (R )
 0.initScore              f024              (R )
-0.motionSet              f2d9              (R )
-0.noCollision            f36c              (R )
-0.noDelay                f0a0              (R )
-0.noMotion               f2d9              (R )
-0.padLoop                f34a              (R )
-0.playArea               f316              (R )
+0.motionSet              f2f9              (R )
+0.noCollectDelay         f0dd              (R )
+0.noCollectHit           f3f8              (R )
+0.noCollision            f3da              (R )
+0.noDelay                f0a8              (R )
+0.noMotion               f2f9              (R )
+0.padLoop                f3b8              (R )
+0.playArea               f345              (R )
 0.scoreLoop              f24b              (R )
-0.skipMonster            f097              (R )
-0.skipScore              f083              (R )
-0.skipTrig               f337              (R )
-0.spawnBall              f0b3              (R )
-0.storeBall              f32d              (R )
-0.storeP0                f341              (R )
+0.skipMissilePos         f2d3              (R )
+0.skipMonster            f09f              (R )
+0.skipScore              f08b              (R )
+0.spawnBall              f0bb              (R )
+0.storeBall              f370              (R )
+0.storeCollect           f3a5              (R )
+0.storeP0_1              f35f              (R )
+0.storeP0_2              f394              (R )
 0.topSpacer              f208              (R )
-0.waitForOverscan        f36c              (R )
-0.waitForVBlank          f11a              (R )
-0.yOk                    f0ca              (R )
+0.waitForOverscan        f3f8              (R )
+0.waitForVBlank          f149              (R )
+0.yOk                    f0d2              (R )
 1.CLEAR_STACK            f005              (R )
-AddScore                 f374              (R )
+AddScore                 f400              (R )
 AUDC0                    0015                  
 AUDC1                    0016                  
 AUDF0                    0017                  
@@ -46,11 +59,17 @@ bally                    009c              (R )
 bgcolor                  0080              (R )
 BIKE_HEIGHT              0006              (R )
 BLACK                    0000                  
-blank                    f450              (R )
-CheckDown                f0dd                  
-CheckLeft                f103                  
-CheckRight               f0ee                  
-CheckUp                  f0cc                  
+blank                    f550              (R )
+CheckDown                f10c                  
+CheckLeft                f132                  
+CheckRight               f11d                  
+CheckUp                  f0fb                  
+COLLECT_HEIGHT           0004              (R )
+collectActive            00a4              (R )
+collectDelay             00a5              (R )
+collectSpawnTable        f7a0              (R )
+collectX                 00a2              (R )
+collectY                 00a3              (R )
 COLUBK                   0009                  
 COLUP0                   0006              (R )
 COLUP1                   0007              (R )
@@ -59,26 +78,26 @@ CTRLPF                   000a              (R )
 CXBLPF                   0006                  
 CXCLR                    002c              (R )
 CXM0FB                   0004                  
-CXM0P                    0000                  
+CXM0P                    0000              (R )
 CXM1FB                   0005                  
 CXM1P                    0001                  
 CXP0FB                   0002              (R )
 CXP1FB                   0003                  
 CXPPMM                   0007                  
 DrawScreen               f200                  
-eight                    f440              (R )
+eight                    f540              (R )
 ENABL                    001f              (R )
 ENAM0                    001d              (R )
 ENAM1                    001e              (R )
-EndInput                 f118              (R )
-five                     f428              (R )
-four                     f420              (R )
+EndInput                 f147              (R )
+five                     f528              (R )
+four                     f520              (R )
 frame                    0081              (R )
 GRP0                     001b              (R )
 GRP1                     001c              (R )
 HMBL                     0024              (R )
 HMCLR                    002b              (R )
-HMM0                     0022                  
+HMM0                     0022              (R )
 HMM1                     0023                  
 HMOVE                    002a              (R )
 HMP0                     0020              (R )
@@ -90,32 +109,32 @@ INPT3                    000b
 INPT4                    000c                  
 INPT5                    000d                  
 INTIM                    0284              (R )
-LoadScorePointers        f381              (R )
+LoadScorePointers        f40d              (R )
 macro.h                  0000 ????         (R )
-MainLoop                 f04e              (R )
-MonsterGfx               f600              (R )
+MainLoop                 f056              (R )
+MonsterGfx               f700              (R )
 monsterTimer             0085              (R )
-MoveBall                 f097                  
-nine                     f448              (R )
+MoveBall                 f09f                  
+nine                     f548              (R )
 NO_ILLEGAL_OPCODES       0000 ????         (R )
 NUSIZ0                   0004              (R )
 NUSIZ1                   0005              (R )
-one                      f408              (R )
+one                      f508              (R )
 p0color                  009a                  
 p0gfx                    0099              (R )
 p0x                      0082              (R )
 p0y                      0083              (R )
-p0ycounter               009b              (R )
+p0ycounter               009b                  
 p1x                      0084              (R )
 PF0                      000d                  
 PF1                      000e                  
 PF2                      000f                  
-PLAY_HEIGHT              009f              (R )
-PlayerGfx                f500              (R )
+PLAY_HEIGHT              00a0              (R )
+PlayerGfx                f600              (R )
 REFP0                    000b              (R )
 REFP1                    000c              (R )
 RESBL                    0014              (R )
-RESM0                    0012                  
+RESM0                    0012              (R )
 RESM1                    0013                  
 RESMP0                   0028                  
 RESMP1                   0029                  
@@ -126,11 +145,11 @@ score                    0086              (R )
 SCORE_HEIGHT             0007              (R )
 scoreHeight              0094              (R )
 scorepointers            0088              (R )
-scoretable               f400              (R )
-scoretableIndex          f3b2              (R )
-scoreTimer               00a2              (R )
-seven                    f438              (R )
-six                      f430              (R )
+scoretable               f500              (R )
+scoretableIndex          f43e              (R )
+scoreTimer               00a7              (R )
+seven                    f538              (R )
+six                      f530              (R )
 sprite0gfx               0097              (R )
 Start                    f000              (R )
 StartDrawScreen          f200              (R )
@@ -142,7 +161,8 @@ T1024T                   0297
 temp                     0095              (R )
 temp2                    0096                  
 temp_bally               009d              (R )
-three                    f418              (R )
+temp_collecty            00a6              (R )
+three                    f518              (R )
 TIA_BASE_ADDRESS         0000              (R )
 TIA_BASE_READ_ADDRESS    0000              (R )
 TIA_BASE_WRITE_ADDRESS   0000              (R )
@@ -150,7 +170,7 @@ TIM1T                    0294
 TIM64T                   0296              (R )
 TIM8T                    0295                  
 TIMINT                   0285                  
-two                      f410              (R )
+two                      f510              (R )
 VBLANK                   0001              (R )
 vcs.h                    0000 ????         (R )
 VDELBL                   0027                  
@@ -160,5 +180,5 @@ VERSION_MACRO            006d
 VERSION_VCS              006a                  
 VSYNC                    0000              (R )
 WSYNC                    0002              (R )
-zero                     f400              (R )
+zero                     f500              (R )
 --- End of Symbol List.
