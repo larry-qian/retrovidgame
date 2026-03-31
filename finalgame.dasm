@@ -27,7 +27,7 @@
 BLACK = #$00
 SCORE_HEIGHT = #7
 BIKE_HEIGHT = #6
-PLAY_HEIGHT = #160      ; UPDATED to 160 for the 2-line kernel
+PLAY_HEIGHT = #160
 BALL_HEIGHT = #4
 COLLECT_HEIGHT = #4
 
@@ -145,7 +145,7 @@ MainLoop
     sta     WSYNC
     sta     WSYNC
     sta     WSYNC
-    lda     #43         ; UPDATED to hit exactly 262 scanlines
+    lda     #43
     sta     TIM64T
     lda     #0
     sta     VSYNC
@@ -338,7 +338,6 @@ DrawScreen
     sta     WSYNC
     bne     .topSpacer
 
-; initialize the score 
     lda     #0
     sta     WSYNC
     sta     REFP0
@@ -369,7 +368,6 @@ DrawScreen
     sta     HMOVE
     sta     WSYNC
 
-; display the score
 .scoreLoop
     ldy     scoreHeight                                                          
     lda     (scorepointers),y                                                    
@@ -408,7 +406,6 @@ DrawScreen
 ; ===================
 ; Transition to play area
 ; ===================
-    ; 1. Position player 0 inline
     lda     p0x
     ldx     #0
     sta     WSYNC       
@@ -426,7 +423,6 @@ DrawScreen
 
     sta     WSYNC       
 
-    ; 2. Position Player 1 (Monster) inline
     lda     p1x
     ldx     #1          
     sta     WSYNC
@@ -443,7 +439,6 @@ DrawScreen
     sta     RESP0,x     
     sta     WSYNC       
 
-    ; 3. Position Missile 0 (collectible) inline
     lda     collectActive
     beq     .skipMissilePos
     lda     collectX
@@ -466,7 +461,6 @@ DrawScreen
     sta     WSYNC
 .doneM0Pos
 
-    ; 4. Handle ball settling
     lda     ballneedpos
     cmp     #2
     bne     .checkSettle
@@ -494,7 +488,7 @@ DrawScreen
     sta     HMOVE       
     sta     WSYNC       
 
-    ; Setup Player 0
+; --- Setup Objects ---
     lda     #0
     sta     GRP0
     sta     NUSIZ0
@@ -502,19 +496,17 @@ DrawScreen
     lda     #$0E
     sta     COLUP0
 
-    ; Setup Player 1 (Monster)
     lda     #$07            
     sta     NUSIZ1
     lda     #$C4            
     sta     COLUP1
 
-    ; Ball Setup
     lda     #$36
     sta     COLUPF
     lda     #%00100100      
     sta     CTRLPF
 
-    ; --- Ball Pre-calculation ---
+; --- Pre-calculation ---
     lda     ballactive
     beq     .disableBall
     lda     ballneedpos
@@ -529,7 +521,6 @@ DrawScreen
     sta     ENABL
 .ballSetupDone:
 
-    ; --- Collectible Pre-calculation ---
     lda     collectActive
     beq     .disableCollect
     lda     collectY
@@ -547,19 +538,17 @@ DrawScreen
 ; ===================
     ldx     #PLAY_HEIGHT
 .playArea
-    ; --- LINE 1 ---
     lda     p0gfx
     sta     GRP0
     lda     MonsterGfx-1,x  
     sta     GRP1
 
-    ; Player 0 logic 
     txa                     
     sec                     
     sbc     p0y             
     cmp     #BIKE_HEIGHT+1  
-    bcs     .hideP0_1         
-    tay                     ; Just transfer directly to Y!
+    bcs     .hideP0_1       
+    tay                     
     lda     PlayerGfx,y     
     jmp     .storeP0_1      
 .hideP0_1:
@@ -567,7 +556,6 @@ DrawScreen
 .storeP0_1:
     sta     p0gfx           
 
-    ; Ball logic
     txa                     
     sec                     
     sbc     temp_bally      
@@ -583,18 +571,16 @@ DrawScreen
     sta     WSYNC           
     dex                     
 
-    ; --- LINE 2 ---
     lda     p0gfx
     sta     GRP0
     lda     MonsterGfx-1,x  
     sta     GRP1
 
-    ; Player 0 logic
     txa                     
     sec                     
     sbc     p0y             
     cmp     #BIKE_HEIGHT+1  
-    bcs     .hideP0_2         
+    bcs     .hideP0_2       
     eor     #$FF            
     clc                     
     adc     #BIKE_HEIGHT+1  
@@ -606,7 +592,6 @@ DrawScreen
 .storeP0_2:
     sta     p0gfx           
 
-    ; Collectible (M0) logic
     txa                     
     sec                     
     sbc     temp_collecty   
@@ -624,9 +609,8 @@ DrawScreen
     bne     .playArea       
 
 ; ===================
-; Padding to hit exact scanlines
+; Padding
 ; ===================
-    ; Clear graphics immediately so they don't stretch
     lda     #0
     sta     GRP0
     sta     GRP1        
@@ -645,7 +629,7 @@ DrawScreen
     lda     #%01000010
     sta     WSYNC
     sta     VBLANK
-    lda     #36      ; UPDATED to hit exactly 262 scanlines
+    lda     #36
     sta     TIM64T
 
     lda     #0
@@ -656,7 +640,6 @@ DrawScreen
 ; ===================
 ; Collision Detection 
 ; ===================
-    ; Ball-to-Player0 collision
     lda     CXP0FB
     and     #%01000000
     beq     .noCollision
@@ -666,7 +649,6 @@ DrawScreen
 
 .noCollision
 
-    ; Collectible (M0) to Player0 collision
     lda     CXM0P
     and     #%01000000
     beq     .noCollectHit
@@ -678,6 +660,15 @@ DrawScreen
     ldy     #0
     jsr     AddScore
     jsr     LoadScorePointers
+
+; monster push back
+    lda     p1x
+    sec
+    sbc     #15
+    bcs     .storeMonsterX
+    lda     #0
+.storeMonsterX:
+    sta     p1x
 
     lda     #0
     sta     collectActive
@@ -852,12 +843,12 @@ blank
     align 256
 PlayerGfx
     .byte   %00000000
-    .byte   %01100110  ; Engine nozzles
-    .byte   %11111111  ; Wings/Hull
-    .byte   %01111110  ; Hull
-    .byte   %00111100  ; Hull
-    .byte   %00111100  ; Upper Hull (Fixed to 4 pixels)
-    .byte   %00011000  ; Tip
+    .byte   %01100110  
+    .byte   %11111111  
+    .byte   %01111110  
+    .byte   %00111100  
+    .byte   %00111100  
+    .byte   %00011000  
     .byte   %00000000
 	align 256
 MonsterGfx

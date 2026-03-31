@@ -48,7 +48,7 @@
      25  10000 ????						;			    used for code assembly.
      26  10000 ????						; 1.04  12/NOV/2003	 Added TIA_BASE_WRITE_ADDRESS and TIA_BASE_READ_ADDRESS for
      27  10000 ????						;			 convenient disassembly/reassembly compatibility for hardware
-     28  10000 ????						;			 mirrored reading/writing differences.	This is more a
+     28  10000 ????						;			 mirrored reading/writing differences.	This is more a 
      29  10000 ????						;			 readability issue, and binary compatibility with disassembled
      30  10000 ????						;			 and reassembled sources.  Per Manuel Rotschkar's suggestion.
      31  10000 ????						; 1.03  12/MAY/2003	 Added SEG segment at end of file to fix old-code compatibility
@@ -90,7 +90,7 @@
      67  10000 ????						; for the mirrored ROM hardware registers.
      68  10000 ????
      69  10000 ????						; Usage: As per above, define the TIA_BASE_READ_ADDRESS and/or TIA_BASE_WRITE_ADDRESS
-     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined,
+     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined, 
      71  10000 ????						; they defaut to the TIA_BASE_ADDRESS.
      72  10000 ????
      73  10000 ????			   -	       IFNCONST	TIA_BASE_READ_ADDRESS
@@ -257,13 +257,13 @@
      31  0000 ????						;
      32  0000 ????						; 1.02  14/JUN/2003	 - VERTICAL_SYNC macro added
      33  0000 ????						;			   (standardised macro for vertical synch code)
-     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added.
+     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added. 
      35  0000 ????						;			 - NO_ILLEGAL_OPCODES switch implemented
      36  0000 ????						; 1.0	22/MAR/2003		Initial release
      37  0000 ????
-     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage,
+     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage, 
      39  0000 ????						;   define the symbol NO_ILLEGAL_OPCODES (-DNO_ILLEGAL_OPCODES=1 on command-line).
-     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file
+     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file 
      41  0000 ????						;   *after* including VCS.H (as the non-illegal opcodes access hardware
      42  0000 ????						;   registers and require them to be defined first).
      43  0000 ????
@@ -402,7 +402,7 @@
      27  0000 ????	       00 00	   BLACK      =	#$00
      28  0000 ????	       00 07	   SCORE_HEIGHT =	#7
      29  0000 ????	       00 06	   BIKE_HEIGHT =	#6
-     30  0000 ????	       00 a0	   PLAY_HEIGHT =	#160	; UPDATED to 160 for the 2-line kernel
+     30  0000 ????	       00 a0	   PLAY_HEIGHT =	#160
      31  0000 ????	       00 04	   BALL_HEIGHT =	#4
      32  0000 ????	       00 04	   COLLECT_HEIGHT =	#4
      33  0000 ????
@@ -535,7 +535,7 @@
     145  f05a		       85 02		      sta	WSYNC
     146  f05c		       85 02		      sta	WSYNC
     147  f05e		       85 02		      sta	WSYNC
-    148  f060		       a9 2b		      lda	#43	; UPDATED to hit exactly 262 scanlines
+    148  f060		       a9 2b		      lda	#43
     149  f062		       8d 96 02 	      sta	TIM64T
     150  f065		       a9 00		      lda	#0
     151  f067		       85 00		      sta	VSYNC
@@ -563,8 +563,8 @@
     173  f07f		       a9 01		      lda	#1
     174  f081		       a2 00		      ldx	#0
     175  f083		       a0 00		      ldy	#0
-    176  f085		       20 00 f4 	      jsr	AddScore
-    177  f088		       20 0d f4 	      jsr	LoadScorePointers
+    176  f085		       20 0b f4 	      jsr	AddScore
+    177  f088		       20 18 f4 	      jsr	LoadScorePointers
     178  f08b
     179  f08b				   .skipScore
     180  f08b
@@ -728,593 +728,584 @@
     338  f20f		       85 02		      sta	WSYNC
     339  f211		       d0 f5		      bne	.topSpacer
     340  f213
-    341  f213							; initialize the score
-    342  f213		       a9 00		      lda	#0
-    343  f215		       85 02		      sta	WSYNC
-    344  f217		       85 0b		      sta	REFP0
-    345  f219		       85 0c		      sta	REFP1
-    346  f21b		       85 1b		      sta	GRP0
-    347  f21d		       85 1c		      sta	GRP1
-    348  f21f		       85 1d		      sta	ENAM0
-    349  f221		       85 1e		      sta	ENAM1
-    350  f223		       85 1f		      sta	ENABL
-    351  f225		       85 02		      sta	WSYNC
-    352  f227		       ea		      nop
-    353  f228		       85 1b		      sta	GRP0
-    354  f22a		       85 1c		      sta	GRP1
-    355  f22c		       a0 07		      ldy	#SCORE_HEIGHT
-    356  f22e		       84 94		      sty	scoreHeight
-    357  f230		       a9 03		      lda	#$03
-    358  f232		       85 04		      sta	NUSIZ0
-    359  f234		       85 05		      sta	NUSIZ1
-    360  f236		       85 25		      sta	VDELP0
-    361  f238		       85 26		      sta	VDELP1
-    362  f23a		       a9 f0		      lda	#$F0
-    363  f23c		       85 20		      sta	HMP0
-    364  f23e		       a9 00		      lda	#0
-    365  f240		       ea		      nop
-    366  f241		       85 10		      sta	RESP0
-    367  f243		       85 11		      sta	RESP1
-    368  f245		       85 02		      sta	WSYNC
-    369  f247		       85 2a		      sta	HMOVE
-    370  f249		       85 02		      sta	WSYNC
-    371  f24b
-    372  f24b							; display the score
-    373  f24b				   .scoreLoop
-    374  f24b		       a4 94		      ldy	scoreHeight
-    375  f24d		       b1 88		      lda	(scorepointers),y
-    376  f24f		       85 1b		      sta	GRP0
-    377  f251		       85 02		      sta	WSYNC
-    378  f253		       b1 8a		      lda	(scorepointers+2),y
-    379  f255		       85 1c		      sta	GRP1
-    380  f257		       b1 8c		      lda	(scorepointers+4),y
-    381  f259		       85 1b		      sta	GRP0
-    382  f25b		       b1 8e		      lda	(scorepointers+6),y
-    383  f25d		       85 95		      sta	temp
-    384  f25f		       b1 90		      lda	(scorepointers+8),y
-    385  f261		       aa		      tax
-    386  f262		       b1 92		      lda	(scorepointers+10),y
-    387  f264		       a8		      tay
-    388  f265		       a5 95		      lda	temp
-    389  f267		       85 1c		      sta	GRP1
-    390  f269		       86 1b		      stx	GRP0
-    391  f26b		       84 1c		      sty	GRP1
-    392  f26d		       85 1b		      sta	GRP0
-    393  f26f		       c6 94		      dec	scoreHeight
-    394  f271		       10 d8		      bpl	.scoreLoop
-    395  f273
-    396  f273		       85 02		      sta	WSYNC
-    397  f275		       a9 00		      lda	#0
-    398  f277		       85 06		      sta	COLUP0
-    399  f279		       85 07		      sta	COLUP1
-    400  f27b		       85 25		      sta	VDELP0
-    401  f27d		       85 26		      sta	VDELP1
-    402  f27f		       85 1b		      sta	GRP0
-    403  f281		       85 1c		      sta	GRP1
-    404  f283		       85 1b		      sta	GRP0
-    405  f285		       85 04		      sta	NUSIZ0
-    406  f287		       85 05		      sta	NUSIZ1
-    407  f289
+    341  f213		       a9 00		      lda	#0
+    342  f215		       85 02		      sta	WSYNC
+    343  f217		       85 0b		      sta	REFP0
+    344  f219		       85 0c		      sta	REFP1
+    345  f21b		       85 1b		      sta	GRP0
+    346  f21d		       85 1c		      sta	GRP1
+    347  f21f		       85 1d		      sta	ENAM0
+    348  f221		       85 1e		      sta	ENAM1
+    349  f223		       85 1f		      sta	ENABL
+    350  f225		       85 02		      sta	WSYNC
+    351  f227		       ea		      nop
+    352  f228		       85 1b		      sta	GRP0
+    353  f22a		       85 1c		      sta	GRP1
+    354  f22c		       a0 07		      ldy	#SCORE_HEIGHT
+    355  f22e		       84 94		      sty	scoreHeight
+    356  f230		       a9 03		      lda	#$03
+    357  f232		       85 04		      sta	NUSIZ0
+    358  f234		       85 05		      sta	NUSIZ1
+    359  f236		       85 25		      sta	VDELP0
+    360  f238		       85 26		      sta	VDELP1
+    361  f23a		       a9 f0		      lda	#$F0
+    362  f23c		       85 20		      sta	HMP0
+    363  f23e		       a9 00		      lda	#0
+    364  f240		       ea		      nop
+    365  f241		       85 10		      sta	RESP0
+    366  f243		       85 11		      sta	RESP1
+    367  f245		       85 02		      sta	WSYNC
+    368  f247		       85 2a		      sta	HMOVE
+    369  f249		       85 02		      sta	WSYNC
+    370  f24b
+    371  f24b				   .scoreLoop
+    372  f24b		       a4 94		      ldy	scoreHeight
+    373  f24d		       b1 88		      lda	(scorepointers),y
+    374  f24f		       85 1b		      sta	GRP0
+    375  f251		       85 02		      sta	WSYNC
+    376  f253		       b1 8a		      lda	(scorepointers+2),y
+    377  f255		       85 1c		      sta	GRP1
+    378  f257		       b1 8c		      lda	(scorepointers+4),y
+    379  f259		       85 1b		      sta	GRP0
+    380  f25b		       b1 8e		      lda	(scorepointers+6),y
+    381  f25d		       85 95		      sta	temp
+    382  f25f		       b1 90		      lda	(scorepointers+8),y
+    383  f261		       aa		      tax
+    384  f262		       b1 92		      lda	(scorepointers+10),y
+    385  f264		       a8		      tay
+    386  f265		       a5 95		      lda	temp
+    387  f267		       85 1c		      sta	GRP1
+    388  f269		       86 1b		      stx	GRP0
+    389  f26b		       84 1c		      sty	GRP1
+    390  f26d		       85 1b		      sta	GRP0
+    391  f26f		       c6 94		      dec	scoreHeight
+    392  f271		       10 d8		      bpl	.scoreLoop
+    393  f273
+    394  f273		       85 02		      sta	WSYNC
+    395  f275		       a9 00		      lda	#0
+    396  f277		       85 06		      sta	COLUP0
+    397  f279		       85 07		      sta	COLUP1
+    398  f27b		       85 25		      sta	VDELP0
+    399  f27d		       85 26		      sta	VDELP1
+    400  f27f		       85 1b		      sta	GRP0
+    401  f281		       85 1c		      sta	GRP1
+    402  f283		       85 1b		      sta	GRP0
+    403  f285		       85 04		      sta	NUSIZ0
+    404  f287		       85 05		      sta	NUSIZ1
+    405  f289
+    406  f289							; ===================
+    407  f289							; Transition to play area
     408  f289							; ===================
-    409  f289							; Transition to play area
-    410  f289							; ===================
-    411  f289							; 1. Position player 0 inline
-    412  f289		       a5 82		      lda	p0x
-    413  f28b		       a2 00		      ldx	#0
-    414  f28d		       85 02		      sta	WSYNC
-    415  f28f		       38		      sec
-    416  f290				   .divLoop
-    417  f290		       e9 0f		      sbc	#15
-    418  f292		       b0 fc		      bcs	.divLoop
-    419  f294		       49 07		      eor	#7
-    420  f296		       0a		      asl
-    421  f297		       0a		      asl
-    422  f298		       0a		      asl
-    423  f299		       0a		      asl
-    424  f29a		       95 20		      sta	HMP0,x
-    425  f29c		       95 10		      sta	RESP0,x
-    426  f29e
-    427  f29e		       85 02		      sta	WSYNC
-    428  f2a0
-    429  f2a0							; 2. Position Player 1 (Monster) inline
-    430  f2a0		       a5 84		      lda	p1x
-    431  f2a2		       a2 01		      ldx	#1
-    432  f2a4		       85 02		      sta	WSYNC
-    433  f2a6		       38		      sec
-    434  f2a7				   .divLoopM
-    435  f2a7		       e9 0f		      sbc	#15
-    436  f2a9		       b0 fc		      bcs	.divLoopM
-    437  f2ab		       49 07		      eor	#7
-    438  f2ad		       0a		      asl
-    439  f2ae		       0a		      asl
-    440  f2af		       0a		      asl
-    441  f2b0		       0a		      asl
-    442  f2b1		       95 20		      sta	HMP0,x
-    443  f2b3		       95 10		      sta	RESP0,x
-    444  f2b5		       85 02		      sta	WSYNC
-    445  f2b7
-    446  f2b7							; 3. Position Missile 0 (collectible) inline
-    447  f2b7		       a5 a4		      lda	collectActive
-    448  f2b9		       f0 18		      beq	.skipMissilePos
-    449  f2bb		       a5 a2		      lda	collectX
-    450  f2bd		       85 02		      sta	WSYNC
-    451  f2bf		       38		      sec
-    452  f2c0				   .divLoopC
-    453  f2c0		       e9 0f		      sbc	#15
-    454  f2c2		       b0 fc		      bcs	.divLoopC
-    455  f2c4		       49 07		      eor	#7
-    456  f2c6		       0a		      asl
-    457  f2c7		       0a		      asl
-    458  f2c8		       0a		      asl
-    459  f2c9		       0a		      asl
-    460  f2ca		       85 22		      sta	HMM0
-    461  f2cc		       85 12		      sta	RESM0
-    462  f2ce		       85 02		      sta	WSYNC
-    463  f2d0		       4c d7 f2 	      jmp	.doneM0Pos
-    464  f2d3				   .skipMissilePos
-    465  f2d3		       85 02		      sta	WSYNC
-    466  f2d5		       85 02		      sta	WSYNC
-    467  f2d7				   .doneM0Pos
-    468  f2d7
-    469  f2d7							; 4. Handle ball settling
-    470  f2d7		       a5 a0		      lda	ballneedpos
-    471  f2d9		       c9 02		      cmp	#2
-    472  f2db		       d0 07		      bne	.checkSettle
-    473  f2dd		       85 14		      sta	RESBL
-    474  f2df		       c6 a0		      dec	ballneedpos
-    475  f2e1		       4c ea f2 	      jmp	.donePos
-    476  f2e4
-    477  f2e4				   .checkSettle
-    478  f2e4		       c9 01		      cmp	#1
-    479  f2e6		       d0 02		      bne	.donePos
-    480  f2e8		       c6 a0		      dec	ballneedpos
-    481  f2ea
-    482  f2ea				   .donePos
-    483  f2ea		       a5 9e		      lda	ballactive
-    484  f2ec		       f0 0b		      beq	.noMotion
-    485  f2ee		       a5 a0		      lda	ballneedpos
-    486  f2f0		       d0 07		      bne	.noMotion
-    487  f2f2		       a9 e0		      lda	#$E0
-    488  f2f4		       85 24		      sta	HMBL
-    489  f2f6		       4c f9 f2 	      jmp	.motionSet
-    490  f2f9
-    491  f2f9				   .noMotion
-    492  f2f9				   .motionSet
-    493  f2f9		       85 02		      sta	WSYNC
-    494  f2fb		       85 2a		      sta	HMOVE
-    495  f2fd		       85 02		      sta	WSYNC
-    496  f2ff
-    497  f2ff							; Setup Player 0
-    498  f2ff		       a9 00		      lda	#0
-    499  f301		       85 1b		      sta	GRP0
-    500  f303		       85 04		      sta	NUSIZ0
-    501  f305		       85 99		      sta	p0gfx
-    502  f307		       a9 0e		      lda	#$0E
-    503  f309		       85 06		      sta	COLUP0
-    504  f30b
-    505  f30b							; Setup Player 1 (Monster)
-    506  f30b		       a9 07		      lda	#$07
-    507  f30d		       85 05		      sta	NUSIZ1
-    508  f30f		       a9 c4		      lda	#$C4
-    509  f311		       85 07		      sta	COLUP1
-    510  f313
-    511  f313							; Ball Setup
-    512  f313		       a9 36		      lda	#$36
-    513  f315		       85 08		      sta	COLUPF
-    514  f317		       a9 24		      lda	#%00100100
-    515  f319		       85 0a		      sta	CTRLPF
-    516  f31b
-    517  f31b							; --- Ball Pre-calculation ---
-    518  f31b		       a5 9e		      lda	ballactive
-    519  f31d		       f0 0b		      beq	.disableBall
-    520  f31f		       a5 a0		      lda	ballneedpos
-    521  f321		       d0 07		      bne	.disableBall
-    522  f323		       a5 9c		      lda	bally
-    523  f325		       85 9d		      sta	temp_bally
-    524  f327		       4c 32 f3 	      jmp	.ballSetupDone
-    525  f32a				   .disableBall
-    526  f32a		       a9 c8		      lda	#200
-    527  f32c		       85 9d		      sta	temp_bally
-    528  f32e		       a9 00		      lda	#0
-    529  f330		       85 1f		      sta	ENABL
-    530  f332				   .ballSetupDone
-    531  f332
-    532  f332							; --- Collectible Pre-calculation ---
-    533  f332		       a5 a4		      lda	collectActive
-    534  f334		       f0 07		      beq	.disableCollect
-    535  f336		       a5 a3		      lda	collectY
-    536  f338		       85 a6		      sta	temp_collecty
-    537  f33a		       4c 41 f3 	      jmp	.collectSetupDone
-    538  f33d				   .disableCollect
-    539  f33d		       a9 c8		      lda	#200
-    540  f33f		       85 a6		      sta	temp_collecty
-    541  f341				   .collectSetupDone
-    542  f341
-    543  f341		       85 02		      sta	WSYNC
-    544  f343
-    545  f343							; ===================
-    546  f343							; Play Area
-    547  f343							; ===================
-    548  f343		       a2 a0		      ldx	#PLAY_HEIGHT
-    549  f345				   .playArea
-    550  f345							; --- LINE 1 ---
-    551  f345		       a5 99		      lda	p0gfx
-    552  f347		       85 1b		      sta	GRP0
-    553  f349		       bd ff f6 	      lda	MonsterGfx-1,x
-    554  f34c		       85 1c		      sta	GRP1
-    555  f34e
-    556  f34e							; Player 0 logic
-    557  f34e		       8a		      txa
-    558  f34f		       38		      sec
-    559  f350		       e5 83		      sbc	p0y
-    560  f352		       c9 07		      cmp	#BIKE_HEIGHT+1
-    561  f354		       b0 07		      bcs	.hideP0_1
-    562  f356		       a8		      tay		; Just transfer directly to Y!
-    563  f357		       b9 00 f6 	      lda	PlayerGfx,y
-    564  f35a		       4c 5f f3 	      jmp	.storeP0_1
-    565  f35d				   .hideP0_1
-    566  f35d		       a9 00		      lda	#0
-    567  f35f				   .storeP0_1
-    568  f35f		       85 99		      sta	p0gfx
-    569  f361
-    570  f361							; Ball logic
-    571  f361		       8a		      txa
-    572  f362		       38		      sec
-    573  f363		       e5 9d		      sbc	temp_bally
-    574  f365		       c9 04		      cmp	#BALL_HEIGHT
-    575  f367		       b0 05		      bcs	.hideBall
-    576  f369		       a9 02		      lda	#2
-    577  f36b		       4c 70 f3 	      jmp	.storeBall
-    578  f36e				   .hideBall
-    579  f36e		       a9 00		      lda	#0
-    580  f370				   .storeBall
-    581  f370		       85 1f		      sta	ENABL
-    582  f372
-    583  f372		       85 02		      sta	WSYNC
-    584  f374		       ca		      dex
-    585  f375
-    586  f375							; --- LINE 2 ---
-    587  f375		       a5 99		      lda	p0gfx
-    588  f377		       85 1b		      sta	GRP0
-    589  f379		       bd ff f6 	      lda	MonsterGfx-1,x
-    590  f37c		       85 1c		      sta	GRP1
-    591  f37e
-    592  f37e							; Player 0 logic
-    593  f37e		       8a		      txa
-    594  f37f		       38		      sec
-    595  f380		       e5 83		      sbc	p0y
-    596  f382		       c9 07		      cmp	#BIKE_HEIGHT+1
-    597  f384		       b0 0c		      bcs	.hideP0_2
-    598  f386		       49 ff		      eor	#$FF
-    599  f388		       18		      clc
-    600  f389		       69 07		      adc	#BIKE_HEIGHT+1
-    601  f38b		       a8		      tay
-    602  f38c		       b9 00 f6 	      lda	PlayerGfx,y
-    603  f38f		       4c 94 f3 	      jmp	.storeP0_2
-    604  f392				   .hideP0_2
-    605  f392		       a9 00		      lda	#0
-    606  f394				   .storeP0_2
-    607  f394		       85 99		      sta	p0gfx
-    608  f396
-    609  f396							; Collectible (M0) logic
-    610  f396		       8a		      txa
-    611  f397		       38		      sec
-    612  f398		       e5 a6		      sbc	temp_collecty
-    613  f39a		       c9 04		      cmp	#COLLECT_HEIGHT
-    614  f39c		       b0 05		      bcs	.hideCollect
-    615  f39e		       a9 02		      lda	#2
-    616  f3a0		       4c a5 f3 	      jmp	.storeCollect
-    617  f3a3				   .hideCollect
-    618  f3a3		       a9 00		      lda	#0
-    619  f3a5				   .storeCollect
-    620  f3a5		       85 1d		      sta	ENAM0
-    621  f3a7
-    622  f3a7		       85 02		      sta	WSYNC
-    623  f3a9		       ca		      dex
-    624  f3aa		       d0 99		      bne	.playArea
-    625  f3ac
-    626  f3ac							; ===================
-    627  f3ac							; Padding to hit exact scanlines
-    628  f3ac							; ===================
-    629  f3ac							; Clear graphics immediately so they don't stretch
-    630  f3ac		       a9 00		      lda	#0
-    631  f3ae		       85 1b		      sta	GRP0
-    632  f3b0		       85 1c		      sta	GRP1
-    633  f3b2		       85 1f		      sta	ENABL
-    634  f3b4		       85 1d		      sta	ENAM0
-    635  f3b6
-    636  f3b6		       a2 02		      ldx	#2
-    637  f3b8				   .padLoop
-    638  f3b8		       85 02		      sta	WSYNC
-    639  f3ba		       ca		      dex
-    640  f3bb		       d0 fb		      bne	.padLoop
-    641  f3bd
-    642  f3bd							;------------------------------------------------
-    643  f3bd							; Overscan
-    644  f3bd							;------------------------------------------------
-    645  f3bd		       a9 42		      lda	#%01000010
-    646  f3bf		       85 02		      sta	WSYNC
-    647  f3c1		       85 01		      sta	VBLANK
-    648  f3c3		       a9 24		      lda	#36	; UPDATED to hit exactly 262 scanlines
-    649  f3c5		       8d 96 02 	      sta	TIM64T
-    650  f3c8
-    651  f3c8		       a9 00		      lda	#0
-    652  f3ca		       85 1b		      sta	GRP0
-    653  f3cc		       85 1c		      sta	GRP1
-    654  f3ce		       85 1f		      sta	ENABL
-    655  f3d0
-    656  f3d0							; ===================
-    657  f3d0							; Collision Detection
-    658  f3d0							; ===================
-    659  f3d0							; Ball-to-Player0 collision
-    660  f3d0		       a5 02		      lda	CXP0FB
-    661  f3d2		       29 40		      and	#%01000000
-    662  f3d4		       f0 04		      beq	.noCollision
-    663  f3d6
-    664  f3d6		       a9 42		      lda	#$42
-    665  f3d8		       85 80		      sta	bgcolor
-    666  f3da
-    667  f3da				   .noCollision
-    668  f3da
-    669  f3da							; Collectible (M0) to Player0 collision
-    670  f3da		       a5 00		      lda	CXM0P
-    671  f3dc		       29 40		      and	#%01000000
-    672  f3de		       f0 18		      beq	.noCollectHit
-    673  f3e0		       a5 a4		      lda	collectActive
-    674  f3e2		       f0 14		      beq	.noCollectHit
-    675  f3e4
-    676  f3e4		       a9 50		      lda	#$50
-    677  f3e6		       a2 00		      ldx	#0
-    678  f3e8		       a0 00		      ldy	#0
-    679  f3ea		       20 00 f4 	      jsr	AddScore
-    680  f3ed		       20 0d f4 	      jsr	LoadScorePointers
-    681  f3f0
-    682  f3f0		       a9 00		      lda	#0
-    683  f3f2		       85 a4		      sta	collectActive
-    684  f3f4		       a9 b4		      lda	#180
-    685  f3f6		       85 a5		      sta	collectDelay
-    686  f3f8
-    687  f3f8				   .noCollectHit
-    688  f3f8
-    689  f3f8				   .waitForOverscan
-    690  f3f8		       ad 84 02 	      lda	INTIM
-    691  f3fb		       d0 fb		      bne	.waitForOverscan
-    692  f3fd
-    693  f3fd		       4c 56 f0 	      jmp	MainLoop
-    694  f400
-    695  f400							;------------------------------------------------
-    696  f400							; Subroutines
-    697  f400							;------------------------------------------------
-    698  f400				   AddScore
-    699  f400		       f8		      sed
-    700  f401		       18		      clc
-    701  f402		       65 87		      adc	score+1
-    702  f404		       85 87		      sta	score+1
-    703  f406		       8a		      txa
-    704  f407		       65 86		      adc	score
-    705  f409		       85 86		      sta	score
-    706  f40b		       d8		      cld
-    707  f40c		       60		      rts
-    708  f40d
-    709  f40d				   LoadScorePointers
-    710  f40d		       a5 87		      lda	score+1
-    711  f40f		       29 0f		      and	#$0F
-    712  f411		       aa		      tax
-    713  f412		       bd 3e f4 	      lda	scoretableIndex,x
-    714  f415		       85 8e		      sta	scorepointers+6
-    715  f417
-    716  f417		       a5 87		      lda	score+1
-    717  f419		       29 f0		      and	#$F0
-    718  f41b		       4a		      lsr
-    719  f41c		       4a		      lsr
-    720  f41d		       4a		      lsr
-    721  f41e		       4a		      lsr
-    722  f41f		       aa		      tax
-    723  f420		       bd 3e f4 	      lda	scoretableIndex,x
-    724  f423		       85 8c		      sta	scorepointers+4
-    725  f425
-    726  f425		       a5 86		      lda	score
-    727  f427		       29 0f		      and	#$0F
-    728  f429		       aa		      tax
-    729  f42a		       bd 3e f4 	      lda	scoretableIndex,x
-    730  f42d		       85 8a		      sta	scorepointers+2
-    731  f42f
-    732  f42f		       a5 86		      lda	score
-    733  f431		       29 f0		      and	#$F0
-    734  f433		       4a		      lsr
-    735  f434		       4a		      lsr
-    736  f435		       4a		      lsr
-    737  f436		       4a		      lsr
-    738  f437		       aa		      tax
-    739  f438		       bd 3e f4 	      lda	scoretableIndex,x
-    740  f43b		       85 88		      sta	scorepointers
-    741  f43d
-    742  f43d		       60		      rts
-    743  f43e
-    744  f43e							;------------------------------------------------
-    745  f43e							; ROM Tables
-    746  f43e							;------------------------------------------------
-    747  f43e				   scoretableIndex
-    748  f43e		       00 08 10 18*	      .byte.b	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
-    749  f448
-    750  f500		       00 00 00 00*	      align	256
-    751  f500				   scoretable
-    752  f500				   zero
-    753  f500		       3c		      .byte.b	%00111100
-    754  f501		       66		      .byte.b	%01100110
-    755  f502		       66		      .byte.b	%01100110
-    756  f503		       66		      .byte.b	%01100110
-    757  f504		       66		      .byte.b	%01100110
-    758  f505		       66		      .byte.b	%01100110
-    759  f506		       66		      .byte.b	%01100110
-    760  f507		       3c		      .byte.b	%00111100
-    761  f508				   one
-    762  f508		       3c		      .byte.b	%00111100
-    763  f509		       18		      .byte.b	%00011000
-    764  f50a		       18		      .byte.b	%00011000
-    765  f50b		       18		      .byte.b	%00011000
-    766  f50c		       18		      .byte.b	%00011000
-    767  f50d		       18		      .byte.b	%00011000
-    768  f50e		       38		      .byte.b	%00111000
-    769  f50f		       18		      .byte.b	%00011000
-    770  f510				   two
-    771  f510		       7e		      .byte.b	%01111110
-    772  f511		       60		      .byte.b	%01100000
-    773  f512		       60		      .byte.b	%01100000
-    774  f513		       3c		      .byte.b	%00111100
-    775  f514		       06		      .byte.b	%00000110
-    776  f515		       06		      .byte.b	%00000110
-    777  f516		       46		      .byte.b	%01000110
-    778  f517		       3c		      .byte.b	%00111100
-    779  f518				   three
-    780  f518		       3c		      .byte.b	%00111100
-    781  f519		       46		      .byte.b	%01000110
-    782  f51a		       06		      .byte.b	%00000110
-    783  f51b		       0c		      .byte.b	%00001100
-    784  f51c		       0c		      .byte.b	%00001100
-    785  f51d		       06		      .byte.b	%00000110
-    786  f51e		       46		      .byte.b	%01000110
-    787  f51f		       3c		      .byte.b	%00111100
-    788  f520				   four
-    789  f520		       0c		      .byte.b	%00001100
-    790  f521		       0c		      .byte.b	%00001100
-    791  f522		       0c		      .byte.b	%00001100
-    792  f523		       7e		      .byte.b	%01111110
-    793  f524		       4c		      .byte.b	%01001100
-    794  f525		       2c		      .byte.b	%00101100
-    795  f526		       1c		      .byte.b	%00011100
-    796  f527		       0c		      .byte.b	%00001100
-    797  f528				   five
-    798  f528		       7c		      .byte.b	%01111100
-    799  f529		       46		      .byte.b	%01000110
-    800  f52a		       06		      .byte.b	%00000110
-    801  f52b		       06		      .byte.b	%00000110
-    802  f52c		       7c		      .byte.b	%01111100
-    803  f52d		       60		      .byte.b	%01100000
-    804  f52e		       60		      .byte.b	%01100000
-    805  f52f		       7e		      .byte.b	%01111110
-    806  f530				   six
-    807  f530		       3c		      .byte.b	%00111100
-    808  f531		       66		      .byte.b	%01100110
-    809  f532		       66		      .byte.b	%01100110
-    810  f533		       66		      .byte.b	%01100110
-    811  f534		       7c		      .byte.b	%01111100
-    812  f535		       60		      .byte.b	%01100000
-    813  f536		       62		      .byte.b	%01100010
-    814  f537		       3c		      .byte.b	%00111100
-    815  f538				   seven
-    816  f538		       18		      .byte.b	%00011000
-    817  f539		       18		      .byte.b	%00011000
-    818  f53a		       18		      .byte.b	%00011000
-    819  f53b		       18		      .byte.b	%00011000
-    820  f53c		       0c		      .byte.b	%00001100
-    821  f53d		       06		      .byte.b	%00000110
-    822  f53e		       42		      .byte.b	%01000010
-    823  f53f		       7e		      .byte.b	%01111110
-    824  f540				   eight
-    825  f540		       3c		      .byte.b	%00111100
-    826  f541		       66		      .byte.b	%01100110
-    827  f542		       66		      .byte.b	%01100110
-    828  f543		       3c		      .byte.b	%00111100
-    829  f544		       3c		      .byte.b	%00111100
-    830  f545		       66		      .byte.b	%01100110
-    831  f546		       66		      .byte.b	%01100110
-    832  f547		       3c		      .byte.b	%00111100
-    833  f548				   nine
-    834  f548		       3c		      .byte.b	%00111100
-    835  f549		       46		      .byte.b	%01000110
-    836  f54a		       06		      .byte.b	%00000110
-    837  f54b		       3e		      .byte.b	%00111110
-    838  f54c		       66		      .byte.b	%01100110
-    839  f54d		       66		      .byte.b	%01100110
-    840  f54e		       66		      .byte.b	%01100110
-    841  f54f		       3c		      .byte.b	%00111100
-    842  f550				   blank
-    843  f550		       00		      .byte.b	%00000000
-    844  f551		       00		      .byte.b	%00000000
-    845  f552		       00		      .byte.b	%00000000
-    846  f553		       00		      .byte.b	%00000000
-    847  f554		       00		      .byte.b	%00000000
-    848  f555		       00		      .byte.b	%00000000
-    849  f556		       00		      .byte.b	%00000000
-    850  f557		       00		      .byte.b	%00000000
-    851  f558
-    852  f600		       00 00 00 00*	      align	256
-    853  f600				   PlayerGfx
-    854  f600		       00		      .byte.b	%00000000
-    855  f601		       66		      .byte.b	%01100110	; Engine nozzles
-    856  f602		       ff		      .byte.b	%11111111	; Wings/Hull
-    857  f603		       7e		      .byte.b	%01111110	; Hull
-    858  f604		       3c		      .byte.b	%00111100	; Hull
-    859  f605		       3c		      .byte.b	%00111100	; Upper Hull (Fixed to 4 pixels)
-    860  f606		       18		      .byte.b	%00011000	; Tip
-    861  f607		       00		      .byte.b	%00000000
-    862  f700		       00 00 00 00*	      align	256
-    863  f700				   MonsterGfx
-    864  f700		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-    865  f704		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    866  f708		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    867  f70c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    868  f710		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-    869  f714		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    870  f718		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    871  f71c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    872  f720
-    873  f720		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-    874  f724		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    875  f728		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    876  f72c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    877  f730		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-    878  f734		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    879  f738		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    880  f73c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    881  f740
-    882  f740		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-    883  f744		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    884  f748		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    885  f74c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    886  f750		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-    887  f754		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    888  f758		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    889  f75c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    890  f760
-    891  f760		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-    892  f764		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    893  f768		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    894  f76c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    895  f770		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-    896  f774		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    897  f778		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    898  f77c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    899  f780
-    900  f780		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-    901  f784		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    902  f788		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    903  f78c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    904  f790		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-    905  f794		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-    906  f798		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-    907  f79c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-    908  f7a0
-    909  f7a0							;------------------------------------------------
-    910  f7a0							; Collectible Spawn Locations (X, Y pairs)
-    911  f7a0							;------------------------------------------------
-    912  f7a0				   collectSpawnTable
-    913  f7a0		       32 28		      .byte.b	50, 40
-    914  f7a2		       5a 50		      .byte.b	90, 80
-    915  f7a4		       82 28		      .byte.b	130, 40
-    916  f7a6		       32 78		      .byte.b	50, 120
-    917  f7a8		       6e 64		      .byte.b	110, 100
-    918  f7aa		       46 3c		      .byte.b	70, 60
-    919  f7ac
-    920  f7ac							;------------------------------------------------
-    921  f7ac							; Interrupt Vectors
-    922  f7ac							;------------------------------------------------
+    409  f289		       a5 82		      lda	p0x
+    410  f28b		       a2 00		      ldx	#0
+    411  f28d		       85 02		      sta	WSYNC
+    412  f28f		       38		      sec
+    413  f290				   .divLoop
+    414  f290		       e9 0f		      sbc	#15
+    415  f292		       b0 fc		      bcs	.divLoop
+    416  f294		       49 07		      eor	#7
+    417  f296		       0a		      asl
+    418  f297		       0a		      asl
+    419  f298		       0a		      asl
+    420  f299		       0a		      asl
+    421  f29a		       95 20		      sta	HMP0,x
+    422  f29c		       95 10		      sta	RESP0,x
+    423  f29e
+    424  f29e		       85 02		      sta	WSYNC
+    425  f2a0
+    426  f2a0		       a5 84		      lda	p1x
+    427  f2a2		       a2 01		      ldx	#1
+    428  f2a4		       85 02		      sta	WSYNC
+    429  f2a6		       38		      sec
+    430  f2a7				   .divLoopM
+    431  f2a7		       e9 0f		      sbc	#15
+    432  f2a9		       b0 fc		      bcs	.divLoopM
+    433  f2ab		       49 07		      eor	#7
+    434  f2ad		       0a		      asl
+    435  f2ae		       0a		      asl
+    436  f2af		       0a		      asl
+    437  f2b0		       0a		      asl
+    438  f2b1		       95 20		      sta	HMP0,x
+    439  f2b3		       95 10		      sta	RESP0,x
+    440  f2b5		       85 02		      sta	WSYNC
+    441  f2b7
+    442  f2b7		       a5 a4		      lda	collectActive
+    443  f2b9		       f0 18		      beq	.skipMissilePos
+    444  f2bb		       a5 a2		      lda	collectX
+    445  f2bd		       85 02		      sta	WSYNC
+    446  f2bf		       38		      sec
+    447  f2c0				   .divLoopC
+    448  f2c0		       e9 0f		      sbc	#15
+    449  f2c2		       b0 fc		      bcs	.divLoopC
+    450  f2c4		       49 07		      eor	#7
+    451  f2c6		       0a		      asl
+    452  f2c7		       0a		      asl
+    453  f2c8		       0a		      asl
+    454  f2c9		       0a		      asl
+    455  f2ca		       85 22		      sta	HMM0
+    456  f2cc		       85 12		      sta	RESM0
+    457  f2ce		       85 02		      sta	WSYNC
+    458  f2d0		       4c d7 f2 	      jmp	.doneM0Pos
+    459  f2d3				   .skipMissilePos
+    460  f2d3		       85 02		      sta	WSYNC
+    461  f2d5		       85 02		      sta	WSYNC
+    462  f2d7				   .doneM0Pos
+    463  f2d7
+    464  f2d7		       a5 a0		      lda	ballneedpos
+    465  f2d9		       c9 02		      cmp	#2
+    466  f2db		       d0 07		      bne	.checkSettle
+    467  f2dd		       85 14		      sta	RESBL
+    468  f2df		       c6 a0		      dec	ballneedpos
+    469  f2e1		       4c ea f2 	      jmp	.donePos
+    470  f2e4
+    471  f2e4				   .checkSettle
+    472  f2e4		       c9 01		      cmp	#1
+    473  f2e6		       d0 02		      bne	.donePos
+    474  f2e8		       c6 a0		      dec	ballneedpos
+    475  f2ea
+    476  f2ea				   .donePos
+    477  f2ea		       a5 9e		      lda	ballactive
+    478  f2ec		       f0 0b		      beq	.noMotion
+    479  f2ee		       a5 a0		      lda	ballneedpos
+    480  f2f0		       d0 07		      bne	.noMotion
+    481  f2f2		       a9 e0		      lda	#$E0
+    482  f2f4		       85 24		      sta	HMBL
+    483  f2f6		       4c f9 f2 	      jmp	.motionSet
+    484  f2f9
+    485  f2f9				   .noMotion
+    486  f2f9				   .motionSet
+    487  f2f9		       85 02		      sta	WSYNC
+    488  f2fb		       85 2a		      sta	HMOVE
+    489  f2fd		       85 02		      sta	WSYNC
+    490  f2ff
+    491  f2ff							; --- Setup Objects ---
+    492  f2ff		       a9 00		      lda	#0
+    493  f301		       85 1b		      sta	GRP0
+    494  f303		       85 04		      sta	NUSIZ0
+    495  f305		       85 99		      sta	p0gfx
+    496  f307		       a9 0e		      lda	#$0E
+    497  f309		       85 06		      sta	COLUP0
+    498  f30b
+    499  f30b		       a9 07		      lda	#$07
+    500  f30d		       85 05		      sta	NUSIZ1
+    501  f30f		       a9 c4		      lda	#$C4
+    502  f311		       85 07		      sta	COLUP1
+    503  f313
+    504  f313		       a9 36		      lda	#$36
+    505  f315		       85 08		      sta	COLUPF
+    506  f317		       a9 24		      lda	#%00100100
+    507  f319		       85 0a		      sta	CTRLPF
+    508  f31b
+    509  f31b							; --- Pre-calculation ---
+    510  f31b		       a5 9e		      lda	ballactive
+    511  f31d		       f0 0b		      beq	.disableBall
+    512  f31f		       a5 a0		      lda	ballneedpos
+    513  f321		       d0 07		      bne	.disableBall
+    514  f323		       a5 9c		      lda	bally
+    515  f325		       85 9d		      sta	temp_bally
+    516  f327		       4c 32 f3 	      jmp	.ballSetupDone
+    517  f32a				   .disableBall
+    518  f32a		       a9 c8		      lda	#200
+    519  f32c		       85 9d		      sta	temp_bally
+    520  f32e		       a9 00		      lda	#0
+    521  f330		       85 1f		      sta	ENABL
+    522  f332				   .ballSetupDone
+    523  f332
+    524  f332		       a5 a4		      lda	collectActive
+    525  f334		       f0 07		      beq	.disableCollect
+    526  f336		       a5 a3		      lda	collectY
+    527  f338		       85 a6		      sta	temp_collecty
+    528  f33a		       4c 41 f3 	      jmp	.collectSetupDone
+    529  f33d				   .disableCollect
+    530  f33d		       a9 c8		      lda	#200
+    531  f33f		       85 a6		      sta	temp_collecty
+    532  f341				   .collectSetupDone
+    533  f341
+    534  f341		       85 02		      sta	WSYNC
+    535  f343
+    536  f343							; ===================
+    537  f343							; Play Area
+    538  f343							; ===================
+    539  f343		       a2 a0		      ldx	#PLAY_HEIGHT
+    540  f345				   .playArea
+    541  f345		       a5 99		      lda	p0gfx
+    542  f347		       85 1b		      sta	GRP0
+    543  f349		       bd ff f6 	      lda	MonsterGfx-1,x
+    544  f34c		       85 1c		      sta	GRP1
+    545  f34e
+    546  f34e		       8a		      txa
+    547  f34f		       38		      sec
+    548  f350		       e5 83		      sbc	p0y
+    549  f352		       c9 07		      cmp	#BIKE_HEIGHT+1
+    550  f354		       b0 07		      bcs	.hideP0_1
+    551  f356		       a8		      tay
+    552  f357		       b9 00 f6 	      lda	PlayerGfx,y
+    553  f35a		       4c 5f f3 	      jmp	.storeP0_1
+    554  f35d				   .hideP0_1
+    555  f35d		       a9 00		      lda	#0
+    556  f35f				   .storeP0_1
+    557  f35f		       85 99		      sta	p0gfx
+    558  f361
+    559  f361		       8a		      txa
+    560  f362		       38		      sec
+    561  f363		       e5 9d		      sbc	temp_bally
+    562  f365		       c9 04		      cmp	#BALL_HEIGHT
+    563  f367		       b0 05		      bcs	.hideBall
+    564  f369		       a9 02		      lda	#2
+    565  f36b		       4c 70 f3 	      jmp	.storeBall
+    566  f36e				   .hideBall
+    567  f36e		       a9 00		      lda	#0
+    568  f370				   .storeBall
+    569  f370		       85 1f		      sta	ENABL
+    570  f372
+    571  f372		       85 02		      sta	WSYNC
+    572  f374		       ca		      dex
+    573  f375
+    574  f375		       a5 99		      lda	p0gfx
+    575  f377		       85 1b		      sta	GRP0
+    576  f379		       bd ff f6 	      lda	MonsterGfx-1,x
+    577  f37c		       85 1c		      sta	GRP1
+    578  f37e
+    579  f37e		       8a		      txa
+    580  f37f		       38		      sec
+    581  f380		       e5 83		      sbc	p0y
+    582  f382		       c9 07		      cmp	#BIKE_HEIGHT+1
+    583  f384		       b0 0c		      bcs	.hideP0_2
+    584  f386		       49 ff		      eor	#$FF
+    585  f388		       18		      clc
+    586  f389		       69 07		      adc	#BIKE_HEIGHT+1
+    587  f38b		       a8		      tay
+    588  f38c		       b9 00 f6 	      lda	PlayerGfx,y
+    589  f38f		       4c 94 f3 	      jmp	.storeP0_2
+    590  f392				   .hideP0_2
+    591  f392		       a9 00		      lda	#0
+    592  f394				   .storeP0_2
+    593  f394		       85 99		      sta	p0gfx
+    594  f396
+    595  f396		       8a		      txa
+    596  f397		       38		      sec
+    597  f398		       e5 a6		      sbc	temp_collecty
+    598  f39a		       c9 04		      cmp	#COLLECT_HEIGHT
+    599  f39c		       b0 05		      bcs	.hideCollect
+    600  f39e		       a9 02		      lda	#2
+    601  f3a0		       4c a5 f3 	      jmp	.storeCollect
+    602  f3a3				   .hideCollect
+    603  f3a3		       a9 00		      lda	#0
+    604  f3a5				   .storeCollect
+    605  f3a5		       85 1d		      sta	ENAM0
+    606  f3a7
+    607  f3a7		       85 02		      sta	WSYNC
+    608  f3a9		       ca		      dex
+    609  f3aa		       d0 99		      bne	.playArea
+    610  f3ac
+    611  f3ac							; ===================
+    612  f3ac							; Padding
+    613  f3ac							; ===================
+    614  f3ac		       a9 00		      lda	#0
+    615  f3ae		       85 1b		      sta	GRP0
+    616  f3b0		       85 1c		      sta	GRP1
+    617  f3b2		       85 1f		      sta	ENABL
+    618  f3b4		       85 1d		      sta	ENAM0
+    619  f3b6
+    620  f3b6		       a2 02		      ldx	#2
+    621  f3b8				   .padLoop
+    622  f3b8		       85 02		      sta	WSYNC
+    623  f3ba		       ca		      dex
+    624  f3bb		       d0 fb		      bne	.padLoop
+    625  f3bd
+    626  f3bd							;------------------------------------------------
+    627  f3bd							; Overscan
+    628  f3bd							;------------------------------------------------
+    629  f3bd		       a9 42		      lda	#%01000010
+    630  f3bf		       85 02		      sta	WSYNC
+    631  f3c1		       85 01		      sta	VBLANK
+    632  f3c3		       a9 24		      lda	#36
+    633  f3c5		       8d 96 02 	      sta	TIM64T
+    634  f3c8
+    635  f3c8		       a9 00		      lda	#0
+    636  f3ca		       85 1b		      sta	GRP0
+    637  f3cc		       85 1c		      sta	GRP1
+    638  f3ce		       85 1f		      sta	ENABL
+    639  f3d0
+    640  f3d0							; ===================
+    641  f3d0							; Collision Detection 
+    642  f3d0							; ===================
+    643  f3d0		       a5 02		      lda	CXP0FB
+    644  f3d2		       29 40		      and	#%01000000
+    645  f3d4		       f0 04		      beq	.noCollision
+    646  f3d6
+    647  f3d6		       a9 42		      lda	#$42
+    648  f3d8		       85 80		      sta	bgcolor
+    649  f3da
+    650  f3da				   .noCollision
+    651  f3da
+    652  f3da		       a5 00		      lda	CXM0P
+    653  f3dc		       29 40		      and	#%01000000
+    654  f3de		       f0 23		      beq	.noCollectHit
+    655  f3e0		       a5 a4		      lda	collectActive
+    656  f3e2		       f0 1f		      beq	.noCollectHit
+    657  f3e4
+    658  f3e4		       a9 50		      lda	#$50
+    659  f3e6		       a2 00		      ldx	#0
+    660  f3e8		       a0 00		      ldy	#0
+    661  f3ea		       20 0b f4 	      jsr	AddScore
+    662  f3ed		       20 18 f4 	      jsr	LoadScorePointers
+    663  f3f0
+    664  f3f0							; monster push back
+    665  f3f0		       a5 84		      lda	p1x
+    666  f3f2		       38		      sec
+    667  f3f3		       e9 0f		      sbc	#15
+    668  f3f5		       b0 02		      bcs	.storeMonsterX
+    669  f3f7		       a9 00		      lda	#0
+    670  f3f9				   .storeMonsterX
+    671  f3f9		       85 84		      sta	p1x
+    672  f3fb
+    673  f3fb		       a9 00		      lda	#0
+    674  f3fd		       85 a4		      sta	collectActive
+    675  f3ff		       a9 b4		      lda	#180
+    676  f401		       85 a5		      sta	collectDelay
+    677  f403
+    678  f403				   .noCollectHit
+    679  f403
+    680  f403				   .waitForOverscan
+    681  f403		       ad 84 02 	      lda	INTIM
+    682  f406		       d0 fb		      bne	.waitForOverscan
+    683  f408
+    684  f408		       4c 56 f0 	      jmp	MainLoop
+    685  f40b
+    686  f40b							;------------------------------------------------
+    687  f40b							; Subroutines
+    688  f40b							;------------------------------------------------
+    689  f40b				   AddScore
+    690  f40b		       f8		      sed
+    691  f40c		       18		      clc
+    692  f40d		       65 87		      adc	score+1
+    693  f40f		       85 87		      sta	score+1
+    694  f411		       8a		      txa
+    695  f412		       65 86		      adc	score
+    696  f414		       85 86		      sta	score
+    697  f416		       d8		      cld
+    698  f417		       60		      rts
+    699  f418
+    700  f418				   LoadScorePointers
+    701  f418		       a5 87		      lda	score+1
+    702  f41a		       29 0f		      and	#$0F
+    703  f41c		       aa		      tax
+    704  f41d		       bd 49 f4 	      lda	scoretableIndex,x
+    705  f420		       85 8e		      sta	scorepointers+6
+    706  f422
+    707  f422		       a5 87		      lda	score+1
+    708  f424		       29 f0		      and	#$F0
+    709  f426		       4a		      lsr
+    710  f427		       4a		      lsr
+    711  f428		       4a		      lsr
+    712  f429		       4a		      lsr
+    713  f42a		       aa		      tax
+    714  f42b		       bd 49 f4 	      lda	scoretableIndex,x
+    715  f42e		       85 8c		      sta	scorepointers+4
+    716  f430
+    717  f430		       a5 86		      lda	score
+    718  f432		       29 0f		      and	#$0F
+    719  f434		       aa		      tax
+    720  f435		       bd 49 f4 	      lda	scoretableIndex,x
+    721  f438		       85 8a		      sta	scorepointers+2
+    722  f43a
+    723  f43a		       a5 86		      lda	score
+    724  f43c		       29 f0		      and	#$F0
+    725  f43e		       4a		      lsr
+    726  f43f		       4a		      lsr
+    727  f440		       4a		      lsr
+    728  f441		       4a		      lsr
+    729  f442		       aa		      tax
+    730  f443		       bd 49 f4 	      lda	scoretableIndex,x
+    731  f446		       85 88		      sta	scorepointers
+    732  f448
+    733  f448		       60		      rts
+    734  f449
+    735  f449							;------------------------------------------------
+    736  f449							; ROM Tables
+    737  f449							;------------------------------------------------
+    738  f449				   scoretableIndex
+    739  f449		       00 08 10 18*	      .byte.b	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
+    740  f453
+    741  f500		       00 00 00 00*	      align	256
+    742  f500				   scoretable
+    743  f500				   zero
+    744  f500		       3c		      .byte.b	%00111100
+    745  f501		       66		      .byte.b	%01100110
+    746  f502		       66		      .byte.b	%01100110
+    747  f503		       66		      .byte.b	%01100110
+    748  f504		       66		      .byte.b	%01100110
+    749  f505		       66		      .byte.b	%01100110
+    750  f506		       66		      .byte.b	%01100110
+    751  f507		       3c		      .byte.b	%00111100
+    752  f508				   one
+    753  f508		       3c		      .byte.b	%00111100
+    754  f509		       18		      .byte.b	%00011000
+    755  f50a		       18		      .byte.b	%00011000
+    756  f50b		       18		      .byte.b	%00011000
+    757  f50c		       18		      .byte.b	%00011000
+    758  f50d		       18		      .byte.b	%00011000
+    759  f50e		       38		      .byte.b	%00111000
+    760  f50f		       18		      .byte.b	%00011000
+    761  f510				   two
+    762  f510		       7e		      .byte.b	%01111110
+    763  f511		       60		      .byte.b	%01100000
+    764  f512		       60		      .byte.b	%01100000
+    765  f513		       3c		      .byte.b	%00111100
+    766  f514		       06		      .byte.b	%00000110
+    767  f515		       06		      .byte.b	%00000110
+    768  f516		       46		      .byte.b	%01000110
+    769  f517		       3c		      .byte.b	%00111100
+    770  f518				   three
+    771  f518		       3c		      .byte.b	%00111100
+    772  f519		       46		      .byte.b	%01000110
+    773  f51a		       06		      .byte.b	%00000110
+    774  f51b		       0c		      .byte.b	%00001100
+    775  f51c		       0c		      .byte.b	%00001100
+    776  f51d		       06		      .byte.b	%00000110
+    777  f51e		       46		      .byte.b	%01000110
+    778  f51f		       3c		      .byte.b	%00111100
+    779  f520				   four
+    780  f520		       0c		      .byte.b	%00001100
+    781  f521		       0c		      .byte.b	%00001100
+    782  f522		       0c		      .byte.b	%00001100
+    783  f523		       7e		      .byte.b	%01111110
+    784  f524		       4c		      .byte.b	%01001100
+    785  f525		       2c		      .byte.b	%00101100
+    786  f526		       1c		      .byte.b	%00011100
+    787  f527		       0c		      .byte.b	%00001100
+    788  f528				   five
+    789  f528		       7c		      .byte.b	%01111100
+    790  f529		       46		      .byte.b	%01000110
+    791  f52a		       06		      .byte.b	%00000110
+    792  f52b		       06		      .byte.b	%00000110
+    793  f52c		       7c		      .byte.b	%01111100
+    794  f52d		       60		      .byte.b	%01100000
+    795  f52e		       60		      .byte.b	%01100000
+    796  f52f		       7e		      .byte.b	%01111110
+    797  f530				   six
+    798  f530		       3c		      .byte.b	%00111100
+    799  f531		       66		      .byte.b	%01100110
+    800  f532		       66		      .byte.b	%01100110
+    801  f533		       66		      .byte.b	%01100110
+    802  f534		       7c		      .byte.b	%01111100
+    803  f535		       60		      .byte.b	%01100000
+    804  f536		       62		      .byte.b	%01100010
+    805  f537		       3c		      .byte.b	%00111100
+    806  f538				   seven
+    807  f538		       18		      .byte.b	%00011000
+    808  f539		       18		      .byte.b	%00011000
+    809  f53a		       18		      .byte.b	%00011000
+    810  f53b		       18		      .byte.b	%00011000
+    811  f53c		       0c		      .byte.b	%00001100
+    812  f53d		       06		      .byte.b	%00000110
+    813  f53e		       42		      .byte.b	%01000010
+    814  f53f		       7e		      .byte.b	%01111110
+    815  f540				   eight
+    816  f540		       3c		      .byte.b	%00111100
+    817  f541		       66		      .byte.b	%01100110
+    818  f542		       66		      .byte.b	%01100110
+    819  f543		       3c		      .byte.b	%00111100
+    820  f544		       3c		      .byte.b	%00111100
+    821  f545		       66		      .byte.b	%01100110
+    822  f546		       66		      .byte.b	%01100110
+    823  f547		       3c		      .byte.b	%00111100
+    824  f548				   nine
+    825  f548		       3c		      .byte.b	%00111100
+    826  f549		       46		      .byte.b	%01000110
+    827  f54a		       06		      .byte.b	%00000110
+    828  f54b		       3e		      .byte.b	%00111110
+    829  f54c		       66		      .byte.b	%01100110
+    830  f54d		       66		      .byte.b	%01100110
+    831  f54e		       66		      .byte.b	%01100110
+    832  f54f		       3c		      .byte.b	%00111100
+    833  f550				   blank
+    834  f550		       00		      .byte.b	%00000000
+    835  f551		       00		      .byte.b	%00000000
+    836  f552		       00		      .byte.b	%00000000
+    837  f553		       00		      .byte.b	%00000000
+    838  f554		       00		      .byte.b	%00000000
+    839  f555		       00		      .byte.b	%00000000
+    840  f556		       00		      .byte.b	%00000000
+    841  f557		       00		      .byte.b	%00000000
+    842  f558
+    843  f600		       00 00 00 00*	      align	256
+    844  f600				   PlayerGfx
+    845  f600		       00		      .byte.b	%00000000
+    846  f601		       66		      .byte.b	%01100110
+    847  f602		       ff		      .byte.b	%11111111
+    848  f603		       7e		      .byte.b	%01111110
+    849  f604		       3c		      .byte.b	%00111100
+    850  f605		       3c		      .byte.b	%00111100
+    851  f606		       18		      .byte.b	%00011000
+    852  f607		       00		      .byte.b	%00000000
+    853  f700		       00 00 00 00*	      align	256
+    854  f700				   MonsterGfx
+    855  f700		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+    856  f704		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    857  f708		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    858  f70c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    859  f710		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+    860  f714		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    861  f718		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    862  f71c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    863  f720
+    864  f720		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+    865  f724		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    866  f728		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    867  f72c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    868  f730		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+    869  f734		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    870  f738		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    871  f73c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    872  f740
+    873  f740		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+    874  f744		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    875  f748		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    876  f74c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    877  f750		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+    878  f754		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    879  f758		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    880  f75c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    881  f760
+    882  f760		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+    883  f764		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    884  f768		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    885  f76c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    886  f770		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+    887  f774		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    888  f778		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    889  f77c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    890  f780
+    891  f780		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+    892  f784		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    893  f788		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    894  f78c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    895  f790		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+    896  f794		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+    897  f798		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+    898  f79c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+    899  f7a0
+    900  f7a0							;------------------------------------------------
+    901  f7a0							; Collectible Spawn Locations (X, Y pairs)
+    902  f7a0							;------------------------------------------------
+    903  f7a0				   collectSpawnTable
+    904  f7a0		       32 28		      .byte.b	50, 40
+    905  f7a2		       5a 50		      .byte.b	90, 80
+    906  f7a4		       82 28		      .byte.b	130, 40
+    907  f7a6		       32 78		      .byte.b	50, 120
+    908  f7a8		       6e 64		      .byte.b	110, 100
+    909  f7aa		       46 3c		      .byte.b	70, 60
+    910  f7ac
+    911  f7ac							;------------------------------------------------
+    912  f7ac							; Interrupt Vectors
+    913  f7ac							;------------------------------------------------
  1964  ROM bytes used
-    923  f7ac					      echo	[*-$F000]d, " ROM bytes used"
-    924  fffa					      ORG	$FFFA
-    925  fffa		       00 f0		      .word.w	Start
-    926  fffc		       00 f0		      .word.w	Start
-    927  fffe		       00 f0		      .word.w	Start
-    928  10000
-    929  10000					       END
+    914  f7ac					      echo	[*-$F000]d, " ROM bytes used"
+    915  fffa					      ORG	$FFFA
+    916  fffa		       00 f0		      .word.w	Start
+    917  fffc		       00 f0		      .word.w	Start
+    918  fffe		       00 f0		      .word.w	Start
+    919  10000
+    920  10000					       END
