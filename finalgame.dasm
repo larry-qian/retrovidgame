@@ -2,14 +2,23 @@
 ; the monster does not go past the halfway line, even though I probably
 ; want it to go past the halfway line.
 ; to do:
+; -2. make background more interesting. add stars (maybe yellow, or
+; different color from collectible) (low priority)
+; -1. change name of player sprite away from bike to spaceship (medium
+; priority)
+; -0.5. MAKE IT SO THE MONSTER CAN MOVE PAST HALFWAY... because why does
+; it NOT???? (HIGH PRIORITY)
 ; 0. MOVE SPAWN POINTS FOR MONSTER SO PLAYER CAN COLLECT THEM EVEN AS
 ;    THE MONSTER GETS FASTER (HIGHEST PRIORITY)
 ; 1. add life system, 3 lives, player lose life on collision with monster,
 ;    or ball. Losing life should push the monster back a certain
-;    distance (HIGH PRIORITY))
+;    distance (HIGH PRIORITY)
+;    1b. IF THE MONSTER REACHES CPX #120, THEN ITS GAME OVER, REGARDLESS
+;    OF LIVES (MEDIUM LOW PRIORITY)
 ; 2. make the monster move faster as the score increases (MEDIUM PRIORITY)
 ; 3. maybe when collecting the collectible item, you must shoot it
-;    at the monster in order to push it back? (VERY LOW PRIORITY)
+;    at the monster in order to push it back? Also change the sprite for
+;   the collectible (VERY LOW PRIORITY)
 ; 4. make other things that could be obstacles for the player as well?
 ;    this should be a very last thing to do I think. (LOW PRIORITY)
 ;------------------------------------------------
@@ -181,13 +190,13 @@ MainLoop
 ; ===================
     inc     monsterTimer
     lda     monsterTimer
-    cmp     #120            
+    cmp     #60 ;determines how many frames before monster moves, 240 is 4 seconds, 120 is 2 seconds.  
     bcc     .skipMonster
     
     lda     #0
     sta     monsterTimer
     lda     p1x
-    cmp     #60             
+    cmp     #120 ;this determines how far the monster goes, 60 is halfway, 120 is basically the whole screen
     bcs     .skipMonster
     inc     p1x             
 .skipMonster
