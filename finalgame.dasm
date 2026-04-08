@@ -1,19 +1,13 @@
 ; notes:
 ; the monster does not go past the halfway line, even though I probably
-; want it to go past the halfway line.
+; want it to go past the halfway line. (FIXED - it was just bouncing off the player!)
 ; to do:
 ; 1. add life system, 3 lives, player lose life on collision with monster,
 ;    or ball. Losing life should push the monster back a certain
-;    distance (MEDIUM PRIORITY))
-; 2. make the monster move faster as the score increases (LOW PRIORITY)
+;    distance (COMPLETED)
+; 2. make the monster move faster as the score increases (REVERTED TO STEADY SPEED)
 ; 3. add the collectible item that will also push the monster back a
-;    certain distance (HIGH PRIORITY) What should I use for the
-;    collectible item? another projectile or ball? it cant be another
-;    sprite because of how we setup the player and monster sprites.
-;    3b. maybe when collecting the collectible item, you must shoot it
-;    at the monster in order to push it back? (VERY LOW PRIORITY)
-; 4. make other things that could be obstacles for the player as well?
-;    this should be a very last thing to do I think. (LOW PRIORITY)
+;    certain distance (COMPLETED) 
 ;------------------------------------------------
 ; Atari VCS Game
 ;------------------------------------------------
@@ -43,8 +37,8 @@ p0x         .byte
 p0y         .byte
 
 ; --- Monster variables ---
-p1x         .byte
-monsterTimer .byte
+p1x             .byte
+monsterTimer    .byte
 
 score               ds 2 
 scorepointers       ds 12
@@ -74,6 +68,10 @@ temp_collecty   .byte
 
 ; --- Score timer ---
 scoreTimer  .byte
+
+; --- Lives system ---
+lives       .byte
+invincible  .byte
 
 ;------------------------------------------------
 ; Start of ROM
@@ -130,6 +128,12 @@ Start
     lda     #0
     sta     scoreTimer
 
+; --- Initialize lives ---
+    lda     #3
+    sta     lives
+    lda     #0
+    sta     invincible
+
 ; --- Initialize collectible item ---
     lda     #0
     sta     collectActive
@@ -183,16 +187,24 @@ MainLoop
 ; ===================
     inc     monsterTimer
     lda     monsterTimer
-    cmp     #120            
+    cmp     #120            ; Steady speed timer
     bcc     .skipMonster
     
     lda     #0
     sta     monsterTimer
     lda     p1x
-    cmp     #60             
+    cmp     #140            
     bcs     .skipMonster
     inc     p1x             
 .skipMonster
+
+; ===================
+; Invincibility Countdown
+; ===================
+    lda     invincible
+    beq     .noInvCount
+    dec     invincible
+.noInvCount
 
 ; ===================
 ; Move Ball Obstacle
@@ -331,12 +343,55 @@ DrawScreen
 
     ldx     #9
 .topSpacer
+    cpx     #7
+    bcs     .noLivesDraw
+    cpx     #4
+    bcc     .noLivesDraw
+
+; --- Draw lives indicator using playfield ---
+    lda     #$46            ; red-ish color for lives
+    sta     COLUPF
+    lda     #0
+    sta     PF0
+    sta     PF2
+    lda     lives
+    cmp     #3
+    bcc     .not3
+    lda     #%01010100      ; 3 blocks
+    jmp     .setLivesPF
+.not3
+    cmp     #2
+    bcc     .not2
+    lda     #%01010000      ; 2 blocks
+    jmp     .setLivesPF
+.not2
+    cmp     #1
+    bcc     .noLivesBlk
+    lda     #%01000000      ; 1 block
+    jmp     .setLivesPF
+.noLivesBlk
+    lda     #0
+.setLivesPF
+    sta     PF1
+    jmp     .doneLives
+.noLivesDraw
+    lda     #0
+    sta     PF0
+    sta     PF1
+    sta     PF2
+.doneLives
     lda     bgcolor
     sta     COLUP0
     sta     COLUP1
     dex
     sta     WSYNC
     bne     .topSpacer
+
+; --- Clear playfield after lives display ---
+    lda     #0
+    sta     PF0
+    sta     PF1
+    sta     PF2
 
     lda     #0
     sta     WSYNC
@@ -370,25 +425,25 @@ DrawScreen
 
 .scoreLoop
     ldy     scoreHeight                                                          
-    lda     (scorepointers),y                                                    
+    lda     (scorepointers),y                             
     sta     GRP0                                                                 
     sta     WSYNC               
     lda     (scorepointers+2),y                                                  
-    sta     GRP1                                                                 
-    lda     (scorepointers+4),y                                                  
+    sta     GRP1           
+    lda     (scorepointers+4),y                                     
     sta     GRP0                                                                 
-    lda     (scorepointers+6),y                                                  
-    sta     temp                                                                 
+    lda     (scorepointers+6),y    
+    sta     temp                                             
     lda     (scorepointers+8),y                                                  
-    tax                                                                          
-    lda     (scorepointers+10),y                                                 
+    tax                 
+    lda     (scorepointers+10),y                                  
     tay                                                                          
     lda     temp                                                                 
-    sta     GRP1                                                                 
-    stx     GRP0                                                                 
+    sta     GRP1                        
+    stx     GRP0                                                  
     sty     GRP1                                                                 
-    sta     GRP0                                                                 
-    dec     scoreHeight                                                          
+    sta     GRP0  
+    dec     scoreHeight                            
     bpl     .scoreLoop                                                           
  
     sta     WSYNC
@@ -406,6 +461,10 @@ DrawScreen
 ; ===================
 ; Transition to play area
 ; ===================
+    jmp     .skipAlignPadding   
+    align 256                   
+.skipAlignPadding
+
     lda     p0x
     ldx     #0
     sta     WSYNC       
@@ -452,8 +511,8 @@ DrawScreen
     asl
     asl
     asl
-    sta     HMM0
-    sta     RESM0
+    sta     HMM1        ; CHANGED TO M1
+    sta     RESM1       ; CHANGED TO M1
     sta     WSYNC
     jmp     .doneM0Pos
 .skipMissilePos
@@ -486,17 +545,29 @@ DrawScreen
 .motionSet
     sta     WSYNC
     sta     HMOVE       
-    sta     WSYNC       
+    sta     WSYNC 
 
 ; --- Setup Objects ---
     lda     #0
     sta     GRP0
     sta     NUSIZ0
     sta     p0gfx
+
+; --- Player color: flash if invincible ---
+    lda     invincible
+    beq     .normalColor
+    lda     frame
+    and     #%00000100
+    beq     .flashOff
+.normalColor
     lda     #$0E
+    jmp     .setP0Color
+.flashOff
+    lda     #$00
+.setP0Color
     sta     COLUP0
 
-    lda     #$07            
+    lda     #$07    
     sta     NUSIZ1
     lda     #$C4            
     sta     COLUP1
@@ -505,6 +576,8 @@ DrawScreen
     sta     COLUPF
     lda     #%00100100      
     sta     CTRLPF
+
+    sta     WSYNC           ; SPLIT CYCLE LOAD
 
 ; --- Pre-calculation ---
     lda     ballactive
@@ -550,7 +623,7 @@ DrawScreen
     bcs     .hideP0_1       
     tay                     
     lda     PlayerGfx,y     
-    jmp     .storeP0_1      
+    jmp     .storeP0_1   
 .hideP0_1:
     lda     #0              
 .storeP0_1:
@@ -564,7 +637,7 @@ DrawScreen
     lda     #2              
     jmp     .storeBall      
 .hideBall:
-    lda     #0              
+    lda     #0             
 .storeBall:
     sta     ENABL           
 
@@ -580,7 +653,7 @@ DrawScreen
     sec                     
     sbc     p0y             
     cmp     #BIKE_HEIGHT+1  
-    bcs     .hideP0_2       
+    bcs     .hideP0_2    
     eor     #$FF            
     clc                     
     adc     #BIKE_HEIGHT+1  
@@ -593,7 +666,7 @@ DrawScreen
     sta     p0gfx           
 
     txa                     
-    sec                     
+    sec              
     sbc     temp_collecty   
     cmp     #COLLECT_HEIGHT 
     bcs     .hideCollect    
@@ -602,7 +675,7 @@ DrawScreen
 .hideCollect:
     lda     #0              
 .storeCollect:
-    sta     ENAM0           
+    sta     ENAM1           ; CHANGED TO ENAM1
 
     sta     WSYNC           
     dex                     
@@ -615,9 +688,9 @@ DrawScreen
     sta     GRP0
     sta     GRP1        
     sta     ENABL
-    sta     ENAM0
+    sta     ENAM1           ; CHANGED TO ENAM1
 
-    ldx     #2          
+    ldx     #1              ; REDUCED TO 1 SCANLINE
 .padLoop
     sta     WSYNC
     dex
@@ -640,17 +713,51 @@ DrawScreen
 ; ===================
 ; Collision Detection 
 ; ===================
+
+; --- Check if player is invincible ---
+    lda     invincible
+    bne     .noCollision
+
+; --- Check Player-Ball collision (P0-BL on D6 of CXP0FB) ---
     lda     CXP0FB
     and     #%01000000
-    beq     .noCollision
+    bne     .playerHit
+
+; --- Check Player-Monster collision (P0-P1 on D7 of CXPPMM) ---
+    lda     CXPPMM
+    and     #%10000000
+    bne     .playerHit
+
+    jmp     .noCollision
+
+.playerHit
+    dec     lives
+    lda     lives
+    bne     .stillAlive
+
+; --- Game Over: reset everything ---
+    jmp     Start
+
+.stillAlive
+    lda     #120
+    sta     invincible
+
+; --- Push monster back on hit ---
+    lda     p1x
+    sec
+    sbc     #20
+    bcs     .storeHitMonX
+    lda     #0
+.storeHitMonX
+    sta     p1x
 
     lda     #$42
     sta     bgcolor
 
 .noCollision
 
-    lda     CXM0P
-    and     #%01000000
+    lda     CXM1P           ; CHANGED TO CXM1P
+    and     #%10000000      ; CHECKING BIT 7
     beq     .noCollectHit
     lda     collectActive
     beq     .noCollectHit
@@ -901,12 +1008,12 @@ MonsterGfx
 ; Collectible Spawn Locations (X, Y pairs)
 ;------------------------------------------------
 collectSpawnTable
-    .byte   50,  40
+    .byte   100, 30
+    .byte   130, 50
     .byte   90,  80
-    .byte   130, 40
-    .byte   50,  120
-    .byte   110, 100
-    .byte   70,  60
+    .byte   140, 100
+    .byte   110, 120
+    .byte   125, 140
 
 ;------------------------------------------------
 ; Interrupt Vectors
