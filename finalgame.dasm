@@ -1,11 +1,11 @@
 ; notes
+; DONE: game over screen with "GAME OVER" text
+; DONE: start screen right before the actual game starts
+; DONE: add more options via console switches (difficulty, game select)
+; DONE: sound effects for hits, collects, game over
 ; still need a background, its not been going good though
-; since a decent amount of mechanics are finished, start adding more that would make the game more interesting
-; add a game over screen like classic atari games
-; maybe have a start screen right before the actual game starts? I think a lot of atari games have something like that
-; add more options that a person can set to change certain mechanics or turn them off or make the game harder?
 ;------------------------------------------------
-; Atari VCS Game
+; Atari VCS Game - Enhanced Version
 ;------------------------------------------------
     processor   6502
     include     vcs.h
@@ -21,6 +21,10 @@ PLAY_HEIGHT = #160
 BALL_HEIGHT = #4
 COLLECT_HEIGHT = #4
 
+STATE_TITLE = 0
+STATE_PLAYING = 1
+STATE_GAMEOVER = 2
+
 ;------------------------------------------------
 ; RAM
 ;------------------------------------------------
@@ -32,7 +36,6 @@ frame       .byte
 p0x         .byte
 p0y         .byte
 
-; --- Monster variables ---
 p1x             .byte
 monsterTimer    .byte
 monsterSpeed    .byte
@@ -48,7 +51,6 @@ p0gfx       .byte
 p0color     .byte
 p0ycounter  .byte
 
-; --- Ball obstacle variables ---
 bally       .byte
 temp_bally  .byte
 ballactive  .byte
@@ -56,19 +58,27 @@ balldelay   .byte
 ballneedpos .byte
 balltimer   .byte
 
-; --- Collectible item variables ---
 collectX    .byte
 collectY    .byte
 collectActive   .byte
 collectDelay    .byte
 temp_collecty   .byte
 
-; --- Score timer ---
 scoreTimer  .byte
 
-; --- Lives system ---
 lives       .byte
 invincible  .byte
+
+gameState   .byte
+fireDebounce .byte
+gameVariation .byte
+selectDebounce .byte
+
+soundTimer  .byte
+soundType   .byte
+
+goTimer     .byte
+finalScore  ds 2
 
 ;------------------------------------------------
 ; Start of ROM
@@ -79,12 +89,21 @@ invincible  .byte
 Start 
     CLEAN_START
 
+    lda     #STATE_TITLE
+    sta     gameState
+    lda     #0
+    sta     fireDebounce
+    sta     selectDebounce
+    sta     gameVariation
+    sta     soundTimer
+    sta     soundType
+
+InitGame
     lda     #80
     sta     p0x
     lda     #60
     sta     p0y
 
-; --- Initialize Monster ---
     lda     #0              
     sta     p1x
     sta     monsterTimer
@@ -113,7 +132,6 @@ Start
     sta     scorepointers+9
     sta     scorepointers+11
 
-; --- Initialize ball obstacle ---
     lda     #0
     sta     ballactive
     sta     ballneedpos
@@ -122,24 +140,37 @@ Start
     lda     #120            
     sta     balldelay
 
-; --- Initialize score timer ---
     lda     #0
     sta     scoreTimer
+    sta     score
+    sta     score+1
 
-; --- Initialize lives ---
+    lda     gameVariation
+    cmp     #1
+    beq     .fiveLives
+    cmp     #2
+    beq     .oneLife
     lda     #3
+    jmp     .setLives
+.fiveLives
+    lda     #5
+    jmp     .setLives
+.oneLife
+    lda     #1
+.setLives
     sta     lives
     lda     #0
     sta     invincible
 
-; --- Initialize collectible item ---
     lda     #0
     sta     collectActive
     lda     #90
     sta     collectDelay
+    lda     #0
+    sta     goTimer
 
 ;------------------------------------------------
-; Vertical Blank
+; Main Loop
 ;------------------------------------------------
 MainLoop
     lda     #2
@@ -155,61 +186,163 @@ MainLoop
     lda     #$0E
     sta     bgcolor
 
-; --- Clear collision registers and motion ---
     sta     CXCLR
     sta     HMCLR           
 
     inc     frame
 
+    lda     gameState
+    cmp     #STATE_PLAYING
+    beq     .doPlaying
+    cmp     #STATE_GAMEOVER
+    beq     .doGameOver
+    jmp     DoTitle
+
+.doPlaying
+    jmp     DoPlaying
+.doGameOver
+    jmp     DoGameOver
+
 ; ===================
-; Score Logic
+; TITLE SCREEN LOGIC
 ; ===================
+DoTitle
+    lda     SWCHB
+    and     #%00000010
+    bne     .selectNotPressed
+    lda     selectDebounce
+    bne     .selectHeld
+    lda     #1
+    sta     selectDebounce
+    inc     gameVariation
+    lda     gameVariation
+    cmp     #3
+    bcc     .varOk
+    lda     #0
+    sta     gameVariation
+.varOk
+    lda     #4
+    sta     soundTimer
+    lda     #2
+    sta     soundType
+    jmp     .selectDone
+.selectNotPressed
+    lda     #0
+    sta     selectDebounce
+.selectHeld
+.selectDone
+
+    lda     SWCHB
+    and     #%00000001
+    beq     .startGame
+
+    lda     INPT4
+    bmi     .noFireTitle
+.startGame
+    lda     fireDebounce
+    bne     .noFireTitle
+    lda     #1
+    sta     fireDebounce
+    lda     #STATE_PLAYING
+    sta     gameState
+    jmp     InitGame
+.noFireTitle
+    lda     INPT4
+    bmi     .resetDebounce
+    jmp     .skipResetDebounce
+.resetDebounce
+    lda     #0
+    sta     fireDebounce
+.skipResetDebounce
+
+    jsr     UpdateSound
+    jmp     WaitVBlankEnd
+
+; ===================
+; GAME OVER LOGIC
+; ===================
+DoGameOver
+    inc     goTimer
+
+    lda     SWCHB
+    and     #%00000001
+    beq     .goToTitle
+
+    lda     INPT4
+    bmi     .noFireGO
+    lda     fireDebounce
+    bne     .noFireGO
+.goToTitle
+    lda     goTimer
+    cmp     #60
+    bcc     .noFireGO
+    lda     #STATE_TITLE
+    sta     gameState
+    lda     #0
+    sta     fireDebounce
+    jmp     Start
+.noFireGO
+    lda     INPT4
+    bmi     .resetDebounceGO
+    jmp     .skipResetGO
+.resetDebounceGO
+    lda     #0
+    sta     fireDebounce
+.skipResetGO
+
+    jsr     UpdateSound
+    jmp     WaitVBlankEnd
+
+; ===================
+; PLAYING LOGIC
+; ===================
+DoPlaying
     inc     scoreTimer
     lda     scoreTimer
     cmp     #60
     bcc     .skipScore
-
     lda     #0
     sta     scoreTimer
-
     lda     #1
     ldx     #0
     ldy     #0
     jsr     AddScore
     jsr     LoadScorePointers
-
 .skipScore
 
-; ===================
-; Move Monster
-; ===================
     inc     monsterTimer
     lda     monsterTimer
     cmp     monsterSpeed
     bcc     .skipMonster
-    
     lda     #0
     sta     monsterTimer
-
     lda     p1x
     cmp     #120
     bcc     .moveMonster
-    jmp     Start
+    jmp     TriggerGameOver
 .moveMonster
     inc     p1x             
 .skipMonster
 
-; ===================
-; Invincibility Countdown
-; ===================
     lda     invincible
     beq     .noInvCount
     dec     invincible
 .noInvCount
 
-; ===================
-; Move Ball Obstacle
-; ===================
+    lda     SWCHB
+    and     #%01000000
+    bne     .proMode
+    jmp     .diffDone
+.proMode
+    lda     frame
+    and     #%00000001
+    bne     .diffDone
+    lda     p1x
+    cmp     #120
+    bcs     .diffDone
+    inc     p1x
+.diffDone
+
 MoveBall
     lda     balldelay
     beq     .noDelay
@@ -218,13 +351,18 @@ MoveBall
 .noDelay
     lda     ballactive
     beq     .spawnBall
-
     dec     balltimer
     bne     .ballLogicDone
-
     lda     #0
     sta     ballactive
-    lda     #120            
+    lda     SWCHB
+    and     #%10000000
+    beq     .normalBallDelay
+    lda     #60
+    jmp     .setBallDelay
+.normalBallDelay
+    lda     #120
+.setBallDelay
     sta     balldelay
     jmp     .ballLogicDone
 
@@ -235,7 +373,6 @@ MoveBall
     sta     ballneedpos     
     lda     #75             
     sta     balltimer
-
     lda     bally
     clc
     adc     #12
@@ -244,12 +381,8 @@ MoveBall
     lda     #20
 .yOk
     sta     bally
-
 .ballLogicDone
 
-; ===================
-; Spawn Collectible
-; ===================
     lda     collectDelay
     beq     .noCollectDelay
     dec     collectDelay
@@ -257,7 +390,6 @@ MoveBall
 .noCollectDelay
     lda     collectActive
     bne     .collectLogicDone
-
     lda     frame
     and     #%00000111
     cmp     #6
@@ -272,12 +404,8 @@ MoveBall
     sta     collectY
     lda     #1
     sta     collectActive
-
 .collectLogicDone
 
-; ===================
-; Joystick Input
-; ===================
 CheckUp
     lda     #%00010000
     bit     SWCHA
@@ -323,6 +451,9 @@ CheckLeft
     dec     p0x
 EndInput
 
+    jsr     UpdateSound
+
+WaitVBlankEnd
     sta     WSYNC           
 .waitForVBlank
     lda     INTIM
@@ -330,10 +461,410 @@ EndInput
     sta     WSYNC
     sta     VBLANK
 
+    lda     gameState
+    cmp     #STATE_PLAYING
+    beq     .kernelPlay
+    cmp     #STATE_GAMEOVER
+    beq     .kernelGO
+    jmp     TitleKernel
+.kernelPlay
     jmp     StartDrawScreen
+.kernelGO
+    jmp     GameOverKernel
+
+; ===================
+; TITLE SCREEN KERNEL
+; ===================
+TitleKernel
+    lda     #0
+    sta     GRP0
+    sta     GRP1
+    sta     PF0
+    sta     PF1
+    sta     PF2
+    sta     ENAM0
+    sta     ENAM1
+    sta     ENABL
+
+    lda     #$46
+    sta     COLUPF
+    lda     #$00
+    sta     COLUBK
+    lda     #%00000001
+    sta     CTRLPF
+
+    ldx     #192
+.titleLine
+    cpx     #155
+    bcs     .titleBlank
+    cpx     #140
+    bcc     .titleMid
+    lda     #%11110000
+    sta     PF0
+    lda     #%11111111
+    sta     PF1
+    lda     #%11111111
+    sta     PF2
+    jmp     .titleWSYNC
+
+.titleMid
+    cpx     #105
+    bcs     .titleLower
+    cpx     #90
+    bcc     .titleLower
+    lda     #%00000000
+    sta     PF0
+    lda     gameVariation
+    cmp     #0
+    beq     .showVar0
+    cmp     #1
+    beq     .showVar1
+    lda     #%01100110
+    sta     PF1
+    lda     #%00000000
+    sta     PF2
+    jmp     .titleWSYNC
+.showVar0
+    lda     #%00011000
+    sta     PF1
+    lda     #%00000000
+    sta     PF2
+    jmp     .titleWSYNC
+.showVar1
+    lda     #%01111110
+    sta     PF1
+    lda     #%00000000
+    sta     PF2
+    jmp     .titleWSYNC
+
+.titleLower
+    cpx     #65
+    bcs     .titleBlank
+    cpx     #50
+    bcc     .titleBlank
+    lda     frame
+    and     #%00100000
+    beq     .titleBlank
+    lda     #%00000000
+    sta     PF0
+    lda     #%01111110
+    sta     PF1
+    lda     #%00000000
+    sta     PF2
+    lda     #$0E
+    sta     COLUPF
+    jmp     .titleWSYNC
+
+.titleBlank
+    lda     #0
+    sta     PF0
+    sta     PF1
+    sta     PF2
+    lda     #$46
+    sta     COLUPF
+
+.titleWSYNC
+    sta     WSYNC
+    dex
+    bne     .titleLine
+
+    jmp     DoOverscan
+
+; ===================
+; GAME OVER KERNEL
+; ===================
+GameOverKernel
+    lda     finalScore
+    sta     score
+    lda     finalScore+1
+    sta     score+1
+    jsr     LoadScorePointers
+
+    lda     #0
+    sta     GRP0
+    sta     GRP1
+    sta     ENAM0
+    sta     ENAM1
+    sta     ENABL
+    sta     PF0
+    sta     PF1
+    sta     PF2
+
+    lda     #$36
+    sta     COLUBK
+
+    lda     frame
+    and     #%00010000
+    beq     .goColorA
+    lda     #$0E
+    jmp     .goSetColor
+.goColorA
+    lda     #$48
+.goSetColor
+    sta     COLUP0
+    sta     COLUP1
+
+    lda     #%00000001
+    sta     CTRLPF
+
+; ---- Scanline budget: 192 total ----
+; Top spacer:    30 lines
+; Score:         18 lines (2 setup + 16 draw)
+; Gap1:          20 lines
+; "GAME":        18 lines
+; Gap2:           6 lines
+; "OVER":        18 lines
+; Gap3:          20 lines
+; Flash bar:     16 lines
+; Bottom:        46 lines
+; Total:        192
+
+; --- Top spacer: 30 ---
+    ldx     #30
+.goTopSpacer
+    sta     WSYNC
+    dex
+    bne     .goTopSpacer
+
+; === SCORE DISPLAY ===
+    jsr     Setup48Pixel
+
+.goScoreLoop
+    ldy     scoreHeight                                                          
+    lda     (scorepointers),y                             
+    sta     GRP0                                                                 
+    sta     WSYNC               
+    lda     (scorepointers+2),y                                                  
+    sta     GRP1           
+    lda     (scorepointers+4),y              
+    sta     GRP0                                                                 
+    lda     (scorepointers+6),y    
+    sta     temp                                             
+    lda     (scorepointers+8),y                           
+    tax                 
+    lda     (scorepointers+10),y                                  
+    tay         
+    lda     temp                          
+    sta     GRP1                        
+    stx     GRP0                   
+    sty     GRP1                                                            
+    sta     GRP0  
+    dec     scoreHeight                            
+    bpl     .goScoreLoop                                      
+
+    jsr     End48Pixel
+
+; --- Gap1: 20 ---
+    ldx     #20
+.goGap1
+    sta     WSYNC
+    dex
+    bne     .goGap1
+
+; === "GAME" TEXT ===
+    lda     #<LetterG
+    sta     scorepointers
+    lda     #>LetterG
+    sta     scorepointers+1
+    lda     #<LetterA
+    sta     scorepointers+2
+    lda     #>LetterA
+    sta     scorepointers+3
+    lda     #<LetterM
+    sta     scorepointers+4
+    lda     #>LetterM
+    sta     scorepointers+5
+    lda     #<LetterE
+    sta     scorepointers+6
+    lda     #>LetterE
+    sta     scorepointers+7
+    lda     #<blank
+    sta     scorepointers+8
+    lda     #>blank
+    sta     scorepointers+9
+    lda     #<blank
+    sta     scorepointers+10
+    lda     #>blank
+    sta     scorepointers+11
+
+    jsr     Setup48Pixel
+
+.goGameLoop
+    ldy     scoreHeight                                                          
+    lda     (scorepointers),y                             
+    sta     GRP0                                                                 
+    sta     WSYNC               
+    lda     (scorepointers+2),y                                                  
+    sta     GRP1           
+    lda     (scorepointers+4),y              
+    sta     GRP0                                                                 
+    lda     (scorepointers+6),y    
+    sta     temp                                             
+    lda     (scorepointers+8),y                           
+    tax                 
+    lda     (scorepointers+10),y                                  
+    tay         
+    lda     temp                          
+    sta     GRP1                        
+    stx     GRP0                   
+    sty     GRP1                                                            
+    sta     GRP0  
+    dec     scoreHeight                            
+    bpl     .goGameLoop                                      
+
+    jsr     End48Pixel
+
+; --- Gap2: 6 ---
+    ldx     #6
+.goGap2
+    sta     WSYNC
+    dex
+    bne     .goGap2
+
+; === "OVER" TEXT ===
+    lda     #<LetterO
+    sta     scorepointers
+    lda     #>LetterO
+    sta     scorepointers+1
+    lda     #<LetterV
+    sta     scorepointers+2
+    lda     #>LetterV
+    sta     scorepointers+3
+    lda     #<LetterE
+    sta     scorepointers+4
+    lda     #>LetterE
+    sta     scorepointers+5
+    lda     #<LetterR
+    sta     scorepointers+6
+    lda     #>LetterR
+    sta     scorepointers+7
+    lda     #<blank
+    sta     scorepointers+8
+    lda     #>blank
+    sta     scorepointers+9
+    lda     #<blank
+    sta     scorepointers+10
+    lda     #>blank
+    sta     scorepointers+11
+
+    jsr     Setup48Pixel
+
+.goOverLoop
+    ldy     scoreHeight                                                          
+    lda     (scorepointers),y                             
+    sta     GRP0                                                                 
+    sta     WSYNC               
+    lda     (scorepointers+2),y                                                  
+    sta     GRP1           
+    lda     (scorepointers+4),y              
+    sta     GRP0                                                                 
+    lda     (scorepointers+6),y    
+    sta     temp                                             
+    lda     (scorepointers+8),y                           
+    tax                 
+    lda     (scorepointers+10),y                                  
+    tay         
+    lda     temp                          
+    sta     GRP1                        
+    stx     GRP0                   
+    sty     GRP1                                                            
+    sta     GRP0  
+    dec     scoreHeight                            
+    bpl     .goOverLoop                                      
+
+    jsr     End48Pixel
+
+; --- Gap3: 20 ---
+    ldx     #20
+.goGap3
+    sta     WSYNC
+    dex
+    bne     .goGap3
+
+; --- Flash bar: 16 ---
+    lda     frame
+    and     #%00001000
+    beq     .goNoBar
+    lda     #$44
+    sta     COLUPF
+    lda     #%11110000
+    sta     PF0
+    lda     #%11111111
+    sta     PF1
+    lda     #%11111111
+    sta     PF2
+    jmp     .goDrawBar
+.goNoBar
+    lda     #0
+    sta     PF0
+    sta     PF1
+    sta     PF2
+.goDrawBar
+    ldx     #16
+.goBarLoop
+    sta     WSYNC
+    dex
+    bne     .goBarLoop
+    lda     #0
+    sta     PF0
+    sta     PF1
+    sta     PF2
+
+; --- Bottom: 46 ---
+    ldx     #46
+.goBottom
+    sta     WSYNC
+    dex
+    bne     .goBottom
+
+    jmp     DoOverscan
+
+; ===================
+; 48-pixel setup/teardown subroutines
+; ===================
+Setup48Pixel
+    lda     #0
+    sta     WSYNC
+    sta     REFP0
+    sta     REFP1
+    sta     GRP0
+    sta     GRP1
+    sta     WSYNC
+    nop
+    sta     GRP0
+    sta     GRP1
+    ldy     #SCORE_HEIGHT
+    sty     scoreHeight
+    lda     #$03
+    sta     NUSIZ0
+    sta     NUSIZ1
+    sta     VDELP0
+    sta     VDELP1  
+    lda     #$F0
+    sta     HMP0
+    lda     #0
+    nop
+    sta     RESP0
+    sta     RESP1
+    sta     WSYNC
+    sta     HMOVE
+    sta     WSYNC
+    rts
+
+End48Pixel
+    sta     WSYNC
+    lda     #0
+    sta     VDELP0
+    sta     VDELP1
+    sta     GRP0
+    sta     GRP1
+    sta     GRP0        
+    sta     NUSIZ0
+    sta     NUSIZ1
+    rts
 
 ;------------------------------------------------
-; Kernel
+; Game Kernel (playing state)
 ;------------------------------------------------
     align 256
 StartDrawScreen
@@ -342,6 +873,9 @@ DrawScreen
     sta     GRP0
     sta     GRP1
 
+    lda     #$00
+    sta     COLUBK
+
     ldx     #9
 .topSpacer
     cpx     #7
@@ -349,26 +883,35 @@ DrawScreen
     cpx     #4
     bcc     .noLivesDraw
 
-; --- Draw lives indicator using playfield ---
-    lda     #$46            ; red-ish color for lives
+    lda     #$46
     sta     COLUPF
     lda     #0
     sta     PF0
     sta     PF2
     lda     lives
+    cmp     #5
+    bcc     .not5
+    lda     #%01010101
+    jmp     .setLivesPF
+.not5
+    cmp     #4
+    bcc     .not4
+    lda     #%01010101
+    jmp     .setLivesPF
+.not4
     cmp     #3
     bcc     .not3
-    lda     #%01010100      ; 3 blocks
+    lda     #%01010100
     jmp     .setLivesPF
 .not3
     cmp     #2
     bcc     .not2
-    lda     #%01010000      ; 2 blocks
+    lda     #%01010000
     jmp     .setLivesPF
 .not2
     cmp     #1
     bcc     .noLivesBlk
-    lda     #%01000000      ; 1 block
+    lda     #%01000000
     jmp     .setLivesPF
 .noLivesBlk
     lda     #0
@@ -388,7 +931,6 @@ DrawScreen
     sta     WSYNC
     bne     .topSpacer
 
-; --- Clear playfield after lives display ---
     lda     #0
     sta     PF0
     sta     PF1
@@ -459,9 +1001,6 @@ DrawScreen
     sta     NUSIZ0
     sta     NUSIZ1
 
-; ===================
-; Transition to play area
-; ===================
     jmp     .skipAlignPadding   
     align 256                   
 .skipAlignPadding
@@ -512,8 +1051,8 @@ DrawScreen
     asl
     asl
     asl
-    sta     HMM1        ; CHANGED TO M1
-    sta     RESM1       ; CHANGED TO M1
+    sta     HMM1
+    sta     RESM1
     sta     WSYNC
     jmp     .doneM0Pos
 .skipMissilePos
@@ -548,13 +1087,11 @@ DrawScreen
     sta     HMOVE       
     sta     WSYNC 
 
-; --- Setup Objects ---
     lda     #0
     sta     GRP0
     sta     NUSIZ0
     sta     p0gfx
 
-; --- Player color: flash if invincible ---
     lda     invincible
     beq     .normalColor
     lda     frame
@@ -578,9 +1115,8 @@ DrawScreen
     lda     #%00100100      
     sta     CTRLPF
 
-    sta     WSYNC          ; SPLIT CYCLE LOAD
+    sta     WSYNC
 
-; --- Pre-calculation ---
     lda     ballactive
     beq     .disableBall
     lda     ballneedpos
@@ -588,28 +1124,25 @@ DrawScreen
     lda     bally
     sta     temp_bally
     jmp     .ballSetupDone
-.disableBall:
+.disableBall
     lda     #200        
     sta     temp_bally
     lda     #0
     sta     ENABL
-.ballSetupDone:
+.ballSetupDone
 
     lda     collectActive
     beq     .disableCollect
     lda     collectY
     sta     temp_collecty
     jmp     .collectSetupDone
-.disableCollect:
+.disableCollect
     lda     #200
     sta     temp_collecty
-.collectSetupDone:
+.collectSetupDone
 
     sta     WSYNC       
 
-; ===================
-; Play Area
-; ===================
     ldx     #PLAY_HEIGHT
 .playArea
     lda     p0gfx
@@ -625,9 +1158,9 @@ DrawScreen
     tay                     
     lda     PlayerGfx,y     
     jmp     .storeP0_1   
-.hideP0_1:
+.hideP0_1
     lda     #0              
-.storeP0_1:
+.storeP0_1
     sta     p0gfx           
 
     txa                     
@@ -637,9 +1170,9 @@ DrawScreen
     bcs     .hideBall       
     lda     #2              
     jmp     .storeBall      
-.hideBall:
+.hideBall
     lda     #0             
-.storeBall:
+.storeBall
     sta     WSYNC
     sta     ENABL
 
@@ -661,9 +1194,9 @@ DrawScreen
     tay                     
     lda     PlayerGfx,y     
     jmp     .storeP0_2      
-.hideP0_2:
+.hideP0_2
     lda     #0              
-.storeP0_2:
+.storeP0_2
     sta     p0gfx           
 
     txa                     
@@ -673,33 +1206,31 @@ DrawScreen
     bcs     .hideCollect    
     lda     #2              
     jmp     .storeCollect   
-.hideCollect:
+.hideCollect
     lda     #0              
-.storeCollect:
+.storeCollect
     sta     WSYNC
     sta     ENAM1
 
     dex                     
     bne     .playArea
 
-; ===================
-; Padding
-; ===================
     lda     #0
     sta     GRP0
     sta     GRP1        
     sta     ENABL
-    sta     ENAM1           ; CHANGED TO ENAM1
+    sta     ENAM1
 
-    ldx     #1              ; REDUCED TO 1 SCANLINE
+    ldx     #1
 .padLoop
     sta     WSYNC
     dex
     bne     .padLoop
 
 ;------------------------------------------------
-; Overscan
+; Overscan (shared)
 ;------------------------------------------------
+DoOverscan
     lda     #%01000010
     sta     WSYNC
     sta     VBLANK
@@ -710,21 +1241,21 @@ DrawScreen
     sta     GRP0
     sta     GRP1        
     sta     ENABL
+    sta     PF0
+    sta     PF1
+    sta     PF2
 
-; ===================
-; Collision Detection 
-; ===================
+    lda     gameState
+    cmp     #STATE_PLAYING
+    bne     .skipAllCollision
 
-; --- Check if player is invincible ---
     lda     invincible
     bne     .noCollision
 
-; --- Check Player-Ball collision (P0-BL on D6 of CXP0FB) ---
     lda     CXP0FB
     and     #%01000000
     bne     .playerHit
 
-; --- Check Player-Monster collision (P0-P1 on D7 of CXPPMM) ---
     lda     CXPPMM
     and     #%10000000
     bne     .playerHit
@@ -735,15 +1266,16 @@ DrawScreen
     dec     lives
     lda     lives
     bne     .stillAlive
-
-; --- Game Over: reset everything ---
-    jmp     Start
+    jmp     TriggerGameOver
 
 .stillAlive
     lda     #120
     sta     invincible
+    lda     #15
+    sta     soundTimer
+    lda     #1
+    sta     soundType
 
-; --- Push monster back on hit ---
     lda     p1x
     sec
     sbc     #20
@@ -751,17 +1283,20 @@ DrawScreen
     lda     #0
 .storeHitMonX
     sta     p1x
-
     lda     #$42
     sta     bgcolor
 
 .noCollision
-
-    lda     CXM1P           ; CHANGED TO CXM1P
-    and     #%10000000      ; CHECKING BIT 7
+    lda     CXM1P
+    and     #%10000000
     beq     .noCollectHit
     lda     collectActive
     beq     .noCollectHit
+
+    lda     #10
+    sta     soundTimer
+    lda     #2
+    sta     soundType
 
     lda     #$50
     ldx     #0
@@ -769,31 +1304,89 @@ DrawScreen
     jsr     AddScore
     jsr     LoadScorePointers
 
-; monster push back
     lda     p1x
     sec
     sbc     #15
     bcs     .storeMonsterX
     lda     #0
-.storeMonsterX:
+.storeMonsterX
     sta     p1x
-
     lda     #0
     sta     collectActive
     lda     #60
     sta     collectDelay
 
 .noCollectHit
+.skipAllCollision
 
 .waitForOverscan
     lda     INTIM
     bne     .waitForOverscan
+    jmp     MainLoop
 
+; ===================
+; Trigger Game Over
+; ===================
+TriggerGameOver
+    lda     score
+    sta     finalScore
+    lda     score+1
+    sta     finalScore+1
+    lda     #STATE_GAMEOVER
+    sta     gameState
+    lda     #0
+    sta     goTimer
+    lda     #30
+    sta     soundTimer
+    lda     #3
+    sta     soundType
     jmp     MainLoop
 
 ;------------------------------------------------
 ; Subroutines
 ;------------------------------------------------
+UpdateSound
+    lda     soundTimer
+    beq     .soundOff
+    dec     soundTimer
+    lda     soundType
+    cmp     #1
+    beq     .hitSound
+    cmp     #2
+    beq     .collectSound
+    cmp     #3
+    beq     .gameOverSound
+    jmp     .soundOff
+.hitSound
+    lda     #8
+    sta     AUDC0
+    lda     #6
+    sta     AUDF0
+    lda     #8
+    sta     AUDV0
+    rts
+.collectSound
+    lda     #4
+    sta     AUDC0
+    lda     #15
+    sta     AUDF0
+    lda     #8
+    sta     AUDV0
+    rts
+.gameOverSound
+    lda     soundTimer
+    sta     AUDF0
+    lda     #4
+    sta     AUDC0
+    lda     #10
+    sta     AUDV0
+    rts
+.soundOff
+    lda     #0
+    sta     AUDV0
+    sta     soundType
+    rts
+
 AddScore
     sta     temp2
     sed
@@ -804,35 +1397,28 @@ AddScore
     adc     score
     sta     score
     cld
-
-; --- Adjust monster speed based on score added ---
     lda     temp2
     cmp     #$50
     beq     .speedSub50
     cmp     #$01
     beq     .speedSub1
     rts
-
 .speedSub50
     lda     monsterSpeed
     sec
     sbc     #5
     bcc     .capSpeed
     jmp     .checkSpeedLimit
-    
 .speedSub1
     lda     monsterSpeed
     sec
     sbc     #1
     bcc     .capSpeed
-    
 .checkSpeedLimit
     cmp     #10
     bcs     .storeSpeed
-    
 .capSpeed
     lda     #10
-    
 .storeSpeed
     sta     monsterSpeed
     rts
@@ -843,7 +1429,6 @@ LoadScorePointers
     tax
     lda     scoretableIndex,x
     sta     scorepointers+6
-
     lda     score+1
     and     #$F0
     lsr
@@ -853,13 +1438,11 @@ LoadScorePointers
     tax
     lda     scoretableIndex,x
     sta     scorepointers+4
-
     lda     score
     and     #$0F
     tax
     lda     scoretableIndex,x
     sta     scorepointers+2
-
     lda     score
     and     #$F0
     lsr
@@ -869,7 +1452,15 @@ LoadScorePointers
     tax
     lda     scoretableIndex,x
     sta     scorepointers
-    
+
+    lda     #>scoretable
+    sta     scorepointers+1
+    sta     scorepointers+3
+    sta     scorepointers+5
+    sta     scorepointers+7
+    lda     #>blank
+    sta     scorepointers+9
+    sta     scorepointers+11
     rts
 
 ;------------------------------------------------
@@ -980,6 +1571,80 @@ blank
     .byte   %00000000
     .byte   %00000000
 
+; ===================
+; Letter Graphics for GAME OVER (bottom-to-top, 8 bytes each)
+; Must be in same page as scoretable!
+; ===================
+LetterG
+    .byte   %00111100
+    .byte   %01100110
+    .byte   %01101110
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %00111100
+
+LetterA
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01111110
+    .byte   %01100110
+    .byte   %00100100
+    .byte   %00100100
+    .byte   %00011000
+    .byte   %00011000
+
+LetterM
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01111110
+    .byte   %01111110
+    .byte   %01100110
+    .byte   %01100110
+
+LetterE
+    .byte   %01111110
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01111100
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01111110
+
+LetterO
+    .byte   %00111100
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %00111100
+
+LetterV
+    .byte   %00011000
+    .byte   %00011000
+    .byte   %00111100
+    .byte   %00100100
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+
+LetterR
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01111100
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01111100
+
     align 256
 PlayerGfx
     .byte   %00000000
@@ -1037,9 +1702,6 @@ MonsterGfx
     .byte   %11111100, %11111100, %11111100, %11111100
     .byte   %11111110, %11111110, %11111110, %11111110
 
-;------------------------------------------------
-; Collectible Spawn Locations (X, Y pairs)
-;------------------------------------------------
 collectSpawnTable
     .byte   100, 30
     .byte   130, 50
@@ -1048,9 +1710,6 @@ collectSpawnTable
     .byte   110, 120
     .byte   125, 140
 
-;------------------------------------------------
-; Interrupt Vectors
-;------------------------------------------------
     echo [*-$F000]d, " ROM bytes used"
     ORG    $FFFA
     .word  Start
