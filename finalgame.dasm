@@ -8,19 +8,25 @@
 ; priority)
 ; -0.5. MAKE IT SO THE MONSTER CAN MOVE PAST HALFWAY... because why does
 ; it NOT???? (HIGH PRIORITY)
+;
 ; 0. MOVE SPAWN POINTS FOR MONSTER SO PLAYER CAN COLLECT THEM EVEN AS
 ;    THE MONSTER GETS FASTER (HIGHEST PRIORITY)
+;
 ; 1. add life system, 3 lives, player lose life on collision with monster,
 ;    or ball. Losing life should push the monster back a certain
 ;    distance (HIGH PRIORITY)
 ;    1b. IF THE MONSTER REACHES CPX #120, THEN ITS GAME OVER, REGARDLESS
 ;    OF LIVES (MEDIUM LOW PRIORITY)
+;
 ; 2. make the monster move faster as the score increases (MEDIUM PRIORITY)
+;
 ; 3. maybe when collecting the collectible item, you must shoot it
 ;    at the monster in order to push it back? Also change the sprite for
 ;   the collectible (VERY LOW PRIORITY)
+;
 ; 4. make other things that could be obstacles for the player as well?
-;    this should be a very last thing to do I think. (LOW PRIORITY)
+;
+; this should be a very last thing to do I think. (LOW PRIORITY)
 ;------------------------------------------------
 ; Atari VCS Game
 ;------------------------------------------------
@@ -52,6 +58,7 @@ p0y         .byte
 ; --- Monster variables ---
 p1x             .byte
 monsterTimer    .byte
+monsterSpeed    .byte       ; NEW: Variable to hold dynamic speed limit
 
 score               ds 2 
 scorepointers       ds 12
@@ -103,8 +110,9 @@ Start
 ; --- Initialize Monster ---
     lda     #0              
     sta     p1x
-    lda     #0
     sta     monsterTimer
+    lda     #120            ; NEW: Initial monster speed (frames per step)
+    sta     monsterSpeed
 
     lda     #<PlayerGfx
     sta     sprite0gfx
@@ -200,14 +208,17 @@ MainLoop
 ; ===================
     inc     monsterTimer
     lda     monsterTimer
-    cmp     #120            ; Steady speed timer
+    cmp     monsterSpeed    ; UPDATED: Use dynamic speed instead of hardcoded 120
     bcc     .skipMonster
     
     lda     #0
     sta     monsterTimer
+
     lda     p1x
-    cmp     #120 ;this determines how far the monster goes, 60 is halfway, 120 is basically the whole screen
-    bcs     .skipMonster
+    cmp     #120            ; UPDATED: Check if monster reached the end of the screen
+    bcc     .moveMonster
+    jmp     Start           ; NEW: GAME OVER: Reset if it crossed the edge
+.moveMonster
     inc     p1x             
 .skipMonster
 
@@ -443,21 +454,21 @@ DrawScreen
     sta     WSYNC               
     lda     (scorepointers+2),y                                                  
     sta     GRP1           
-    lda     (scorepointers+4),y                                     
+    lda     (scorepointers+4),y              
     sta     GRP0                                                                 
     lda     (scorepointers+6),y    
     sta     temp                                             
-    lda     (scorepointers+8),y                                                  
+    lda     (scorepointers+8),y                           
     tax                 
     lda     (scorepointers+10),y                                  
-    tay                                                                          
-    lda     temp                                                                 
+    tay         
+    lda     temp                          
     sta     GRP1                        
-    stx     GRP0                                                  
-    sty     GRP1                                                                 
+    stx     GRP0                   
+    sty     GRP1                                                            
     sta     GRP0  
     dec     scoreHeight                            
-    bpl     .scoreLoop                                                           
+    bpl     .scoreLoop                                      
  
     sta     WSYNC
     lda     #0
@@ -550,7 +561,7 @@ DrawScreen
     beq     .noMotion
     lda     ballneedpos
     bne     .noMotion       
-    lda     #$E0            
+    lda     #$E0        
     sta     HMBL
     jmp     .motionSet
 
@@ -590,7 +601,7 @@ DrawScreen
     lda     #%00100100      
     sta     CTRLPF
 
-    sta     WSYNC           ; SPLIT CYCLE LOAD
+    sta     WSYNC          ; SPLIT CYCLE LOAD
 
 ; --- Pre-calculation ---
     lda     ballactive
@@ -792,7 +803,7 @@ DrawScreen
 
     lda     #0
     sta     collectActive
-    lda     #180
+    lda     #60
     sta     collectDelay
 
 .noCollectHit
@@ -807,6 +818,7 @@ DrawScreen
 ; Subroutines
 ;------------------------------------------------
 AddScore
+    sta     temp2           ; Save the score value being added
     sed
     clc
     adc     score+1
@@ -815,6 +827,37 @@ AddScore
     adc     score
     sta     score
     cld
+
+    ; --- Adjust monster speed based on score added ---
+    lda     temp2
+    cmp     #$50            ; Was a collectible picked up (+50 points)?
+    beq     .speedSub50
+    cmp     #$01            ; Was it a normal second passing (+1 point)?
+    beq     .speedSub1
+    rts
+
+.speedSub50
+    lda     monsterSpeed
+    sec
+    sbc     #5              ; Decrease timer limit by 5 frames
+    bcc     .capSpeed       ; If math goes below 0 (underflow), jump straight to cap
+    jmp     .checkSpeedLimit
+    
+.speedSub1
+    lda     monsterSpeed
+    sec
+    sbc     #1              ; Decrease timer limit by 1 frame
+    bcc     .capSpeed       ; If math goes below 0 (underflow), jump straight to cap
+    
+.checkSpeedLimit
+    cmp     #10             ; MIDDLE GROUND CAP: Check against hard cap (10 frames)
+    bcs     .storeSpeed     ; If speed >= 10, we are good, jump to store
+    
+.capSpeed
+    lda     #10             ; MIDDLE GROUND CAP: Force the timer to 10
+    
+.storeSpeed
+    sta     monsterSpeed
     rts
 
 LoadScorePointers
