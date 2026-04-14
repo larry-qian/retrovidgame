@@ -1,11 +1,11 @@
-; notes
-; DONE: game over screen with "GAME OVER" text
-; DONE: start screen right before the actual game starts
-; DONE: add more options via console switches (difficulty, game select)
-; DONE: sound effects for hits, collects, game over
-; still need a background, its not been going good though
 ;------------------------------------------------
 ; Atari VCS Game - Enhanced Version
+;------------------------------------------------
+; Console Switches Dictionary:
+; GAME SELECT:   Cycles starting lives (3, 5, or 1)
+; GAME RESET:    Starts the game (same as Fire button)
+; LEFT DIFF:     P0 Difficulty (A = Fast Monster, B = Normal Monster)
+; RIGHT DIFF:    P1 Difficulty (A = Fast Ball Spawn, B = Normal Ball Spawn)
 ;------------------------------------------------
     processor   6502
     include     vcs.h
@@ -31,54 +31,54 @@ STATE_GAMEOVER = 2
     SEG.U   variables
     ORG     $80
 
-bgcolor     .byte
-frame       .byte
-p0x         .byte
-p0y         .byte
+bgcolor         .byte
+frame           .byte
+p0x             .byte
+p0y             .byte
 
 p1x             .byte
 monsterTimer    .byte
 monsterSpeed    .byte
 
-score               ds 2 
-scorepointers       ds 12
-scoreHeight         .byte
-temp                .byte
-temp2               .byte
+score           ds 2 
+scorepointers   ds 12
+scoreHeight     .byte
+temp            .byte
+temp2           .byte
 
-sprite0gfx  ds 2
-p0gfx       .byte
-p0color     .byte
-p0ycounter  .byte
+sprite0gfx      ds 2
+p0gfx           .byte
+p0color         .byte
+p0ycounter      .byte
 
-bally       .byte
-temp_bally  .byte
-ballactive  .byte
-balldelay   .byte
-ballneedpos .byte
-balltimer   .byte
+bally           .byte
+temp_bally      .byte
+ballactive      .byte
+balldelay       .byte
+ballneedpos     .byte
+balltimer       .byte
 
-collectX    .byte
-collectY    .byte
+collectX        .byte
+collectY        .byte
 collectActive   .byte
 collectDelay    .byte
 temp_collecty   .byte
 
-scoreTimer  .byte
+scoreTimer      .byte
 
-lives       .byte
-invincible  .byte
+lives           .byte
+invincible      .byte
 
-gameState   .byte
-fireDebounce .byte
-gameVariation .byte
-selectDebounce .byte
+gameState       .byte
+fireDebounce    .byte
+gameVariation   .byte
+selectDebounce  .byte
 
-soundTimer  .byte
-soundType   .byte
+soundTimer      .byte
+soundType       .byte
 
-goTimer     .byte
-finalScore  ds 2
+goTimer         .byte
+finalScore      ds 2
 
 ;------------------------------------------------
 ; Start of ROM
@@ -321,7 +321,7 @@ DoPlaying
     bcc     .moveMonster
     jmp     TriggerGameOver
 .moveMonster
-    inc     p1x             
+    inc     p1x              
 .skipMonster
 
     lda     invincible
@@ -486,87 +486,240 @@ TitleKernel
     sta     ENAM1
     sta     ENABL
 
-    lda     #$46
-    sta     COLUPF
-    lda     #$00
-    sta     COLUBK
     lda     #%00000001
     sta     CTRLPF
+    lda     #$00
+    sta     COLUBK
 
-    ldx     #192
-.titleLine
-    cpx     #155
-    bcs     .titleBlank
-    cpx     #140
-    bcc     .titleMid
-    lda     #%11110000
-    sta     PF0
-    lda     #%11111111
-    sta     PF1
-    lda     #%11111111
-    sta     PF2
-    jmp     .titleWSYNC
+    ; Setup high bytes for scorepointers efficiently (all map to the same page)
+    lda     #>scoretable
+    sta     scorepointers+1
+    sta     scorepointers+3
+    sta     scorepointers+5
+    sta     scorepointers+7
+    sta     scorepointers+9
+    sta     scorepointers+11
 
-.titleMid
-    cpx     #105
-    bcs     .titleLower
-    cpx     #90
-    bcc     .titleLower
-    lda     #%00000000
-    sta     PF0
-    lda     gameVariation
-    cmp     #0
-    beq     .showVar0
-    cmp     #1
-    beq     .showVar1
-    lda     #%01100110
-    sta     PF1
-    lda     #%00000000
-    sta     PF2
-    jmp     .titleWSYNC
-.showVar0
-    lda     #%00011000
-    sta     PF1
-    lda     #%00000000
-    sta     PF2
-    jmp     .titleWSYNC
-.showVar1
-    lda     #%01111110
-    sta     PF1
-    lda     #%00000000
-    sta     PF2
-    jmp     .titleWSYNC
-
-.titleLower
-    cpx     #65
-    bcs     .titleBlank
-    cpx     #50
-    bcc     .titleBlank
-    lda     frame
-    and     #%00100000
-    beq     .titleBlank
-    lda     #%00000000
-    sta     PF0
-    lda     #%01111110
-    sta     PF1
-    lda     #%00000000
-    sta     PF2
-    lda     #$0E
-    sta     COLUPF
-    jmp     .titleWSYNC
-
-.titleBlank
-    lda     #0
-    sta     PF0
-    sta     PF1
-    sta     PF2
-    lda     #$46
-    sta     COLUPF
-
-.titleWSYNC
+    ; --- Top Spacer: 20 Lines ---
+    ldx     #20
+.titleTopSpc
     sta     WSYNC
     dex
-    bne     .titleLine
+    bne     .titleTopSpc
+
+    ; --- Blinking "PRESS FIRE" ---
+    lda     frame
+    and     #%00100000
+    bne     .drawPressFire
+
+    ldx     #32                     ; Skip text if we are in the 'off' flash phase
+.titleBlankText
+    sta     WSYNC
+    dex
+    bne     .titleBlankText
+    jmp     .afterPressFire
+
+.drawPressFire
+    lda     #$46                    ; Reddish color for PRESS FIRE
+    sta     COLUP0
+    sta     COLUP1
+
+    ; P R E S S [BLANK]
+    lda     #<LetterP
+    sta     scorepointers
+    lda     #<LetterR
+    sta     scorepointers+2
+    lda     #<LetterE
+    sta     scorepointers+4
+    lda     #<LetterS
+    sta     scorepointers+6
+    sta     scorepointers+8         ; Duplicate S
+    lda     #<blank
+    sta     scorepointers+10
+
+    jsr     Setup48Pixel
+.pressLoop
+    ldy     scoreHeight                                                          
+    lda     (scorepointers),y                             
+    sta     GRP0                                                          
+    sta     WSYNC               
+    lda     (scorepointers+2),y                                                  
+    sta     GRP1           
+    lda     (scorepointers+4),y              
+    sta     GRP0                                                          
+    lda     (scorepointers+6),y    
+    sta     temp                                             
+    lda     (scorepointers+8),y                 
+    tax                 
+    lda     (scorepointers+10),y                                  
+    tay         
+    lda     temp    
+    sta     GRP1                        
+    stx     GRP0                   
+    sty     GRP1        
+    sta     GRP0  
+    dec     scoreHeight                            
+    bpl     .pressLoop                                      
+    jsr     End48Pixel
+
+    ; Gap 6 Lines
+    ldx     #6
+.pfGap
+    sta     WSYNC
+    dex
+    bne     .pfGap
+
+    ; F I R E [BLANK] [BLANK] 
+    lda     #<LetterF
+    sta     scorepointers
+    lda     #<LetterI
+    sta     scorepointers+2
+    lda     #<LetterR
+    sta     scorepointers+4
+    lda     #<LetterE
+    sta     scorepointers+6
+    lda     #<blank
+    sta     scorepointers+8
+    sta     scorepointers+10
+
+    jsr     Setup48Pixel
+.fireLoop
+    ldy     scoreHeight                                                          
+    lda     (scorepointers),y                             
+    sta     GRP0                                                          
+    sta     WSYNC               
+    lda     (scorepointers+2),y                                                  
+    sta     GRP1           
+    lda     (scorepointers+4),y              
+    sta     GRP0                                                          
+    lda     (scorepointers+6),y    
+    sta     temp                                             
+    lda     (scorepointers+8),y                 
+    tax                 
+    lda     (scorepointers+10),y                                  
+    tay         
+    lda     temp    
+    sta     GRP1                        
+    stx     GRP0                   
+    sty     GRP1        
+    sta     GRP0  
+    dec     scoreHeight                            
+    bpl     .fireLoop                                      
+    jsr     End48Pixel
+
+.afterPressFire
+    ; --- Middle Spacer: 20 Lines ---
+    ldx     #20
+.titleMidGap
+    sta     WSYNC
+    dex
+    bne     .titleMidGap
+
+    ; --- "LIVES" Label ---
+    lda     #$0E                    ; White text
+    sta     COLUP0
+    sta     COLUP1
+
+    lda     #<LetterL
+    sta     scorepointers
+    lda     #<LetterI
+    sta     scorepointers+2
+    lda     #<LetterV
+    sta     scorepointers+4
+    lda     #<LetterE
+    sta     scorepointers+6
+    lda     #<LetterS
+    sta     scorepointers+8
+    lda     #<blank
+    sta     scorepointers+10
+
+    jsr     Setup48Pixel
+.livesLoop
+    ldy     scoreHeight                                                          
+    lda     (scorepointers),y                             
+    sta     GRP0                                                          
+    sta     WSYNC               
+    lda     (scorepointers+2),y                                                  
+    sta     GRP1           
+    lda     (scorepointers+4),y              
+    sta     GRP0                                                          
+    lda     (scorepointers+6),y    
+    sta     temp                                             
+    lda     (scorepointers+8),y                 
+    tax                 
+    lda     (scorepointers+10),y                                  
+    tay         
+    lda     temp    
+    sta     GRP1                        
+    stx     GRP0                   
+    sty     GRP1        
+    sta     GRP0  
+    dec     scoreHeight                            
+    bpl     .livesLoop                                      
+    jsr     End48Pixel
+
+    ; Gap 6 Lines
+    ldx     #6
+.livesGap
+    sta     WSYNC
+    dex
+    bne     .livesGap
+
+    ; --- Number of Lives (Centered) ---
+    lda     #<blank                 ; Pad left
+    sta     scorepointers
+    sta     scorepointers+2
+    sta     scorepointers+6         ; Pad right
+    sta     scorepointers+8
+    sta     scorepointers+10
+
+    lda     gameVariation
+    cmp     #0
+    beq     .show3
+    cmp     #1
+    beq     .show5
+.show1
+    lda     #<one
+    jmp     .setNum
+.show3
+    lda     #<three
+    jmp     .setNum
+.show5
+    lda     #<five
+.setNum
+    sta     scorepointers+4
+
+    jsr     Setup48Pixel
+.numLoop
+    ldy     scoreHeight                                                          
+    lda     (scorepointers),y                             
+    sta     GRP0                                                          
+    sta     WSYNC               
+    lda     (scorepointers+2),y                                                  
+    sta     GRP1           
+    lda     (scorepointers+4),y              
+    sta     GRP0                                                          
+    lda     (scorepointers+6),y    
+    sta     temp                                             
+    lda     (scorepointers+8),y                 
+    tax                 
+    lda     (scorepointers+10),y                                  
+    tay         
+    lda     temp    
+    sta     GRP1                        
+    stx     GRP0                   
+    sty     GRP1        
+    sta     GRP0  
+    dec     scoreHeight                            
+    bpl     .numLoop                                      
+    jsr     End48Pixel
+
+    ; --- Bottom Pad: 88 Lines to reach 192 total ---
+    ldx     #88
+.titleBotSpc
+    sta     WSYNC
+    dex
+    bne     .titleBotSpc
 
     jmp     DoOverscan
 
@@ -631,7 +784,7 @@ GameOverKernel
 
 .goScoreLoop
     ldy     scoreHeight                                                          
-    lda     (scorepointers),y                             
+    lda     (scorepointers),y            
     sta     GRP0                                                                 
     sta     WSYNC               
     lda     (scorepointers+2),y                                                  
@@ -641,16 +794,16 @@ GameOverKernel
     lda     (scorepointers+6),y    
     sta     temp                                             
     lda     (scorepointers+8),y                           
-    tax                 
+    tax  
     lda     (scorepointers+10),y                                  
     tay         
-    lda     temp                          
+    lda     temp                    
     sta     GRP1                        
     stx     GRP0                   
-    sty     GRP1                                                            
+    sty     GRP1                        
     sta     GRP0  
     dec     scoreHeight                            
-    bpl     .goScoreLoop                                      
+    bpl     .goScoreLoop       
 
     jsr     End48Pixel
 
@@ -692,22 +845,22 @@ GameOverKernel
 .goGameLoop
     ldy     scoreHeight                                                          
     lda     (scorepointers),y                             
-    sta     GRP0                                                                 
+    sta     GRP0                                                          
     sta     WSYNC               
     lda     (scorepointers+2),y                                                  
     sta     GRP1           
     lda     (scorepointers+4),y              
-    sta     GRP0                                                                 
+    sta     GRP0                                                          
     lda     (scorepointers+6),y    
     sta     temp                                             
-    lda     (scorepointers+8),y                           
+    lda     (scorepointers+8),y                 
     tax                 
     lda     (scorepointers+10),y                                  
     tay         
-    lda     temp                          
+    lda     temp    
     sta     GRP1                        
     stx     GRP0                   
-    sty     GRP1                                                            
+    sty     GRP1        
     sta     GRP0  
     dec     scoreHeight                            
     bpl     .goGameLoop                                      
@@ -752,22 +905,22 @@ GameOverKernel
 .goOverLoop
     ldy     scoreHeight                                                          
     lda     (scorepointers),y                             
-    sta     GRP0                                                                 
+    sta     GRP0                                                          
     sta     WSYNC               
     lda     (scorepointers+2),y                                                  
     sta     GRP1           
     lda     (scorepointers+4),y              
-    sta     GRP0                                                                 
+    sta     GRP0                                                          
     lda     (scorepointers+6),y    
     sta     temp                                             
-    lda     (scorepointers+8),y                           
+    lda     (scorepointers+8),y                 
     tax                 
     lda     (scorepointers+10),y                                  
     tay         
-    lda     temp                          
+    lda     temp    
     sta     GRP1                        
     stx     GRP0                   
-    sty     GRP1                                                            
+    sty     GRP1        
     sta     GRP0  
     dec     scoreHeight                            
     bpl     .goOverLoop                                      
@@ -781,30 +934,13 @@ GameOverKernel
     dex
     bne     .goGap3
 
-; --- Flash bar: 16 ---
-    lda     frame
-    and     #%00001000
-    beq     .goNoBar
-    lda     #$44
-    sta     COLUPF
-    lda     #%11110000
-    sta     PF0
-    lda     #%11111111
-    sta     PF1
-    lda     #%11111111
-    sta     PF2
-    jmp     .goDrawBar
-.goNoBar
-    lda     #0
-    sta     PF0
-    sta     PF1
-    sta     PF2
-.goDrawBar
+; --- Flash bar removed (16 spacer lines) ---
     ldx     #16
 .goBarLoop
     sta     WSYNC
     dex
     bne     .goBarLoop
+    
     lda     #0
     sta     PF0
     sta     PF1
@@ -858,7 +994,7 @@ End48Pixel
     sta     VDELP1
     sta     GRP0
     sta     GRP1
-    sta     GRP0        
+    sta     GRP0   
     sta     NUSIZ0
     sta     NUSIZ1
     rts
@@ -969,24 +1105,24 @@ DrawScreen
 .scoreLoop
     ldy     scoreHeight                                                          
     lda     (scorepointers),y                             
-    sta     GRP0                                                                 
+    sta     GRP0                                                     
     sta     WSYNC               
     lda     (scorepointers+2),y                                                  
     sta     GRP1           
     lda     (scorepointers+4),y              
-    sta     GRP0                                                                 
+    sta     GRP0                                                     
     lda     (scorepointers+6),y    
     sta     temp                                             
-    lda     (scorepointers+8),y                           
+    lda     (scorepointers+8),y            
     tax                 
     lda     (scorepointers+10),y                                  
     tay         
     lda     temp                          
     sta     GRP1                        
     stx     GRP0                   
-    sty     GRP1                                                            
+    sty     GRP1   
     sta     GRP0  
-    dec     scoreHeight                            
+    dec     scoreHeight                       
     bpl     .scoreLoop                                      
  
     sta     WSYNC
@@ -1165,7 +1301,7 @@ DrawScreen
 
     txa                     
     sec                     
-    sbc     temp_bally      
+    sbc     temp_bally   
     cmp     #BALL_HEIGHT    
     bcs     .hideBall       
     lda     #2              
@@ -1189,13 +1325,13 @@ DrawScreen
     cmp     #BIKE_HEIGHT+1  
     bcs     .hideP0_2    
     eor     #$FF            
-    clc                     
+    clc      
     adc     #BIKE_HEIGHT+1  
     tay                     
     lda     PlayerGfx,y     
     jmp     .storeP0_2      
 .hideP0_2
-    lda     #0              
+    lda     #0           
 .storeP0_2
     sta     p0gfx           
 
@@ -1203,7 +1339,7 @@ DrawScreen
     sec              
     sbc     temp_collecty   
     cmp     #COLLECT_HEIGHT 
-    bcs     .hideCollect    
+    bcs     .hideCollect   
     lda     #2              
     jmp     .storeCollect   
 .hideCollect
@@ -1212,7 +1348,7 @@ DrawScreen
     sta     WSYNC
     sta     ENAM1
 
-    dex                     
+    dex                   
     bne     .playArea
 
     lda     #0
@@ -1572,8 +1708,7 @@ blank
     .byte   %00000000
 
 ; ===================
-; Letter Graphics for GAME OVER (bottom-to-top, 8 bytes each)
-; Must be in same page as scoretable!
+; Text Graphic Data (bottom-to-top layout)
 ; ===================
 LetterG
     .byte   %00111100
@@ -1645,6 +1780,56 @@ LetterR
     .byte   %01100110
     .byte   %01111100
 
+LetterP
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01111100
+    .byte   %01100110
+    .byte   %01100110
+    .byte   %01111100
+    .byte   %00000000
+
+LetterS
+    .byte   %01111100
+    .byte   %01100110
+    .byte   %00000110
+    .byte   %00111100
+    .byte   %01100000
+    .byte   %01100110
+    .byte   %01111100
+    .byte   %00000000
+
+LetterF
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01111100
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01111110
+    .byte   %00000000
+
+LetterI
+    .byte   %00111100
+    .byte   %00011000
+    .byte   %00011000
+    .byte   %00011000
+    .byte   %00011000
+    .byte   %00011000
+    .byte   %00111100
+    .byte   %00000000
+
+LetterL
+    .byte   %01111110
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %01100000
+    .byte   %00000000
+
     align 256
 PlayerGfx
     .byte   %00000000
@@ -1693,6 +1878,7 @@ MonsterGfx
     .byte   %11111100, %11111100, %11111100, %11111100
     .byte   %11111110, %11111110, %11111110, %11111110
 
+    ; --- Added 5th block to complete the 160 scanline requirement ---
     .byte   %11111111, %11111111, %11111111, %11111111
     .byte   %11111110, %11111110, %11111110, %11111110
     .byte   %11111100, %11111100, %11111100, %11111100
