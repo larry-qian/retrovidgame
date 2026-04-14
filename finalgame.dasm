@@ -724,15 +724,10 @@ TitleKernel
     jmp     DoOverscan
 
 ; ===================
-; GAME OVER KERNEL
+; GAME OVER KERNEL (COMPLETE FIXED VERSION)
 ; ===================
 GameOverKernel
-    lda     finalScore
-    sta     score
-    lda     finalScore+1
-    sta     score+1
-    jsr     LoadScorePointers
-
+    ; CRITICAL: Disable ALL graphics objects from previous state
     lda     #0
     sta     GRP0
     sta     GRP1
@@ -742,10 +737,22 @@ GameOverKernel
     sta     PF0
     sta     PF1
     sta     PF2
+    sta     HMCLR              ; Clear any pending horizontal motion
+    sta     RESMP0             ; Reset missile-to-player lock
+    sta     RESMP1
+    
+    ; Now set up the score display
+    lda     finalScore
+    sta     score
+    lda     finalScore+1
+    sta     score+1
+    jsr     LoadScorePointers
 
+    ; Set background color
     lda     #$36
     sta     COLUBK
 
+    ; Blinking text color
     lda     frame
     and     #%00010000
     beq     .goColorA
@@ -760,20 +767,8 @@ GameOverKernel
     lda     #%00000001
     sta     CTRLPF
 
-; ---- Scanline budget: 192 total ----
-; Top spacer:    30 lines
-; Score:         18 lines (2 setup + 16 draw)
-; Gap1:          20 lines
-; "GAME":        18 lines
-; Gap2:           6 lines
-; "OVER":        18 lines
-; Gap3:          20 lines
-; Flash bar:     16 lines
-; Bottom:        46 lines
-; Total:        192
-
 ; --- Top spacer: 30 ---
-    ldx     #30
+    ldx     #27
 .goTopSpacer
     sta     WSYNC
     dex
@@ -934,20 +929,8 @@ GameOverKernel
     dex
     bne     .goGap3
 
-; --- Flash bar removed (16 spacer lines) ---
-    ldx     #16
-.goBarLoop
-    sta     WSYNC
-    dex
-    bne     .goBarLoop
-    
-    lda     #0
-    sta     PF0
-    sta     PF1
-    sta     PF2
-
-; --- Bottom: 46 ---
-    ldx     #46
+; --- Bottom spacer: 79 lines (total visible = 192) ---
+    ldx     #79
 .goBottom
     sta     WSYNC
     dex
@@ -956,7 +939,7 @@ GameOverKernel
     jmp     DoOverscan
 
 ; ===================
-; 48-pixel setup/teardown subroutines
+; 48-pixel setup/teardown subroutines (ORIGINAL WORKING VERSION)
 ; ===================
 Setup48Pixel
     lda     #0
