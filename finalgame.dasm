@@ -742,10 +742,9 @@ TitleKernel
     jmp     DoOverscan
 
 ; ===================
-; GAME OVER KERNEL (COMPLETE FIXED VERSION)
+; GAME OVER KERNEL
 ; ===================
 GameOverKernel
-    ; CRITICAL: Disable ALL graphics objects from previous state
     lda     #0
     sta     GRP0
     sta     GRP1
@@ -957,7 +956,7 @@ GameOverKernel
     jmp     DoOverscan
 
 ; ===================
-; 48-pixel setup/teardown subroutines (ORIGINAL WORKING VERSION)
+; 48-pixel setup/teardown subroutines
 ; ===================
 Setup48Pixel
     lda     #0
