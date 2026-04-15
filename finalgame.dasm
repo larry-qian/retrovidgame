@@ -1,3 +1,9 @@
+; notes
+; make monster go a little bit faster?
+; make the projectile spawn faster and move faster as score increases
+; add background
+; fix issue with black lines in game over screen
+; change sprite for collectible
 ;------------------------------------------------
 ; Atari VCS Game - Enhanced Version
 ;------------------------------------------------
