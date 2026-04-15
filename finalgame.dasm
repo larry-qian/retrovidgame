@@ -17,7 +17,7 @@
 ; 12. cant show 5 lives? for some reason? Also make the lives on left and
 ; right consistent.. or just remove the lives from one side?
 ;------------------------------------------------
-; Atari VCS Game - Enhanced Version
+; Atari VCS Game
 ;------------------------------------------------
 ; Console Switches Dictionary:
 ; GAME SELECT:   Cycles starting lives (3, 5, or 1)
