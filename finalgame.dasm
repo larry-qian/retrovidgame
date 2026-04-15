@@ -1,19 +1,21 @@
 ; notes
-; make monster go a little bit faster?
-; make the projectile spawn faster and move faster as score increases
-; add background
-; fix issue with black lines in game over screen
-; change sprite for collectible
-; make it go back to main menu after dying?
-; game does not end immediately upon monster reaching end of screen?
-; theres a delay on the fast monster?
-; right diff doesnt really do anything lol
-; 3244  ROM bytes used, 4096 max. Also used <60 bytes of RAM max 128
-; probably remove switches for difficulty as it either does too much or
+; 1. make monster go a little bit faster?
+; 2. make the projectile spawn faster and move faster as score increases
+; 3. add background
+; 4. fix issue with black lines in game over screen
+; 5. change sprite for collectible
+; 6. make it go back to main menu after dying?
+; 7. game does not end immediately upon monster reaching end of screen?
+; 8. theres a delay on the fast monster?
+; 9. right diff doesnt really do anything lol
+; 10. 3244  ROM bytes used, 4096 max. Also used <60 bytes of RAM max 128
+; 11. probably remove switches for difficulty as it either does too much or
 ; not enough, so i would just remove it. the select is quite interesting
 ; though, and i like it. game needs to go back to menu screen, and
 ; perhaps it should try to store the lives? so that we can just go right
 ; back in without selecting again...
+; 12. cant show 5 lives? for some reason? Also make the lives on left and
+; right consistent.. or just remove the lives from one side?
 ;------------------------------------------------
 ; Atari VCS Game - Enhanced Version
 ;------------------------------------------------
