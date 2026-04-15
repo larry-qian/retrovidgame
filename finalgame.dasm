@@ -9,6 +9,11 @@
 ; theres a delay on the fast monster?
 ; right diff doesnt really do anything lol
 ; 3244  ROM bytes used, 4096 max. Also used <60 bytes of RAM max 128
+; probably remove switches for difficulty as it either does too much or
+; not enough, so i would just remove it. the select is quite interesting
+; though, and i like it. game needs to go back to menu screen, and
+; perhaps it should try to store the lives? so that we can just go right
+; back in without selecting again...
 ;------------------------------------------------
 ; Atari VCS Game - Enhanced Version
 ;------------------------------------------------
