@@ -38,7 +38,7 @@
      25  10000 ????						;			    used for code assembly.
      26  10000 ????						; 1.04  12/NOV/2003	 Added TIA_BASE_WRITE_ADDRESS and TIA_BASE_READ_ADDRESS for
      27  10000 ????						;			 convenient disassembly/reassembly compatibility for hardware
-     28  10000 ????						;			 mirrored reading/writing differences.	This is more a 
+     28  10000 ????						;			 mirrored reading/writing differences.	This is more a
      29  10000 ????						;			 readability issue, and binary compatibility with disassembled
      30  10000 ????						;			 and reassembled sources.  Per Manuel Rotschkar's suggestion.
      31  10000 ????						; 1.03  12/MAY/2003	 Added SEG segment at end of file to fix old-code compatibility
@@ -80,7 +80,7 @@
      67  10000 ????						; for the mirrored ROM hardware registers.
      68  10000 ????
      69  10000 ????						; Usage: As per above, define the TIA_BASE_READ_ADDRESS and/or TIA_BASE_WRITE_ADDRESS
-     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined, 
+     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined,
      71  10000 ????						; they defaut to the TIA_BASE_ADDRESS.
      72  10000 ????
      73  10000 ????			   -	       IFNCONST	TIA_BASE_READ_ADDRESS
@@ -247,13 +247,13 @@
      31  0000 ????						;
      32  0000 ????						; 1.02  14/JUN/2003	 - VERTICAL_SYNC macro added
      33  0000 ????						;			   (standardised macro for vertical synch code)
-     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added. 
+     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added.
      35  0000 ????						;			 - NO_ILLEGAL_OPCODES switch implemented
      36  0000 ????						; 1.0	22/MAR/2003		Initial release
      37  0000 ????
-     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage, 
+     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage,
      39  0000 ????						;   define the symbol NO_ILLEGAL_OPCODES (-DNO_ILLEGAL_OPCODES=1 on command-line).
-     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file 
+     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file
      41  0000 ????						;   *after* including VCS.H (as the non-illegal opcodes access hardware
      42  0000 ????						;   registers and require them to be defined first).
      43  0000 ????
@@ -1913,7 +1913,7 @@
    1523  f965				   .speedSub50
    1524  f965		       a5 86		      lda	monsterSpeed
    1525  f967		       38		      sec
-   1526  f968		       e9 03		      sbc	#3
+   1526  f968		       e9 02		      sbc	#2
    1527  f96a		       90 0e		      bcc	.capSpeed
    1528  f96c		       4c 76 f9 	      jmp	.checkSpeedLimit
    1529  f96f				   .speedSub1
@@ -1925,7 +1925,7 @@
    1535  f976		       c9 0f		      cmp	#15
    1536  f978		       b0 02		      bcs	.storeSpeed
    1537  f97a				   .capSpeed
-   1538  f97a		       a9 06		      lda	#6
+   1538  f97a		       a9 05		      lda	#5
    1539  f97c				   .storeSpeed
    1540  f97c		       85 86		      sta	monsterSpeed
    1541  f97e		       60		      rts

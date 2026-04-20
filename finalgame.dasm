@@ -1,3 +1,12 @@
+; notes
+; 1. heres how I want this to work: the speedcap should hit #6 after a
+; while, and then the player will need to collect 20-30 collectibles and
+; then it will hit #5... then another 20-30 for #4 to scale the
+; difficulty more, but in a fair way. this will be scaled NOT in the
+; same way as the usual decrease...
+; 2. maybe add another number to the score counter, as I think 9999 is
+;    reachable, whereas 99999 is probably not unless you try super super
+;    hard
 ;------------------------------------------------
 ; Atari VCS Game
 ;------------------------------------------------
@@ -1523,7 +1532,7 @@ AddScore
 .speedSub50
     lda     monsterSpeed
     sec
-    sbc     #3
+    sbc     #2
     bcc     .capSpeed
     jmp     .checkSpeedLimit
 .speedSub1
@@ -1535,7 +1544,7 @@ AddScore
     cmp     #15
     bcs     .storeSpeed
 .capSpeed
-    lda     #6
+    lda     #5
 .storeSpeed
     sta     monsterSpeed
     rts
