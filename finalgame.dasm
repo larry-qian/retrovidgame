@@ -1,42 +1,11 @@
-; notes
-; -1 note to self:
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; PUSH YOUR DAMN COMMITS EVERY TIME YOU MAKE A CHANGE
-; 1. make monster go a little bit faster?
-; 2. make the projectile spawn faster and move faster as score increases
-; 3. add background
-; 4. fix issue with black lines in game over screen
-; 5. change sprite for collectible
-; 6. make it go back to main menu after dying?
-; 7. game does not end immediately upon monster reaching end of screen?
-; 8. theres a delay on the fast monster?
-; 9. right diff doesnt really do anything lol
-; 10. 3244  ROM bytes used, 4096 max. Also used <60 bytes of RAM max 128
-; 11. probably remove switches for difficulty as it either does too much or
-; not enough, so i would just remove it. the select is quite interesting
-; though, and i like it. game needs to go back to menu screen, and
-; perhaps it should try to store the lives? so that we can just go right
-; back in without selecting again...
-; 12. cant show 5 lives? for some reason? Also make the lives on left and
-; right consistent.. or just remove the lives from one side?
-; 13. tune the difficulty more like stated in 1 and 2.. until i find a
-;     good speed that will make it interesting to play.
 ;------------------------------------------------
 ; Atari VCS Game
 ;------------------------------------------------
-; Console Switches Dictionary:
-; GAME SELECT:   Cycles starting lives (3, 5, or 1)
+; Console Switches:
+; GAME SELECT:   Cycles starting lives (3, 2, or 1)
 ; GAME RESET:    Starts the game (same as Fire button)
-; LEFT DIFF:     P0 Difficulty (A = Fast Monster, B = Normal Monster)
-; RIGHT DIFF:    P1 Difficulty (A = Fast Ball Spawn, B = Normal Ball Spawn)
+;
+; TODO: add background
 ;------------------------------------------------
     processor   6502
     include     vcs.h
@@ -88,6 +57,7 @@ ballactive      .byte
 balldelay       .byte
 ballneedpos     .byte
 balltimer       .byte
+ballDriftDir    .byte
 
 collectX        .byte
 collectY        .byte
@@ -138,7 +108,7 @@ InitGame
     lda     #0              
     sta     p1x
     sta     monsterTimer
-    lda     #120
+    lda     #80
     sta     monsterSpeed
 
     lda     #<PlayerGfx
@@ -168,7 +138,7 @@ InitGame
     sta     ballneedpos
     lda     #20
     sta     bally           
-    lda     #120            
+    lda     #90            
     sta     balldelay
 
     lda     #0
@@ -178,13 +148,13 @@ InitGame
 
     lda     gameVariation
     cmp     #1
-    beq     .fiveLives
+    beq     .twoLives
     cmp     #2
     beq     .oneLife
     lda     #3
     jmp     .setLives
-.fiveLives
-    lda     #5
+.twoLives
+    lda     #2
     jmp     .setLives
 .oneLife
     lda     #1
@@ -311,7 +281,7 @@ DoGameOver
     sta     gameState
     lda     #0
     sta     fireDebounce
-    jmp     Start
+    jmp     MainLoop
 .noFireGO
     lda     INPT4
     bmi     .resetDebounceGO
@@ -330,7 +300,7 @@ DoGameOver
 DoPlaying
     inc     scoreTimer
     lda     scoreTimer
-    cmp     #60
+    cmp     #120
     bcc     .skipScore
     lda     #0
     sta     scoreTimer
@@ -348,7 +318,7 @@ DoPlaying
     lda     #0
     sta     monsterTimer
     lda     p1x
-    cmp     #120
+    cmp     #140
     bcc     .moveMonster
     jmp     TriggerGameOver
 .moveMonster
@@ -360,20 +330,6 @@ DoPlaying
     dec     invincible
 .noInvCount
 
-    lda     SWCHB
-    and     #%01000000
-    bne     .proMode
-    jmp     .diffDone
-.proMode
-    lda     frame
-    and     #%00000001
-    bne     .diffDone
-    lda     p1x
-    cmp     #120
-    bcs     .diffDone
-    inc     p1x
-.diffDone
-
 MoveBall
     lda     balldelay
     beq     .noDelay
@@ -383,26 +339,44 @@ MoveBall
     lda     ballactive
     beq     .spawnBall
     dec     balltimer
-    bne     .ballLogicDone
+    bne     .driftBall
     lda     #0
     sta     ballactive
-    lda     SWCHB
-    and     #%10000000
-    beq     .normalBallDelay
-    lda     #60
-    jmp     .setBallDelay
-.normalBallDelay
-    lda     #120
-.setBallDelay
+    lda     monsterSpeed
     sta     balldelay
+    jmp     .ballLogicDone
+
+.driftBall
+    lda     ballneedpos     
+    bne     .ballLogicDone
+    lda     ballDriftDir
+    beq     .driftDown
+.driftUp
+    dec     bally
+    lda     bally
+    cmp     #4
+    bcs     .ballLogicDone
+    lda     #4              
+    sta     bally
+    jmp     .ballLogicDone
+.driftDown
+    inc     bally
+    lda     bally
+    cmp     #PLAY_HEIGHT-BALL_HEIGHT-2
+    bcc     .ballLogicDone
+    lda     #PLAY_HEIGHT-BALL_HEIGHT-2  
+    sta     bally
     jmp     .ballLogicDone
 
 .spawnBall
     lda     #1
     sta     ballactive
+    lda     ballDriftDir    
+    eor     #1
+    sta     ballDriftDir
     lda     #2
     sta     ballneedpos     
-    lda     #75             
+    lda     #77
     sta     balltimer
     lda     bally
     clc
@@ -522,7 +496,6 @@ TitleKernel
     lda     #$00
     sta     COLUBK
 
-    ; Setup high bytes for scorepointers efficiently (all map to the same page)
     lda     #>scoretable
     sta     scorepointers+1
     sta     scorepointers+3
@@ -531,19 +504,17 @@ TitleKernel
     sta     scorepointers+9
     sta     scorepointers+11
 
-    ; --- Top Spacer: 20 Lines ---
     ldx     #20
 .titleTopSpc
     sta     WSYNC
     dex
     bne     .titleTopSpc
 
-    ; --- Blinking "PRESS FIRE" ---
     lda     frame
     and     #%00100000
     bne     .drawPressFire
 
-    ldx     #32                     ; Skip text if we are in the 'off' flash phase
+    ldx     #32
 .titleBlankText
     sta     WSYNC
     dex
@@ -551,11 +522,10 @@ TitleKernel
     jmp     .afterPressFire
 
 .drawPressFire
-    lda     #$46                    ; Reddish color for PRESS FIRE
+    lda     #$46
     sta     COLUP0
     sta     COLUP1
 
-    ; P R E S S [BLANK]
     lda     #<LetterP
     sta     scorepointers
     lda     #<LetterR
@@ -564,7 +534,7 @@ TitleKernel
     sta     scorepointers+4
     lda     #<LetterS
     sta     scorepointers+6
-    sta     scorepointers+8         ; Duplicate S
+    sta     scorepointers+8
     lda     #<blank
     sta     scorepointers+10
 
@@ -593,14 +563,12 @@ TitleKernel
     bpl     .pressLoop                                      
     jsr     End48Pixel
 
-    ; Gap 6 Lines
     ldx     #6
 .pfGap
     sta     WSYNC
     dex
     bne     .pfGap
 
-    ; F I R E [BLANK] [BLANK] 
     lda     #<LetterF
     sta     scorepointers
     lda     #<LetterI
@@ -639,15 +607,13 @@ TitleKernel
     jsr     End48Pixel
 
 .afterPressFire
-    ; --- Middle Spacer: 20 Lines ---
     ldx     #20
 .titleMidGap
     sta     WSYNC
     dex
     bne     .titleMidGap
 
-    ; --- "LIVES" Label ---
-    lda     #$0E                    ; White text
+    lda     #$0E
     sta     COLUP0
     sta     COLUP1
 
@@ -689,18 +655,16 @@ TitleKernel
     bpl     .livesLoop                                      
     jsr     End48Pixel
 
-    ; Gap 6 Lines
     ldx     #6
 .livesGap
     sta     WSYNC
     dex
     bne     .livesGap
 
-    ; --- Number of Lives (Centered) ---
-    lda     #<blank                 ; Pad left
+    lda     #<blank
     sta     scorepointers
     sta     scorepointers+2
-    sta     scorepointers+6         ; Pad right
+    sta     scorepointers+6
     sta     scorepointers+8
     sta     scorepointers+10
 
@@ -708,15 +672,15 @@ TitleKernel
     cmp     #0
     beq     .show3
     cmp     #1
-    beq     .show5
+    beq     .show2
 .show1
     lda     #<one
     jmp     .setNum
 .show3
     lda     #<three
     jmp     .setNum
-.show5
-    lda     #<five
+.show2
+    lda     #<two
 .setNum
     sta     scorepointers+4
 
@@ -745,7 +709,6 @@ TitleKernel
     bpl     .numLoop                                      
     jsr     End48Pixel
 
-    ; --- Bottom Pad: 88 Lines to reach 192 total ---
     ldx     #88
 .titleBotSpc
     sta     WSYNC
@@ -767,22 +730,19 @@ GameOverKernel
     sta     PF0
     sta     PF1
     sta     PF2
-    sta     HMCLR              ; Clear any pending horizontal motion
-    sta     RESMP0             ; Reset missile-to-player lock
+    sta     HMCLR
+    sta     RESMP0
     sta     RESMP1
     
-    ; Now set up the score display
     lda     finalScore
     sta     score
     lda     finalScore+1
     sta     score+1
     jsr     LoadScorePointers
 
-    ; Set background color
     lda     #$36
     sta     COLUBK
 
-    ; Blinking text color
     lda     frame
     and     #%00010000
     beq     .goColorA
@@ -797,14 +757,12 @@ GameOverKernel
     lda     #%00000001
     sta     CTRLPF
 
-; --- Top spacer: 30 ---
     ldx     #27
 .goTopSpacer
     sta     WSYNC
     dex
     bne     .goTopSpacer
 
-; === SCORE DISPLAY ===
     jsr     Setup48Pixel
 
 .goScoreLoop
@@ -832,14 +790,12 @@ GameOverKernel
 
     jsr     End48Pixel
 
-; --- Gap1: 20 ---
     ldx     #20
 .goGap1
     sta     WSYNC
     dex
     bne     .goGap1
 
-; === "GAME" TEXT ===
     lda     #<LetterG
     sta     scorepointers
     lda     #>LetterG
@@ -892,14 +848,12 @@ GameOverKernel
 
     jsr     End48Pixel
 
-; --- Gap2: 6 ---
     ldx     #6
 .goGap2
     sta     WSYNC
     dex
     bne     .goGap2
 
-; === "OVER" TEXT ===
     lda     #<LetterO
     sta     scorepointers
     lda     #>LetterO
@@ -952,15 +906,13 @@ GameOverKernel
 
     jsr     End48Pixel
 
-; --- Gap3: 20 ---
     ldx     #20
 .goGap3
     sta     WSYNC
     dex
     bne     .goGap3
 
-; --- Bottom spacer: 79 lines (total visible = 192) ---
-    ldx     #79
+    ldx     #83
 .goBottom
     sta     WSYNC
     dex
@@ -1254,7 +1206,7 @@ DrawScreen
 .setP0Color
     sta     COLUP0
 
-    lda     #$07    
+    lda     #$27
     sta     NUSIZ1
     lda     #$C4            
     sta     COLUP1
@@ -1263,6 +1215,17 @@ DrawScreen
     sta     COLUPF
     lda     #%00100100      
     sta     CTRLPF
+
+    lda     frame
+    lsr
+    lsr
+    lsr
+    lsr
+    lsr
+    and     #%00000001
+    asl
+    ora     #%10000000      ; $80 or $82
+    sta     bgcolor
 
     sta     WSYNC
 
@@ -1324,6 +1287,8 @@ DrawScreen
 .storeBall
     sta     WSYNC
     sta     ENABL
+    lda     bgcolor
+    sta     COLUBK
 
     dex                     
 
@@ -1360,11 +1325,14 @@ DrawScreen
 .storeCollect
     sta     WSYNC
     sta     ENAM1
+    lda     bgcolor
+    sta     COLUBK
 
     dex                   
     bne     .playArea
 
     lda     #0
+    sta     COLUBK
     sta     GRP0
     sta     GRP1        
     sta     ENABL
@@ -1462,7 +1430,7 @@ DoOverscan
     sta     p1x
     lda     #0
     sta     collectActive
-    lda     #60
+    lda     #20
     sta     collectDelay
 
 .noCollectHit
@@ -1555,7 +1523,7 @@ AddScore
 .speedSub50
     lda     monsterSpeed
     sec
-    sbc     #5
+    sbc     #3
     bcc     .capSpeed
     jmp     .checkSpeedLimit
 .speedSub1
@@ -1564,10 +1532,10 @@ AddScore
     sbc     #1
     bcc     .capSpeed
 .checkSpeedLimit
-    cmp     #10
+    cmp     #15
     bcs     .storeSpeed
 .capSpeed
-    lda     #10
+    lda     #6
 .storeSpeed
     sta     monsterSpeed
     rts
@@ -1721,7 +1689,7 @@ blank
     .byte   %00000000
 
 ; ===================
-; Text Graphic Data (bottom-to-top layout)
+; Text Graphic Data
 ; ===================
 LetterG
     .byte   %00111100
@@ -1891,7 +1859,6 @@ MonsterGfx
     .byte   %11111100, %11111100, %11111100, %11111100
     .byte   %11111110, %11111110, %11111110, %11111110
 
-    ; --- Added 5th block to complete the 160 scanline requirement ---
     .byte   %11111111, %11111111, %11111111, %11111111
     .byte   %11111110, %11111110, %11111110, %11111110
     .byte   %11111100, %11111100, %11111100, %11111100
