@@ -6,7 +6,10 @@
 ; GAME SELECT:   Cycles starting lives (3, 2, or 1)
 ; GAME RESET:    Starts the game (same as Fire button)
 ;
-; TODO: add background
+; TODO: Make monster move ALL the way back when the player takes damage
+; TODO: Make monster fill up all the left side of the screen? so that
+; the player cant just hide on the left (but the player WILL lose if it
+; hits the right side of the screen so)
 ;------------------------------------------------
     processor   6502
     include     vcs.h
