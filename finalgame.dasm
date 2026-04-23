@@ -6,10 +6,7 @@
 ; GAME SELECT:   Cycles starting lives (3, 2, or 1)
 ; GAME RESET:    Starts the game (same as Fire button)
 ;
-; TODO: Make monster move ALL the way back when the player takes damage
-; TODO: Make monster fill up all the left side of the screen? so that
-; the player cant just hide on the left (but the player WILL lose if it
-; hits the right side of the screen so)
+; DONE: Monster resets ALL the way back to x=0 when player loses a life
 ;------------------------------------------------
     processor   6502
     include     vcs.h
@@ -1402,12 +1399,7 @@ DoOverscan
     lda     #1
     sta     soundType
 
-    lda     p1x
-    sec
-    sbc     #20
-    bcs     .storeHitMonX
-    lda     #0
-.storeHitMonX
+    lda     #0              ; Reset monster all the way back to start
     sta     p1x
     lda     #$42
     sta     bgcolor

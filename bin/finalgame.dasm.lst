@@ -7,7 +7,7 @@
       6  10000 ????						; GAME SELECT:   Cycles starting lives (3, 2, or 1)
       7  10000 ????						; GAME RESET:	  Starts the game (same as Fire button)
       8  10000 ????						;
-      9  10000 ????						; TODO: Make monster move ALL the way back when the player takes damage
+      9  10000 ????						; DONE: Monster resets ALL the way back to x=0 when player loses a life
      10  10000 ????						;------------------------------------------------
      11  10000 ????				       processor	6502
 ------- FILE vcs.h LEVEL 2 PASS 2
@@ -39,7 +39,7 @@
      25  10000 ????						;			    used for code assembly.
      26  10000 ????						; 1.04  12/NOV/2003	 Added TIA_BASE_WRITE_ADDRESS and TIA_BASE_READ_ADDRESS for
      27  10000 ????						;			 convenient disassembly/reassembly compatibility for hardware
-     28  10000 ????						;			 mirrored reading/writing differences.	This is more a
+     28  10000 ????						;			 mirrored reading/writing differences.	This is more a 
      29  10000 ????						;			 readability issue, and binary compatibility with disassembled
      30  10000 ????						;			 and reassembled sources.  Per Manuel Rotschkar's suggestion.
      31  10000 ????						; 1.03  12/MAY/2003	 Added SEG segment at end of file to fix old-code compatibility
@@ -81,7 +81,7 @@
      67  10000 ????						; for the mirrored ROM hardware registers.
      68  10000 ????
      69  10000 ????						; Usage: As per above, define the TIA_BASE_READ_ADDRESS and/or TIA_BASE_WRITE_ADDRESS
-     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined,
+     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined, 
      71  10000 ????						; they defaut to the TIA_BASE_ADDRESS.
      72  10000 ????
      73  10000 ????			   -	       IFNCONST	TIA_BASE_READ_ADDRESS
@@ -248,13 +248,13 @@
      31  0000 ????						;
      32  0000 ????						; 1.02  14/JUN/2003	 - VERTICAL_SYNC macro added
      33  0000 ????						;			   (standardised macro for vertical synch code)
-     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added.
+     34  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added. 
      35  0000 ????						;			 - NO_ILLEGAL_OPCODES switch implemented
      36  0000 ????						; 1.0	22/MAR/2003		Initial release
      37  0000 ????
-     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage,
+     38  0000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage, 
      39  0000 ????						;   define the symbol NO_ILLEGAL_OPCODES (-DNO_ILLEGAL_OPCODES=1 on command-line).
-     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file
+     40  0000 ????						;   If you do not allow illegal opcode usage, you must include this file 
      41  0000 ????						;   *after* including VCS.H (as the non-illegal opcodes access hardware
      42  0000 ????						;   registers and require them to be defined first).
      43  0000 ????
@@ -538,7 +538,7 @@
     148  f05e		       85 88		      sta	score+1
     149  f060		       85 89		      sta	score+2
     150  f062		       85 9b		      sta	collectCount
-    151  f064		       20 c8 f9 	      jsr	LoadScorePointers
+    151  f064		       20 c1 f9 	      jsr	LoadScorePointers
     152  f067
     153  f067		       a5 b2		      lda	gameVariation
     154  f069		       c9 01		      cmp	#1
@@ -650,7 +650,7 @@
     260  f10c		       85 b1		      sta	fireDebounce
     261  f10e				   .skipResetDebounce
     262  f10e
-    263  f10e		       20 0b f9 	      jsr	UpdateSound
+    263  f10e		       20 04 f9 	      jsr	UpdateSound
     264  f111		       4c 53 f2 	      jmp	WaitVBlankEnd
     265  f114
     266  f114							; ===================
@@ -685,7 +685,7 @@
     295  f13f		       85 b1		      sta	fireDebounce
     296  f141				   .skipResetGO
     297  f141
-    298  f141		       20 0b f9 	      jsr	UpdateSound
+    298  f141		       20 04 f9 	      jsr	UpdateSound
     299  f144		       4c 53 f2 	      jmp	WaitVBlankEnd
     300  f147
     301  f147							; ===================
@@ -701,8 +701,8 @@
     311  f153		       a9 01		      lda	#1
     312  f155		       a2 00		      ldx	#0
     313  f157		       a0 00		      ldy	#0
-    314  f159		       20 50 f9 	      jsr	AddScore
-    315  f15c		       20 c8 f9 	      jsr	LoadScorePointers
+    314  f159		       20 49 f9 	      jsr	AddScore
+    315  f15c		       20 c1 f9 	      jsr	LoadScorePointers
     316  f15f				   .skipScore
     317  f15f
     318  f15f		       e6 85		      inc	monsterTimer
@@ -714,7 +714,7 @@
     324  f16b		       a5 84		      lda	p1x
     325  f16d		       c9 8c		      cmp	#140
     326  f16f		       90 03		      bcc	.moveMonster
-    327  f171		       4c ec f8 	      jmp	TriggerGameOver
+    327  f171		       4c e5 f8 	      jmp	TriggerGameOver
     328  f174				   .moveMonster
     329  f174		       e6 84		      inc	p1x
     330  f176				   .skipMonster
@@ -850,7 +850,7 @@
     460  f24e		       c6 82		      dec	p0x
     461  f250				   EndInput
     462  f250
-    463  f250		       20 0b f9 	      jsr	UpdateSound
+    463  f250		       20 04 f9 	      jsr	UpdateSound
     464  f253
     465  f253				   WaitVBlankEnd
     466  f253		       85 02		      sta	WSYNC
@@ -1134,7 +1134,7 @@
     744  f419		       85 88		      sta	score+1
     745  f41b		       a5 b9		      lda	finalScore+2
     746  f41d		       85 89		      sta	score+2
-    747  f41f		       20 c8 f9 	      jsr	LoadScorePointers
+    747  f41f		       20 c1 f9 	      jsr	LoadScorePointers
     748  f422
     749  f422		       a9 36		      lda	#$36
     750  f424		       85 09		      sta	COLUBK
@@ -1760,10 +1760,10 @@
    1370  f876
    1371  f876		       a5 b0		      lda	gameState
    1372  f878		       c9 01		      cmp	#STATE_PLAYING
-   1373  f87a		       d0 68		      bne	.skipAllCollision
+   1373  f87a		       d0 61		      bne	.skipAllCollision
    1374  f87c
    1375  f87c		       a5 af		      lda	invincible
-   1376  f87e		       d0 33		      bne	.noCollision
+   1376  f87e		       d0 2c		      bne	.noCollision
    1377  f880
    1378  f880		       a5 02		      lda	CXP0FB
    1379  f882		       29 40		      and	#%01000000
@@ -1773,13 +1773,13 @@
    1383  f888		       29 80		      and	#%10000000
    1384  f88a		       d0 03		      bne	.playerHit
    1385  f88c
-   1386  f88c		       4c b3 f8 	      jmp	.noCollision
+   1386  f88c		       4c ac f8 	      jmp	.noCollision
    1387  f88f
    1388  f88f				   .playerHit
    1389  f88f		       c6 ae		      dec	lives
    1390  f891		       a5 ae		      lda	lives
    1391  f893		       d0 03		      bne	.stillAlive
-   1392  f895		       4c ec f8 	      jmp	TriggerGameOver
+   1392  f895		       4c e5 f8 	      jmp	TriggerGameOver
    1393  f898
    1394  f898				   .stillAlive
    1395  f898		       a9 78		      lda	#120
@@ -1789,569 +1789,564 @@
    1399  f8a0		       a9 01		      lda	#1
    1400  f8a2		       85 b5		      sta	soundType
    1401  f8a4
-   1402  f8a4		       a5 84		      lda	p1x
-   1403  f8a6		       38		      sec
-   1404  f8a7		       e9 14		      sbc	#20
-   1405  f8a9		       b0 02		      bcs	.storeHitMonX
-   1406  f8ab		       a9 00		      lda	#0
-   1407  f8ad				   .storeHitMonX
-   1408  f8ad		       85 84		      sta	p1x
-   1409  f8af		       a9 42		      lda	#$42
-   1410  f8b1		       85 80		      sta	bgcolor
-   1411  f8b3
-   1412  f8b3				   .noCollision
-   1413  f8b3		       a5 01		      lda	CXM1P
-   1414  f8b5		       29 80		      and	#%10000000
-   1415  f8b7		       f0 2b		      beq	.noCollectHit
-   1416  f8b9		       a5 aa		      lda	collectActive
-   1417  f8bb		       f0 27		      beq	.noCollectHit
-   1418  f8bd
-   1419  f8bd		       a9 0a		      lda	#10
-   1420  f8bf		       85 b4		      sta	soundTimer
-   1421  f8c1		       a9 02		      lda	#2
-   1422  f8c3		       85 b5		      sta	soundType
-   1423  f8c5
-   1424  f8c5		       a9 50		      lda	#$50
-   1425  f8c7		       a2 00		      ldx	#0
-   1426  f8c9		       a0 00		      ldy	#0
-   1427  f8cb		       20 50 f9 	      jsr	AddScore
-   1428  f8ce		       20 c8 f9 	      jsr	LoadScorePointers
-   1429  f8d1
-   1430  f8d1		       a5 84		      lda	p1x
-   1431  f8d3		       38		      sec
-   1432  f8d4		       e9 0f		      sbc	#15
-   1433  f8d6		       b0 02		      bcs	.storeMonsterX
-   1434  f8d8		       a9 00		      lda	#0
-   1435  f8da				   .storeMonsterX
-   1436  f8da		       85 84		      sta	p1x
-   1437  f8dc		       a9 00		      lda	#0
-   1438  f8de		       85 aa		      sta	collectActive
-   1439  f8e0		       a9 14		      lda	#20
-   1440  f8e2		       85 ab		      sta	collectDelay
-   1441  f8e4
-   1442  f8e4				   .noCollectHit
-   1443  f8e4				   .skipAllCollision
-   1444  f8e4
-   1445  f8e4				   .waitForOverscan
-   1446  f8e4		       ad 84 02 	      lda	INTIM
-   1447  f8e7		       d0 fb		      bne	.waitForOverscan
-   1448  f8e9		       4c 8f f0 	      jmp	MainLoop
-   1449  f8ec
-   1450  f8ec							; ===================
-   1451  f8ec							; Trigger Game Over
-   1452  f8ec							; ===================
-   1453  f8ec				   TriggerGameOver
-   1454  f8ec		       a5 87		      lda	score
-   1455  f8ee		       85 b7		      sta	finalScore
-   1456  f8f0		       a5 88		      lda	score+1
-   1457  f8f2		       85 b8		      sta	finalScore+1
-   1458  f8f4		       a5 89		      lda	score+2
-   1459  f8f6		       85 b9		      sta	finalScore+2
-   1460  f8f8		       a9 02		      lda	#STATE_GAMEOVER
-   1461  f8fa		       85 b0		      sta	gameState
-   1462  f8fc		       a9 00		      lda	#0
-   1463  f8fe		       85 b6		      sta	goTimer
-   1464  f900		       a9 1e		      lda	#30
-   1465  f902		       85 b4		      sta	soundTimer
-   1466  f904		       a9 03		      lda	#3
-   1467  f906		       85 b5		      sta	soundType
-   1468  f908		       4c 8f f0 	      jmp	MainLoop
-   1469  f90b
-   1470  f90b							;------------------------------------------------
-   1471  f90b							; Subroutines
-   1472  f90b							;------------------------------------------------
-   1473  f90b				   UpdateSound
-   1474  f90b		       a5 b4		      lda	soundTimer
-   1475  f90d		       f0 3a		      beq	.soundOff
-   1476  f90f		       c6 b4		      dec	soundTimer
-   1477  f911		       a5 b5		      lda	soundType
-   1478  f913		       c9 01		      cmp	#1
-   1479  f915		       f0 0b		      beq	.hitSound
-   1480  f917		       c9 02		      cmp	#2
-   1481  f919		       f0 14		      beq	.collectSound
-   1482  f91b		       c9 03		      cmp	#3
-   1483  f91d		       f0 1d		      beq	.gameOverSound
-   1484  f91f		       4c 49 f9 	      jmp	.soundOff
-   1485  f922				   .hitSound
-   1486  f922		       a9 08		      lda	#8
-   1487  f924		       85 15		      sta	AUDC0
-   1488  f926		       a9 06		      lda	#6
-   1489  f928		       85 17		      sta	AUDF0
-   1490  f92a		       a9 08		      lda	#8
-   1491  f92c		       85 19		      sta	AUDV0
-   1492  f92e		       60		      rts
-   1493  f92f				   .collectSound
-   1494  f92f		       a9 04		      lda	#4
-   1495  f931		       85 15		      sta	AUDC0
-   1496  f933		       a9 0f		      lda	#15
-   1497  f935		       85 17		      sta	AUDF0
-   1498  f937		       a9 08		      lda	#8
-   1499  f939		       85 19		      sta	AUDV0
-   1500  f93b		       60		      rts
-   1501  f93c				   .gameOverSound
-   1502  f93c		       a5 b4		      lda	soundTimer
-   1503  f93e		       85 17		      sta	AUDF0
-   1504  f940		       a9 04		      lda	#4
-   1505  f942		       85 15		      sta	AUDC0
-   1506  f944		       a9 0a		      lda	#10
-   1507  f946		       85 19		      sta	AUDV0
+   1402  f8a4		       a9 00		      lda	#0	; Reset monster all the way back to start
+   1403  f8a6		       85 84		      sta	p1x
+   1404  f8a8		       a9 42		      lda	#$42
+   1405  f8aa		       85 80		      sta	bgcolor
+   1406  f8ac
+   1407  f8ac				   .noCollision
+   1408  f8ac		       a5 01		      lda	CXM1P
+   1409  f8ae		       29 80		      and	#%10000000
+   1410  f8b0		       f0 2b		      beq	.noCollectHit
+   1411  f8b2		       a5 aa		      lda	collectActive
+   1412  f8b4		       f0 27		      beq	.noCollectHit
+   1413  f8b6
+   1414  f8b6		       a9 0a		      lda	#10
+   1415  f8b8		       85 b4		      sta	soundTimer
+   1416  f8ba		       a9 02		      lda	#2
+   1417  f8bc		       85 b5		      sta	soundType
+   1418  f8be
+   1419  f8be		       a9 50		      lda	#$50
+   1420  f8c0		       a2 00		      ldx	#0
+   1421  f8c2		       a0 00		      ldy	#0
+   1422  f8c4		       20 49 f9 	      jsr	AddScore
+   1423  f8c7		       20 c1 f9 	      jsr	LoadScorePointers
+   1424  f8ca
+   1425  f8ca		       a5 84		      lda	p1x
+   1426  f8cc		       38		      sec
+   1427  f8cd		       e9 0f		      sbc	#15
+   1428  f8cf		       b0 02		      bcs	.storeMonsterX
+   1429  f8d1		       a9 00		      lda	#0
+   1430  f8d3				   .storeMonsterX
+   1431  f8d3		       85 84		      sta	p1x
+   1432  f8d5		       a9 00		      lda	#0
+   1433  f8d7		       85 aa		      sta	collectActive
+   1434  f8d9		       a9 14		      lda	#20
+   1435  f8db		       85 ab		      sta	collectDelay
+   1436  f8dd
+   1437  f8dd				   .noCollectHit
+   1438  f8dd				   .skipAllCollision
+   1439  f8dd
+   1440  f8dd				   .waitForOverscan
+   1441  f8dd		       ad 84 02 	      lda	INTIM
+   1442  f8e0		       d0 fb		      bne	.waitForOverscan
+   1443  f8e2		       4c 8f f0 	      jmp	MainLoop
+   1444  f8e5
+   1445  f8e5							; ===================
+   1446  f8e5							; Trigger Game Over
+   1447  f8e5							; ===================
+   1448  f8e5				   TriggerGameOver
+   1449  f8e5		       a5 87		      lda	score
+   1450  f8e7		       85 b7		      sta	finalScore
+   1451  f8e9		       a5 88		      lda	score+1
+   1452  f8eb		       85 b8		      sta	finalScore+1
+   1453  f8ed		       a5 89		      lda	score+2
+   1454  f8ef		       85 b9		      sta	finalScore+2
+   1455  f8f1		       a9 02		      lda	#STATE_GAMEOVER
+   1456  f8f3		       85 b0		      sta	gameState
+   1457  f8f5		       a9 00		      lda	#0
+   1458  f8f7		       85 b6		      sta	goTimer
+   1459  f8f9		       a9 1e		      lda	#30
+   1460  f8fb		       85 b4		      sta	soundTimer
+   1461  f8fd		       a9 03		      lda	#3
+   1462  f8ff		       85 b5		      sta	soundType
+   1463  f901		       4c 8f f0 	      jmp	MainLoop
+   1464  f904
+   1465  f904							;------------------------------------------------
+   1466  f904							; Subroutines
+   1467  f904							;------------------------------------------------
+   1468  f904				   UpdateSound
+   1469  f904		       a5 b4		      lda	soundTimer
+   1470  f906		       f0 3a		      beq	.soundOff
+   1471  f908		       c6 b4		      dec	soundTimer
+   1472  f90a		       a5 b5		      lda	soundType
+   1473  f90c		       c9 01		      cmp	#1
+   1474  f90e		       f0 0b		      beq	.hitSound
+   1475  f910		       c9 02		      cmp	#2
+   1476  f912		       f0 14		      beq	.collectSound
+   1477  f914		       c9 03		      cmp	#3
+   1478  f916		       f0 1d		      beq	.gameOverSound
+   1479  f918		       4c 42 f9 	      jmp	.soundOff
+   1480  f91b				   .hitSound
+   1481  f91b		       a9 08		      lda	#8
+   1482  f91d		       85 15		      sta	AUDC0
+   1483  f91f		       a9 06		      lda	#6
+   1484  f921		       85 17		      sta	AUDF0
+   1485  f923		       a9 08		      lda	#8
+   1486  f925		       85 19		      sta	AUDV0
+   1487  f927		       60		      rts
+   1488  f928				   .collectSound
+   1489  f928		       a9 04		      lda	#4
+   1490  f92a		       85 15		      sta	AUDC0
+   1491  f92c		       a9 0f		      lda	#15
+   1492  f92e		       85 17		      sta	AUDF0
+   1493  f930		       a9 08		      lda	#8
+   1494  f932		       85 19		      sta	AUDV0
+   1495  f934		       60		      rts
+   1496  f935				   .gameOverSound
+   1497  f935		       a5 b4		      lda	soundTimer
+   1498  f937		       85 17		      sta	AUDF0
+   1499  f939		       a9 04		      lda	#4
+   1500  f93b		       85 15		      sta	AUDC0
+   1501  f93d		       a9 0a		      lda	#10
+   1502  f93f		       85 19		      sta	AUDV0
+   1503  f941		       60		      rts
+   1504  f942				   .soundOff
+   1505  f942		       a9 00		      lda	#0
+   1506  f944		       85 19		      sta	AUDV0
+   1507  f946		       85 b5		      sta	soundType
    1508  f948		       60		      rts
-   1509  f949				   .soundOff
-   1510  f949		       a9 00		      lda	#0
-   1511  f94b		       85 19		      sta	AUDV0
-   1512  f94d		       85 b5		      sta	soundType
-   1513  f94f		       60		      rts
-   1514  f950
-   1515  f950				   AddScore
-   1516  f950		       85 9a		      sta	temp2
-   1517  f952		       f8		      sed
-   1518  f953		       18		      clc
-   1519  f954		       65 88		      adc	score+1
-   1520  f956		       85 88		      sta	score+1
-   1521  f958		       8a		      txa
-   1522  f959		       65 87		      adc	score
-   1523  f95b		       85 87		      sta	score
-   1524  f95d		       90 06		      bcc	.noCarryHigh
-   1525  f95f		       a5 89		      lda	score+2
-   1526  f961		       69 00		      adc	#0
-   1527  f963		       85 89		      sta	score+2
-   1528  f965				   .noCarryHigh
-   1529  f965		       d8		      cld
-   1530  f966		       a5 9a		      lda	temp2
-   1531  f968		       c9 50		      cmp	#$50
-   1532  f96a		       f0 19		      beq	.speedSub50
-   1533  f96c		       c9 01		      cmp	#$01
-   1534  f96e		       f0 01		      beq	.speedSub1
-   1535  f970		       60		      rts
-   1536  f971
-   1537  f971							; Time-based tick: reduce speed toward 6, then stop
-   1538  f971				   .speedSub1
-   1539  f971		       a5 86		      lda	monsterSpeed
-   1540  f973		       c9 06		      cmp	#6
-   1541  f975		       f0 0d		      beq	.skipSpeedSub	; If speed is exactly 6, do nothing
-   1542  f977		       90 0b		      bcc	.skipSpeedSub	; If speed is below 6 (5 or 4), do nothing!
-   1543  f979		       38		      sec
-   1544  f97a		       e9 01		      sbc	#1
-   1545  f97c		       c9 06		      cmp	#6
-   1546  f97e		       b0 02		      bcs	.storeSpeed
-   1547  f980		       a9 06		      lda	#6	; Floor at 6 if subtraction went too far
-   1548  f982				   .storeSpeed
-   1549  f982		       85 86		      sta	monsterSpeed
-   1550  f984				   .skipSpeedSub
-   1551  f984		       60		      rts
-   1552  f985
-   1553  f985							; Collect-based: normal -2 above 6, then staged 6->5->4
-   1554  f985				   .speedSub50
-   1555  f985		       a5 86		      lda	monsterSpeed
-   1556  f987		       c9 06		      cmp	#6
-   1557  f989		       90 25		      bcc	.checkStage5	; speed already below 6, check stage 5->4
-   1558  f98b		       f0 12		      beq	.checkStage6	; speed exactly 6, check stage 6->5
-   1559  f98d							; speed > 6: subtract 2, floor at 6, reset counter
-   1560  f98d		       a9 00		      lda	#0
-   1561  f98f		       85 9b		      sta	collectCount
-   1562  f991		       a5 86		      lda	monsterSpeed
-   1563  f993		       38		      sec
-   1564  f994		       e9 02		      sbc	#2
-   1565  f996		       c9 06		      cmp	#6
-   1566  f998		       b0 02		      bcs	.storeCollSpeed
-   1567  f99a		       a9 06		      lda	#6
-   1568  f99c				   .storeCollSpeed
-   1569  f99c		       85 86		      sta	monsterSpeed
-   1570  f99e		       60		      rts
-   1571  f99f
-   1572  f99f				   .checkStage6
-   1573  f99f							; at speed 6: count collects until 5, then drop to 5
-   1574  f99f		       e6 9b		      inc	collectCount
-   1575  f9a1		       a5 9b		      lda	collectCount
-   1576  f9a3		       c9 19		      cmp	#25
-   1577  f9a5		       90 08		      bcc	.noChange
-   1578  f9a7		       a9 05		      lda	#5
-   1579  f9a9		       85 86		      sta	monsterSpeed
-   1580  f9ab		       a9 00		      lda	#0
-   1581  f9ad		       85 9b		      sta	collectCount
-   1582  f9af				   .noChange
-   1583  f9af		       60		      rts
-   1584  f9b0
-   1585  f9b0				   .checkStage5
-   1586  f9b0							; below 6: only act if exactly 5
-   1587  f9b0		       a5 86		      lda	monsterSpeed
-   1588  f9b2		       c9 05		      cmp	#5
-   1589  f9b4		       d0 11		      bne	.atFloor	; speed is 4 or lower, done
-   1590  f9b6		       e6 9b		      inc	collectCount
-   1591  f9b8		       a5 9b		      lda	collectCount
-   1592  f9ba		       c9 19		      cmp	#25
-   1593  f9bc		       90 08		      bcc	.noChange2
-   1594  f9be		       a9 04		      lda	#4
-   1595  f9c0		       85 86		      sta	monsterSpeed
-   1596  f9c2		       a9 00		      lda	#0
-   1597  f9c4		       85 9b		      sta	collectCount
-   1598  f9c6				   .noChange2
-   1599  f9c6		       60		      rts
-   1600  f9c7				   .atFloor
-   1601  f9c7		       60		      rts
-   1602  f9c8
-   1603  f9c8				   LoadScorePointers
-   1604  f9c8							; ten-thousands: score+2 low nibble (always shown, even if 0)
-   1605  f9c8		       a5 89		      lda	score+2
-   1606  f9ca		       29 0f		      and	#$0F
-   1607  f9cc		       aa		      tax
-   1608  f9cd		       bd 1d fa 	      lda	scoretableIndex,x
-   1609  f9d0		       85 8a		      sta	scorepointers
-   1610  f9d2		       a9 fb		      lda	#>scoretable
-   1611  f9d4		       85 8b		      sta	scorepointers+1
-   1612  f9d6
-   1613  f9d6							; thousands: score high nibble
-   1614  f9d6		       a5 87		      lda	score
-   1615  f9d8		       29 f0		      and	#$F0
-   1616  f9da		       4a		      lsr
-   1617  f9db		       4a		      lsr
-   1618  f9dc		       4a		      lsr
-   1619  f9dd		       4a		      lsr
-   1620  f9de		       aa		      tax
-   1621  f9df		       bd 1d fa 	      lda	scoretableIndex,x
-   1622  f9e2		       85 8c		      sta	scorepointers+2
-   1623  f9e4
-   1624  f9e4							; hundreds: score low nibble
-   1625  f9e4		       a5 87		      lda	score
-   1626  f9e6		       29 0f		      and	#$0F
-   1627  f9e8		       aa		      tax
-   1628  f9e9		       bd 1d fa 	      lda	scoretableIndex,x
-   1629  f9ec		       85 8e		      sta	scorepointers+4
-   1630  f9ee
-   1631  f9ee							; tens: score+1 high nibble
-   1632  f9ee		       a5 88		      lda	score+1
-   1633  f9f0		       29 f0		      and	#$F0
-   1634  f9f2		       4a		      lsr
-   1635  f9f3		       4a		      lsr
-   1636  f9f4		       4a		      lsr
-   1637  f9f5		       4a		      lsr
-   1638  f9f6		       aa		      tax
-   1639  f9f7		       bd 1d fa 	      lda	scoretableIndex,x
-   1640  f9fa		       85 90		      sta	scorepointers+6
-   1641  f9fc
-   1642  f9fc							; ones: score+1 low nibble
-   1643  f9fc		       a5 88		      lda	score+1
-   1644  f9fe		       29 0f		      and	#$0F
-   1645  fa00		       aa		      tax
-   1646  fa01		       bd 1d fa 	      lda	scoretableIndex,x
-   1647  fa04		       85 92		      sta	scorepointers+8
-   1648  fa06
-   1649  fa06							; trailing blank slot
-   1650  fa06		       a9 50		      lda	#<blank
-   1651  fa08		       85 94		      sta	scorepointers+10
-   1652  fa0a		       85 96		      sta	scorepointers+12
-   1653  fa0c
-   1654  fa0c		       a9 fb		      lda	#>scoretable
-   1655  fa0e		       85 8d		      sta	scorepointers+3
-   1656  fa10		       85 8f		      sta	scorepointers+5
-   1657  fa12		       85 91		      sta	scorepointers+7
-   1658  fa14		       85 93		      sta	scorepointers+9
-   1659  fa16		       a9 fb		      lda	#>blank
-   1660  fa18		       85 95		      sta	scorepointers+11
-   1661  fa1a		       85 97		      sta	scorepointers+13
-   1662  fa1c		       60		      rts
-   1663  fa1d
-   1664  fa1d							;------------------------------------------------
-   1665  fa1d							; ROM Tables
-   1666  fa1d							;------------------------------------------------
-   1667  fa1d				   scoretableIndex
-   1668  fa1d		       00 08 10 18*	      .byte.b	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
-   1669  fa27
-   1670  fb00		       00 00 00 00*	      align	256
-   1671  fb00				   scoretable
-   1672  fb00				   zero
-   1673  fb00		       3c		      .byte.b	%00111100
-   1674  fb01		       66		      .byte.b	%01100110
-   1675  fb02		       66		      .byte.b	%01100110
-   1676  fb03		       66		      .byte.b	%01100110
-   1677  fb04		       66		      .byte.b	%01100110
-   1678  fb05		       66		      .byte.b	%01100110
-   1679  fb06		       66		      .byte.b	%01100110
-   1680  fb07		       3c		      .byte.b	%00111100
-   1681  fb08				   one
-   1682  fb08		       3c		      .byte.b	%00111100
-   1683  fb09		       18		      .byte.b	%00011000
-   1684  fb0a		       18		      .byte.b	%00011000
-   1685  fb0b		       18		      .byte.b	%00011000
-   1686  fb0c		       18		      .byte.b	%00011000
-   1687  fb0d		       18		      .byte.b	%00011000
-   1688  fb0e		       38		      .byte.b	%00111000
-   1689  fb0f		       18		      .byte.b	%00011000
-   1690  fb10				   two
-   1691  fb10		       7e		      .byte.b	%01111110
-   1692  fb11		       60		      .byte.b	%01100000
-   1693  fb12		       60		      .byte.b	%01100000
-   1694  fb13		       3c		      .byte.b	%00111100
-   1695  fb14		       06		      .byte.b	%00000110
-   1696  fb15		       06		      .byte.b	%00000110
-   1697  fb16		       46		      .byte.b	%01000110
-   1698  fb17		       3c		      .byte.b	%00111100
-   1699  fb18				   three
-   1700  fb18		       3c		      .byte.b	%00111100
-   1701  fb19		       46		      .byte.b	%01000110
-   1702  fb1a		       06		      .byte.b	%00000110
-   1703  fb1b		       0c		      .byte.b	%00001100
-   1704  fb1c		       0c		      .byte.b	%00001100
-   1705  fb1d		       06		      .byte.b	%00000110
-   1706  fb1e		       46		      .byte.b	%01000110
-   1707  fb1f		       3c		      .byte.b	%00111100
-   1708  fb20				   four
-   1709  fb20		       0c		      .byte.b	%00001100
-   1710  fb21		       0c		      .byte.b	%00001100
-   1711  fb22		       0c		      .byte.b	%00001100
-   1712  fb23		       7e		      .byte.b	%01111110
-   1713  fb24		       4c		      .byte.b	%01001100
-   1714  fb25		       2c		      .byte.b	%00101100
-   1715  fb26		       1c		      .byte.b	%00011100
-   1716  fb27		       0c		      .byte.b	%00001100
-   1717  fb28				   five
-   1718  fb28		       7c		      .byte.b	%01111100
-   1719  fb29		       46		      .byte.b	%01000110
-   1720  fb2a		       06		      .byte.b	%00000110
-   1721  fb2b		       06		      .byte.b	%00000110
-   1722  fb2c		       7c		      .byte.b	%01111100
-   1723  fb2d		       60		      .byte.b	%01100000
-   1724  fb2e		       60		      .byte.b	%01100000
-   1725  fb2f		       7e		      .byte.b	%01111110
-   1726  fb30				   six
-   1727  fb30		       3c		      .byte.b	%00111100
-   1728  fb31		       66		      .byte.b	%01100110
-   1729  fb32		       66		      .byte.b	%01100110
-   1730  fb33		       66		      .byte.b	%01100110
-   1731  fb34		       7c		      .byte.b	%01111100
-   1732  fb35		       60		      .byte.b	%01100000
-   1733  fb36		       62		      .byte.b	%01100010
-   1734  fb37		       3c		      .byte.b	%00111100
-   1735  fb38				   seven
-   1736  fb38		       18		      .byte.b	%00011000
-   1737  fb39		       18		      .byte.b	%00011000
-   1738  fb3a		       18		      .byte.b	%00011000
-   1739  fb3b		       18		      .byte.b	%00011000
-   1740  fb3c		       0c		      .byte.b	%00001100
-   1741  fb3d		       06		      .byte.b	%00000110
-   1742  fb3e		       42		      .byte.b	%01000010
-   1743  fb3f		       7e		      .byte.b	%01111110
-   1744  fb40				   eight
-   1745  fb40		       3c		      .byte.b	%00111100
-   1746  fb41		       66		      .byte.b	%01100110
-   1747  fb42		       66		      .byte.b	%01100110
-   1748  fb43		       3c		      .byte.b	%00111100
-   1749  fb44		       3c		      .byte.b	%00111100
-   1750  fb45		       66		      .byte.b	%01100110
-   1751  fb46		       66		      .byte.b	%01100110
-   1752  fb47		       3c		      .byte.b	%00111100
-   1753  fb48				   nine
-   1754  fb48		       3c		      .byte.b	%00111100
-   1755  fb49		       46		      .byte.b	%01000110
-   1756  fb4a		       06		      .byte.b	%00000110
-   1757  fb4b		       3e		      .byte.b	%00111110
-   1758  fb4c		       66		      .byte.b	%01100110
-   1759  fb4d		       66		      .byte.b	%01100110
-   1760  fb4e		       66		      .byte.b	%01100110
-   1761  fb4f		       3c		      .byte.b	%00111100
-   1762  fb50				   blank
-   1763  fb50		       00		      .byte.b	%00000000
-   1764  fb51		       00		      .byte.b	%00000000
-   1765  fb52		       00		      .byte.b	%00000000
-   1766  fb53		       00		      .byte.b	%00000000
-   1767  fb54		       00		      .byte.b	%00000000
-   1768  fb55		       00		      .byte.b	%00000000
-   1769  fb56		       00		      .byte.b	%00000000
-   1770  fb57		       00		      .byte.b	%00000000
-   1771  fb58
-   1772  fb58							; ===================
-   1773  fb58							; Text Graphic Data
-   1774  fb58							; ===================
-   1775  fb58				   LetterG
-   1776  fb58		       3c		      .byte.b	%00111100
-   1777  fb59		       66		      .byte.b	%01100110
-   1778  fb5a		       6e		      .byte.b	%01101110
-   1779  fb5b		       60		      .byte.b	%01100000
-   1780  fb5c		       60		      .byte.b	%01100000
-   1781  fb5d		       66		      .byte.b	%01100110
-   1782  fb5e		       66		      .byte.b	%01100110
-   1783  fb5f		       3c		      .byte.b	%00111100
-   1784  fb60
-   1785  fb60				   LetterA
-   1786  fb60		       66		      .byte.b	%01100110
-   1787  fb61		       66		      .byte.b	%01100110
-   1788  fb62		       7e		      .byte.b	%01111110
-   1789  fb63		       66		      .byte.b	%01100110
-   1790  fb64		       24		      .byte.b	%00100100
-   1791  fb65		       24		      .byte.b	%00100100
-   1792  fb66		       18		      .byte.b	%00011000
-   1793  fb67		       18		      .byte.b	%00011000
-   1794  fb68
-   1795  fb68				   LetterM
-   1796  fb68		       66		      .byte.b	%01100110
-   1797  fb69		       66		      .byte.b	%01100110
-   1798  fb6a		       66		      .byte.b	%01100110
-   1799  fb6b		       66		      .byte.b	%01100110
-   1800  fb6c		       7e		      .byte.b	%01111110
-   1801  fb6d		       7e		      .byte.b	%01111110
-   1802  fb6e		       66		      .byte.b	%01100110
-   1803  fb6f		       66		      .byte.b	%01100110
-   1804  fb70
-   1805  fb70				   LetterE
-   1806  fb70		       7e		      .byte.b	%01111110
-   1807  fb71		       60		      .byte.b	%01100000
-   1808  fb72		       60		      .byte.b	%01100000
-   1809  fb73		       7c		      .byte.b	%01111100
-   1810  fb74		       60		      .byte.b	%01100000
-   1811  fb75		       60		      .byte.b	%01100000
-   1812  fb76		       60		      .byte.b	%01100000
-   1813  fb77		       7e		      .byte.b	%01111110
-   1814  fb78
-   1815  fb78				   LetterO
-   1816  fb78		       3c		      .byte.b	%00111100
-   1817  fb79		       66		      .byte.b	%01100110
-   1818  fb7a		       66		      .byte.b	%01100110
-   1819  fb7b		       66		      .byte.b	%01100110
-   1820  fb7c		       66		      .byte.b	%01100110
-   1821  fb7d		       66		      .byte.b	%01100110
-   1822  fb7e		       66		      .byte.b	%01100110
-   1823  fb7f		       3c		      .byte.b	%00111100
-   1824  fb80
-   1825  fb80				   LetterV
-   1826  fb80		       18		      .byte.b	%00011000
-   1827  fb81		       18		      .byte.b	%00011000
-   1828  fb82		       3c		      .byte.b	%00111100
-   1829  fb83		       24		      .byte.b	%00100100
-   1830  fb84		       66		      .byte.b	%01100110
-   1831  fb85		       66		      .byte.b	%01100110
-   1832  fb86		       66		      .byte.b	%01100110
-   1833  fb87		       66		      .byte.b	%01100110
-   1834  fb88
-   1835  fb88				   LetterR
-   1836  fb88		       66		      .byte.b	%01100110
-   1837  fb89		       66		      .byte.b	%01100110
-   1838  fb8a		       66		      .byte.b	%01100110
-   1839  fb8b		       7c		      .byte.b	%01111100
-   1840  fb8c		       66		      .byte.b	%01100110
-   1841  fb8d		       66		      .byte.b	%01100110
-   1842  fb8e		       66		      .byte.b	%01100110
-   1843  fb8f		       7c		      .byte.b	%01111100
-   1844  fb90
-   1845  fb90				   LetterP
-   1846  fb90		       60		      .byte.b	%01100000
-   1847  fb91		       60		      .byte.b	%01100000
-   1848  fb92		       60		      .byte.b	%01100000
-   1849  fb93		       7c		      .byte.b	%01111100
-   1850  fb94		       66		      .byte.b	%01100110
-   1851  fb95		       66		      .byte.b	%01100110
-   1852  fb96		       7c		      .byte.b	%01111100
-   1853  fb97		       00		      .byte.b	%00000000
-   1854  fb98
-   1855  fb98				   LetterS
-   1856  fb98		       7c		      .byte.b	%01111100
-   1857  fb99		       66		      .byte.b	%01100110
-   1858  fb9a		       06		      .byte.b	%00000110
-   1859  fb9b		       3c		      .byte.b	%00111100
-   1860  fb9c		       60		      .byte.b	%01100000
-   1861  fb9d		       66		      .byte.b	%01100110
-   1862  fb9e		       7c		      .byte.b	%01111100
-   1863  fb9f		       00		      .byte.b	%00000000
-   1864  fba0
-   1865  fba0				   LetterF
-   1866  fba0		       60		      .byte.b	%01100000
-   1867  fba1		       60		      .byte.b	%01100000
-   1868  fba2		       60		      .byte.b	%01100000
-   1869  fba3		       7c		      .byte.b	%01111100
-   1870  fba4		       60		      .byte.b	%01100000
-   1871  fba5		       60		      .byte.b	%01100000
-   1872  fba6		       7e		      .byte.b	%01111110
-   1873  fba7		       00		      .byte.b	%00000000
-   1874  fba8
-   1875  fba8				   LetterI
-   1876  fba8		       3c		      .byte.b	%00111100
-   1877  fba9		       18		      .byte.b	%00011000
-   1878  fbaa		       18		      .byte.b	%00011000
-   1879  fbab		       18		      .byte.b	%00011000
-   1880  fbac		       18		      .byte.b	%00011000
-   1881  fbad		       18		      .byte.b	%00011000
-   1882  fbae		       3c		      .byte.b	%00111100
-   1883  fbaf		       00		      .byte.b	%00000000
-   1884  fbb0
-   1885  fbb0				   LetterL
-   1886  fbb0		       7e		      .byte.b	%01111110
-   1887  fbb1		       60		      .byte.b	%01100000
-   1888  fbb2		       60		      .byte.b	%01100000
-   1889  fbb3		       60		      .byte.b	%01100000
-   1890  fbb4		       60		      .byte.b	%01100000
-   1891  fbb5		       60		      .byte.b	%01100000
-   1892  fbb6		       60		      .byte.b	%01100000
-   1893  fbb7		       00		      .byte.b	%00000000
-   1894  fbb8
-   1895  fc00		       00 00 00 00*	      align	256
-   1896  fc00				   PlayerGfx
-   1897  fc00		       00		      .byte.b	%00000000
-   1898  fc01		       66		      .byte.b	%01100110
-   1899  fc02		       ff		      .byte.b	%11111111
-   1900  fc03		       7e		      .byte.b	%01111110
-   1901  fc04		       3c		      .byte.b	%00111100
-   1902  fc05		       3c		      .byte.b	%00111100
-   1903  fc06		       18		      .byte.b	%00011000
-   1904  fc07		       00		      .byte.b	%00000000
-   1905  fd00		       00 00 00 00*	      align	256
-   1906  fd00				   MonsterGfx
-   1907  fd00		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1908  fd04		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1909  fd08		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1910  fd0c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1911  fd10		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1912  fd14		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1913  fd18		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1914  fd1c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1915  fd20
-   1916  fd20		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1917  fd24		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1918  fd28		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1919  fd2c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1920  fd30		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1921  fd34		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1922  fd38		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1923  fd3c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1924  fd40
-   1925  fd40		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1926  fd44		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1927  fd48		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1928  fd4c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1929  fd50		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1930  fd54		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1931  fd58		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1932  fd5c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1933  fd60
-   1934  fd60		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1935  fd64		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1936  fd68		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1937  fd6c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1938  fd70		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1939  fd74		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1940  fd78		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1941  fd7c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1942  fd80
-   1943  fd80		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1944  fd84		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1945  fd88		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1946  fd8c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1947  fd90		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1948  fd94		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1949  fd98		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1950  fd9c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1951  fda0
-   1952  fda0				   collectSpawnTable
-   1953  fda0		       64 1e		      .byte.b	100, 30
-   1954  fda2		       82 32		      .byte.b	130, 50
-   1955  fda4		       5a 50		      .byte.b	90, 80
-   1956  fda6		       8c 64		      .byte.b	140, 100
-   1957  fda8		       6e 78		      .byte.b	110, 120
-   1958  fdaa		       7d 8c		      .byte.b	125, 140
-   1959  fdac
+   1509  f949
+   1510  f949				   AddScore
+   1511  f949		       85 9a		      sta	temp2
+   1512  f94b		       f8		      sed
+   1513  f94c		       18		      clc
+   1514  f94d		       65 88		      adc	score+1
+   1515  f94f		       85 88		      sta	score+1
+   1516  f951		       8a		      txa
+   1517  f952		       65 87		      adc	score
+   1518  f954		       85 87		      sta	score
+   1519  f956		       90 06		      bcc	.noCarryHigh
+   1520  f958		       a5 89		      lda	score+2
+   1521  f95a		       69 00		      adc	#0
+   1522  f95c		       85 89		      sta	score+2
+   1523  f95e				   .noCarryHigh
+   1524  f95e		       d8		      cld
+   1525  f95f		       a5 9a		      lda	temp2
+   1526  f961		       c9 50		      cmp	#$50
+   1527  f963		       f0 19		      beq	.speedSub50
+   1528  f965		       c9 01		      cmp	#$01
+   1529  f967		       f0 01		      beq	.speedSub1
+   1530  f969		       60		      rts
+   1531  f96a
+   1532  f96a							; Time-based tick: reduce speed toward 6, then stop
+   1533  f96a				   .speedSub1
+   1534  f96a		       a5 86		      lda	monsterSpeed
+   1535  f96c		       c9 06		      cmp	#6
+   1536  f96e		       f0 0d		      beq	.skipSpeedSub	; If speed is exactly 6, do nothing
+   1537  f970		       90 0b		      bcc	.skipSpeedSub	; If speed is below 6 (5 or 4), do nothing!
+   1538  f972		       38		      sec
+   1539  f973		       e9 01		      sbc	#1
+   1540  f975		       c9 06		      cmp	#6
+   1541  f977		       b0 02		      bcs	.storeSpeed
+   1542  f979		       a9 06		      lda	#6	; Floor at 6 if subtraction went too far
+   1543  f97b				   .storeSpeed
+   1544  f97b		       85 86		      sta	monsterSpeed
+   1545  f97d				   .skipSpeedSub
+   1546  f97d		       60		      rts
+   1547  f97e
+   1548  f97e							; Collect-based: normal -2 above 6, then staged 6->5->4
+   1549  f97e				   .speedSub50
+   1550  f97e		       a5 86		      lda	monsterSpeed
+   1551  f980		       c9 06		      cmp	#6
+   1552  f982		       90 25		      bcc	.checkStage5	; speed already below 6, check stage 5->4
+   1553  f984		       f0 12		      beq	.checkStage6	; speed exactly 6, check stage 6->5
+   1554  f986							; speed > 6: subtract 2, floor at 6, reset counter
+   1555  f986		       a9 00		      lda	#0
+   1556  f988		       85 9b		      sta	collectCount
+   1557  f98a		       a5 86		      lda	monsterSpeed
+   1558  f98c		       38		      sec
+   1559  f98d		       e9 02		      sbc	#2
+   1560  f98f		       c9 06		      cmp	#6
+   1561  f991		       b0 02		      bcs	.storeCollSpeed
+   1562  f993		       a9 06		      lda	#6
+   1563  f995				   .storeCollSpeed
+   1564  f995		       85 86		      sta	monsterSpeed
+   1565  f997		       60		      rts
+   1566  f998
+   1567  f998				   .checkStage6
+   1568  f998							; at speed 6: count collects until 5, then drop to 5
+   1569  f998		       e6 9b		      inc	collectCount
+   1570  f99a		       a5 9b		      lda	collectCount
+   1571  f99c		       c9 19		      cmp	#25
+   1572  f99e		       90 08		      bcc	.noChange
+   1573  f9a0		       a9 05		      lda	#5
+   1574  f9a2		       85 86		      sta	monsterSpeed
+   1575  f9a4		       a9 00		      lda	#0
+   1576  f9a6		       85 9b		      sta	collectCount
+   1577  f9a8				   .noChange
+   1578  f9a8		       60		      rts
+   1579  f9a9
+   1580  f9a9				   .checkStage5
+   1581  f9a9							; below 6: only act if exactly 5
+   1582  f9a9		       a5 86		      lda	monsterSpeed
+   1583  f9ab		       c9 05		      cmp	#5
+   1584  f9ad		       d0 11		      bne	.atFloor	; speed is 4 or lower, done
+   1585  f9af		       e6 9b		      inc	collectCount
+   1586  f9b1		       a5 9b		      lda	collectCount
+   1587  f9b3		       c9 19		      cmp	#25
+   1588  f9b5		       90 08		      bcc	.noChange2
+   1589  f9b7		       a9 04		      lda	#4
+   1590  f9b9		       85 86		      sta	monsterSpeed
+   1591  f9bb		       a9 00		      lda	#0
+   1592  f9bd		       85 9b		      sta	collectCount
+   1593  f9bf				   .noChange2
+   1594  f9bf		       60		      rts
+   1595  f9c0				   .atFloor
+   1596  f9c0		       60		      rts
+   1597  f9c1
+   1598  f9c1				   LoadScorePointers
+   1599  f9c1							; ten-thousands: score+2 low nibble (always shown, even if 0)
+   1600  f9c1		       a5 89		      lda	score+2
+   1601  f9c3		       29 0f		      and	#$0F
+   1602  f9c5		       aa		      tax
+   1603  f9c6		       bd 16 fa 	      lda	scoretableIndex,x
+   1604  f9c9		       85 8a		      sta	scorepointers
+   1605  f9cb		       a9 fb		      lda	#>scoretable
+   1606  f9cd		       85 8b		      sta	scorepointers+1
+   1607  f9cf
+   1608  f9cf							; thousands: score high nibble
+   1609  f9cf		       a5 87		      lda	score
+   1610  f9d1		       29 f0		      and	#$F0
+   1611  f9d3		       4a		      lsr
+   1612  f9d4		       4a		      lsr
+   1613  f9d5		       4a		      lsr
+   1614  f9d6		       4a		      lsr
+   1615  f9d7		       aa		      tax
+   1616  f9d8		       bd 16 fa 	      lda	scoretableIndex,x
+   1617  f9db		       85 8c		      sta	scorepointers+2
+   1618  f9dd
+   1619  f9dd							; hundreds: score low nibble
+   1620  f9dd		       a5 87		      lda	score
+   1621  f9df		       29 0f		      and	#$0F
+   1622  f9e1		       aa		      tax
+   1623  f9e2		       bd 16 fa 	      lda	scoretableIndex,x
+   1624  f9e5		       85 8e		      sta	scorepointers+4
+   1625  f9e7
+   1626  f9e7							; tens: score+1 high nibble
+   1627  f9e7		       a5 88		      lda	score+1
+   1628  f9e9		       29 f0		      and	#$F0
+   1629  f9eb		       4a		      lsr
+   1630  f9ec		       4a		      lsr
+   1631  f9ed		       4a		      lsr
+   1632  f9ee		       4a		      lsr
+   1633  f9ef		       aa		      tax
+   1634  f9f0		       bd 16 fa 	      lda	scoretableIndex,x
+   1635  f9f3		       85 90		      sta	scorepointers+6
+   1636  f9f5
+   1637  f9f5							; ones: score+1 low nibble
+   1638  f9f5		       a5 88		      lda	score+1
+   1639  f9f7		       29 0f		      and	#$0F
+   1640  f9f9		       aa		      tax
+   1641  f9fa		       bd 16 fa 	      lda	scoretableIndex,x
+   1642  f9fd		       85 92		      sta	scorepointers+8
+   1643  f9ff
+   1644  f9ff							; trailing blank slot
+   1645  f9ff		       a9 50		      lda	#<blank
+   1646  fa01		       85 94		      sta	scorepointers+10
+   1647  fa03		       85 96		      sta	scorepointers+12
+   1648  fa05
+   1649  fa05		       a9 fb		      lda	#>scoretable
+   1650  fa07		       85 8d		      sta	scorepointers+3
+   1651  fa09		       85 8f		      sta	scorepointers+5
+   1652  fa0b		       85 91		      sta	scorepointers+7
+   1653  fa0d		       85 93		      sta	scorepointers+9
+   1654  fa0f		       a9 fb		      lda	#>blank
+   1655  fa11		       85 95		      sta	scorepointers+11
+   1656  fa13		       85 97		      sta	scorepointers+13
+   1657  fa15		       60		      rts
+   1658  fa16
+   1659  fa16							;------------------------------------------------
+   1660  fa16							; ROM Tables
+   1661  fa16							;------------------------------------------------
+   1662  fa16				   scoretableIndex
+   1663  fa16		       00 08 10 18*	      .byte.b	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
+   1664  fa20
+   1665  fb00		       00 00 00 00*	      align	256
+   1666  fb00				   scoretable
+   1667  fb00				   zero
+   1668  fb00		       3c		      .byte.b	%00111100
+   1669  fb01		       66		      .byte.b	%01100110
+   1670  fb02		       66		      .byte.b	%01100110
+   1671  fb03		       66		      .byte.b	%01100110
+   1672  fb04		       66		      .byte.b	%01100110
+   1673  fb05		       66		      .byte.b	%01100110
+   1674  fb06		       66		      .byte.b	%01100110
+   1675  fb07		       3c		      .byte.b	%00111100
+   1676  fb08				   one
+   1677  fb08		       3c		      .byte.b	%00111100
+   1678  fb09		       18		      .byte.b	%00011000
+   1679  fb0a		       18		      .byte.b	%00011000
+   1680  fb0b		       18		      .byte.b	%00011000
+   1681  fb0c		       18		      .byte.b	%00011000
+   1682  fb0d		       18		      .byte.b	%00011000
+   1683  fb0e		       38		      .byte.b	%00111000
+   1684  fb0f		       18		      .byte.b	%00011000
+   1685  fb10				   two
+   1686  fb10		       7e		      .byte.b	%01111110
+   1687  fb11		       60		      .byte.b	%01100000
+   1688  fb12		       60		      .byte.b	%01100000
+   1689  fb13		       3c		      .byte.b	%00111100
+   1690  fb14		       06		      .byte.b	%00000110
+   1691  fb15		       06		      .byte.b	%00000110
+   1692  fb16		       46		      .byte.b	%01000110
+   1693  fb17		       3c		      .byte.b	%00111100
+   1694  fb18				   three
+   1695  fb18		       3c		      .byte.b	%00111100
+   1696  fb19		       46		      .byte.b	%01000110
+   1697  fb1a		       06		      .byte.b	%00000110
+   1698  fb1b		       0c		      .byte.b	%00001100
+   1699  fb1c		       0c		      .byte.b	%00001100
+   1700  fb1d		       06		      .byte.b	%00000110
+   1701  fb1e		       46		      .byte.b	%01000110
+   1702  fb1f		       3c		      .byte.b	%00111100
+   1703  fb20				   four
+   1704  fb20		       0c		      .byte.b	%00001100
+   1705  fb21		       0c		      .byte.b	%00001100
+   1706  fb22		       0c		      .byte.b	%00001100
+   1707  fb23		       7e		      .byte.b	%01111110
+   1708  fb24		       4c		      .byte.b	%01001100
+   1709  fb25		       2c		      .byte.b	%00101100
+   1710  fb26		       1c		      .byte.b	%00011100
+   1711  fb27		       0c		      .byte.b	%00001100
+   1712  fb28				   five
+   1713  fb28		       7c		      .byte.b	%01111100
+   1714  fb29		       46		      .byte.b	%01000110
+   1715  fb2a		       06		      .byte.b	%00000110
+   1716  fb2b		       06		      .byte.b	%00000110
+   1717  fb2c		       7c		      .byte.b	%01111100
+   1718  fb2d		       60		      .byte.b	%01100000
+   1719  fb2e		       60		      .byte.b	%01100000
+   1720  fb2f		       7e		      .byte.b	%01111110
+   1721  fb30				   six
+   1722  fb30		       3c		      .byte.b	%00111100
+   1723  fb31		       66		      .byte.b	%01100110
+   1724  fb32		       66		      .byte.b	%01100110
+   1725  fb33		       66		      .byte.b	%01100110
+   1726  fb34		       7c		      .byte.b	%01111100
+   1727  fb35		       60		      .byte.b	%01100000
+   1728  fb36		       62		      .byte.b	%01100010
+   1729  fb37		       3c		      .byte.b	%00111100
+   1730  fb38				   seven
+   1731  fb38		       18		      .byte.b	%00011000
+   1732  fb39		       18		      .byte.b	%00011000
+   1733  fb3a		       18		      .byte.b	%00011000
+   1734  fb3b		       18		      .byte.b	%00011000
+   1735  fb3c		       0c		      .byte.b	%00001100
+   1736  fb3d		       06		      .byte.b	%00000110
+   1737  fb3e		       42		      .byte.b	%01000010
+   1738  fb3f		       7e		      .byte.b	%01111110
+   1739  fb40				   eight
+   1740  fb40		       3c		      .byte.b	%00111100
+   1741  fb41		       66		      .byte.b	%01100110
+   1742  fb42		       66		      .byte.b	%01100110
+   1743  fb43		       3c		      .byte.b	%00111100
+   1744  fb44		       3c		      .byte.b	%00111100
+   1745  fb45		       66		      .byte.b	%01100110
+   1746  fb46		       66		      .byte.b	%01100110
+   1747  fb47		       3c		      .byte.b	%00111100
+   1748  fb48				   nine
+   1749  fb48		       3c		      .byte.b	%00111100
+   1750  fb49		       46		      .byte.b	%01000110
+   1751  fb4a		       06		      .byte.b	%00000110
+   1752  fb4b		       3e		      .byte.b	%00111110
+   1753  fb4c		       66		      .byte.b	%01100110
+   1754  fb4d		       66		      .byte.b	%01100110
+   1755  fb4e		       66		      .byte.b	%01100110
+   1756  fb4f		       3c		      .byte.b	%00111100
+   1757  fb50				   blank
+   1758  fb50		       00		      .byte.b	%00000000
+   1759  fb51		       00		      .byte.b	%00000000
+   1760  fb52		       00		      .byte.b	%00000000
+   1761  fb53		       00		      .byte.b	%00000000
+   1762  fb54		       00		      .byte.b	%00000000
+   1763  fb55		       00		      .byte.b	%00000000
+   1764  fb56		       00		      .byte.b	%00000000
+   1765  fb57		       00		      .byte.b	%00000000
+   1766  fb58
+   1767  fb58							; ===================
+   1768  fb58							; Text Graphic Data
+   1769  fb58							; ===================
+   1770  fb58				   LetterG
+   1771  fb58		       3c		      .byte.b	%00111100
+   1772  fb59		       66		      .byte.b	%01100110
+   1773  fb5a		       6e		      .byte.b	%01101110
+   1774  fb5b		       60		      .byte.b	%01100000
+   1775  fb5c		       60		      .byte.b	%01100000
+   1776  fb5d		       66		      .byte.b	%01100110
+   1777  fb5e		       66		      .byte.b	%01100110
+   1778  fb5f		       3c		      .byte.b	%00111100
+   1779  fb60
+   1780  fb60				   LetterA
+   1781  fb60		       66		      .byte.b	%01100110
+   1782  fb61		       66		      .byte.b	%01100110
+   1783  fb62		       7e		      .byte.b	%01111110
+   1784  fb63		       66		      .byte.b	%01100110
+   1785  fb64		       24		      .byte.b	%00100100
+   1786  fb65		       24		      .byte.b	%00100100
+   1787  fb66		       18		      .byte.b	%00011000
+   1788  fb67		       18		      .byte.b	%00011000
+   1789  fb68
+   1790  fb68				   LetterM
+   1791  fb68		       66		      .byte.b	%01100110
+   1792  fb69		       66		      .byte.b	%01100110
+   1793  fb6a		       66		      .byte.b	%01100110
+   1794  fb6b		       66		      .byte.b	%01100110
+   1795  fb6c		       7e		      .byte.b	%01111110
+   1796  fb6d		       7e		      .byte.b	%01111110
+   1797  fb6e		       66		      .byte.b	%01100110
+   1798  fb6f		       66		      .byte.b	%01100110
+   1799  fb70
+   1800  fb70				   LetterE
+   1801  fb70		       7e		      .byte.b	%01111110
+   1802  fb71		       60		      .byte.b	%01100000
+   1803  fb72		       60		      .byte.b	%01100000
+   1804  fb73		       7c		      .byte.b	%01111100
+   1805  fb74		       60		      .byte.b	%01100000
+   1806  fb75		       60		      .byte.b	%01100000
+   1807  fb76		       60		      .byte.b	%01100000
+   1808  fb77		       7e		      .byte.b	%01111110
+   1809  fb78
+   1810  fb78				   LetterO
+   1811  fb78		       3c		      .byte.b	%00111100
+   1812  fb79		       66		      .byte.b	%01100110
+   1813  fb7a		       66		      .byte.b	%01100110
+   1814  fb7b		       66		      .byte.b	%01100110
+   1815  fb7c		       66		      .byte.b	%01100110
+   1816  fb7d		       66		      .byte.b	%01100110
+   1817  fb7e		       66		      .byte.b	%01100110
+   1818  fb7f		       3c		      .byte.b	%00111100
+   1819  fb80
+   1820  fb80				   LetterV
+   1821  fb80		       18		      .byte.b	%00011000
+   1822  fb81		       18		      .byte.b	%00011000
+   1823  fb82		       3c		      .byte.b	%00111100
+   1824  fb83		       24		      .byte.b	%00100100
+   1825  fb84		       66		      .byte.b	%01100110
+   1826  fb85		       66		      .byte.b	%01100110
+   1827  fb86		       66		      .byte.b	%01100110
+   1828  fb87		       66		      .byte.b	%01100110
+   1829  fb88
+   1830  fb88				   LetterR
+   1831  fb88		       66		      .byte.b	%01100110
+   1832  fb89		       66		      .byte.b	%01100110
+   1833  fb8a		       66		      .byte.b	%01100110
+   1834  fb8b		       7c		      .byte.b	%01111100
+   1835  fb8c		       66		      .byte.b	%01100110
+   1836  fb8d		       66		      .byte.b	%01100110
+   1837  fb8e		       66		      .byte.b	%01100110
+   1838  fb8f		       7c		      .byte.b	%01111100
+   1839  fb90
+   1840  fb90				   LetterP
+   1841  fb90		       60		      .byte.b	%01100000
+   1842  fb91		       60		      .byte.b	%01100000
+   1843  fb92		       60		      .byte.b	%01100000
+   1844  fb93		       7c		      .byte.b	%01111100
+   1845  fb94		       66		      .byte.b	%01100110
+   1846  fb95		       66		      .byte.b	%01100110
+   1847  fb96		       7c		      .byte.b	%01111100
+   1848  fb97		       00		      .byte.b	%00000000
+   1849  fb98
+   1850  fb98				   LetterS
+   1851  fb98		       7c		      .byte.b	%01111100
+   1852  fb99		       66		      .byte.b	%01100110
+   1853  fb9a		       06		      .byte.b	%00000110
+   1854  fb9b		       3c		      .byte.b	%00111100
+   1855  fb9c		       60		      .byte.b	%01100000
+   1856  fb9d		       66		      .byte.b	%01100110
+   1857  fb9e		       7c		      .byte.b	%01111100
+   1858  fb9f		       00		      .byte.b	%00000000
+   1859  fba0
+   1860  fba0				   LetterF
+   1861  fba0		       60		      .byte.b	%01100000
+   1862  fba1		       60		      .byte.b	%01100000
+   1863  fba2		       60		      .byte.b	%01100000
+   1864  fba3		       7c		      .byte.b	%01111100
+   1865  fba4		       60		      .byte.b	%01100000
+   1866  fba5		       60		      .byte.b	%01100000
+   1867  fba6		       7e		      .byte.b	%01111110
+   1868  fba7		       00		      .byte.b	%00000000
+   1869  fba8
+   1870  fba8				   LetterI
+   1871  fba8		       3c		      .byte.b	%00111100
+   1872  fba9		       18		      .byte.b	%00011000
+   1873  fbaa		       18		      .byte.b	%00011000
+   1874  fbab		       18		      .byte.b	%00011000
+   1875  fbac		       18		      .byte.b	%00011000
+   1876  fbad		       18		      .byte.b	%00011000
+   1877  fbae		       3c		      .byte.b	%00111100
+   1878  fbaf		       00		      .byte.b	%00000000
+   1879  fbb0
+   1880  fbb0				   LetterL
+   1881  fbb0		       7e		      .byte.b	%01111110
+   1882  fbb1		       60		      .byte.b	%01100000
+   1883  fbb2		       60		      .byte.b	%01100000
+   1884  fbb3		       60		      .byte.b	%01100000
+   1885  fbb4		       60		      .byte.b	%01100000
+   1886  fbb5		       60		      .byte.b	%01100000
+   1887  fbb6		       60		      .byte.b	%01100000
+   1888  fbb7		       00		      .byte.b	%00000000
+   1889  fbb8
+   1890  fc00		       00 00 00 00*	      align	256
+   1891  fc00				   PlayerGfx
+   1892  fc00		       00		      .byte.b	%00000000
+   1893  fc01		       66		      .byte.b	%01100110
+   1894  fc02		       ff		      .byte.b	%11111111
+   1895  fc03		       7e		      .byte.b	%01111110
+   1896  fc04		       3c		      .byte.b	%00111100
+   1897  fc05		       3c		      .byte.b	%00111100
+   1898  fc06		       18		      .byte.b	%00011000
+   1899  fc07		       00		      .byte.b	%00000000
+   1900  fd00		       00 00 00 00*	      align	256
+   1901  fd00				   MonsterGfx
+   1902  fd00		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   1903  fd04		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1904  fd08		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1905  fd0c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1906  fd10		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   1907  fd14		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1908  fd18		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1909  fd1c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1910  fd20
+   1911  fd20		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   1912  fd24		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1913  fd28		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1914  fd2c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1915  fd30		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   1916  fd34		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1917  fd38		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1918  fd3c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1919  fd40
+   1920  fd40		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   1921  fd44		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1922  fd48		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1923  fd4c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1924  fd50		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   1925  fd54		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1926  fd58		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1927  fd5c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1928  fd60
+   1929  fd60		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   1930  fd64		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1931  fd68		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1932  fd6c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1933  fd70		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   1934  fd74		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1935  fd78		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1936  fd7c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1937  fd80
+   1938  fd80		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   1939  fd84		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1940  fd88		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1941  fd8c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1942  fd90		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   1943  fd94		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   1944  fd98		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   1945  fd9c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   1946  fda0
+   1947  fda0				   collectSpawnTable
+   1948  fda0		       64 1e		      .byte.b	100, 30
+   1949  fda2		       82 32		      .byte.b	130, 50
+   1950  fda4		       5a 50		      .byte.b	90, 80
+   1951  fda6		       8c 64		      .byte.b	140, 100
+   1952  fda8		       6e 78		      .byte.b	110, 120
+   1953  fdaa		       7d 8c		      .byte.b	125, 140
+   1954  fdac
  3500  ROM bytes used
-   1960  fdac					      echo	[*-$F000]d, " ROM bytes used"
-   1961  fffa					      ORG	$FFFA
-   1962  fffa		       00 f0		      .word.w	Start
-   1963  fffc		       00 f0		      .word.w	Start
-   1964  fffe		       00 f0		      .word.w	Start
-   1965  10000
-   1966  10000					       END
+   1955  fdac					      echo	[*-$F000]d, " ROM bytes used"
+   1956  fffa					      ORG	$FFFA
+   1957  fffa		       00 f0		      .word.w	Start
+   1958  fffc		       00 f0		      .word.w	Start
+   1959  fffe		       00 f0		      .word.w	Start
+   1960  10000
+   1961  10000					       END
