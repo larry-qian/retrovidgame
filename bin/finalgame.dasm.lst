@@ -1,15 +1,14 @@
 ------- FILE finalgame.dasm LEVEL 1 PASS 2
-      1  10000 ????						; notes
-      2  10000 ????						;------------------------------------------------
-      3  10000 ????						; Atari VCS Game
+      1  10000 ????						;------------------------------------------------
+      2  10000 ????						; Cosmic Devourer
+      3  10000 ????						; By: Larry Qian
       4  10000 ????						;------------------------------------------------
       5  10000 ????						; Console Switches:
       6  10000 ????						; GAME SELECT:   Cycles starting lives (3, 2, or 1)
-      7  10000 ????						; GAME RESET:	  Starts the game (same as Fire button)
-      8  10000 ????						;
-      9  10000 ????						; DONE: Monster resets ALL the way back to x=0 when player loses a life
-     10  10000 ????						;------------------------------------------------
-     11  10000 ????				       processor	6502
+      7  10000 ????						;
+      8  10000 ????						; GAME RESET:	  Starts the game (from title) / returns to title (in-game)
+      9  10000 ????						;------------------------------------------------
+     10  10000 ????				       processor	6502
 ------- FILE vcs.h LEVEL 2 PASS 2
       0  10000 ????				       include	vcs.h
       1  10000 ????						; VCS.H
@@ -386,86 +385,94 @@
     169  0000 ????
     170  0000 ????						; EOF
 ------- FILE finalgame.dasm
-     14  0000 ????
-     15  0000 ????						;------------------------------------------------
-     16  0000 ????						; Constants
-     17  0000 ????						;------------------------------------------------
-     18  0000 ????	       00 00	   BLACK      =	#$00
-     19  0000 ????	       00 07	   SCORE_HEIGHT =	#7
-     20  0000 ????	       00 06	   BIKE_HEIGHT =	#6
-     21  0000 ????	       00 a0	   PLAY_HEIGHT =	#160
-     22  0000 ????	       00 04	   BALL_HEIGHT =	#4
-     23  0000 ????	       00 04	   COLLECT_HEIGHT =	#4
-     24  0000 ????
-     25  0000 ????	       00 00	   STATE_TITLE =	0
-     26  0000 ????	       00 01	   STATE_PLAYING =	1
-     27  0000 ????	       00 02	   STATE_GAMEOVER =	2
-     28  0000 ????
-     29  0000 ????						;------------------------------------------------
-     30  0000 ????						; RAM
-     31  0000 ????						;------------------------------------------------
-     32 U00ba ????				      SEG.U	variables
-     33 U0080					      ORG	$80
-     34 U0080
-     35 U0080		       00	   bgcolor    .byte.b
-     36 U0081		       00	   frame      .byte.b
-     37 U0082		       00	   p0x	      .byte.b
-     38 U0083		       00	   p0y	      .byte.b
-     39 U0084
-     40 U0084		       00	   p1x	      .byte.b
-     41 U0085		       00	   monsterTimer .byte.b
-     42 U0086		       00	   monsterSpeed .byte.b
-     43 U0087
-     44 U0087		       00 00 00    score      ds	3
-     45 U008a		       00 00 00 00*scorepointers ds	14
-     46 U0098		       00	   scoreHeight .byte.b
-     47 U0099		       00	   temp       .byte.b
-     48 U009a		       00	   temp2      .byte.b
-     49 U009b
-     50 U009b		       00	   collectCount .byte.b
-     51 U009c
-     52 U009c		       00 00	   sprite0gfx ds	2
-     53 U009e		       00	   p0gfx      .byte.b
-     54 U009f		       00	   p0color    .byte.b
-     55 U00a0		       00	   p0ycounter .byte.b
-     56 U00a1
-     57 U00a1		       00	   bally      .byte.b
-     58 U00a2		       00	   temp_bally .byte.b
-     59 U00a3		       00	   ballactive .byte.b
-     60 U00a4		       00	   balldelay  .byte.b
-     61 U00a5		       00	   ballneedpos .byte.b
-     62 U00a6		       00	   balltimer  .byte.b
-     63 U00a7		       00	   ballDriftDir .byte.b
-     64 U00a8
-     65 U00a8		       00	   collectX   .byte.b
-     66 U00a9		       00	   collectY   .byte.b
-     67 U00aa		       00	   collectActive .byte.b
-     68 U00ab		       00	   collectDelay .byte.b
-     69 U00ac		       00	   temp_collecty .byte.b
-     70 U00ad
-     71 U00ad		       00	   scoreTimer .byte.b
-     72 U00ae
-     73 U00ae		       00	   lives      .byte.b
-     74 U00af		       00	   invincible .byte.b
-     75 U00b0
-     76 U00b0		       00	   gameState  .byte.b
-     77 U00b1		       00	   fireDebounce .byte.b
-     78 U00b2		       00	   gameVariation .byte.b
-     79 U00b3		       00	   selectDebounce .byte.b
-     80 U00b4
-     81 U00b4		       00	   soundTimer .byte.b
-     82 U00b5		       00	   soundType  .byte.b
-     83 U00b6
-     84 U00b6		       00	   goTimer    .byte.b
-     85 U00b7		       00 00 00    finalScore ds	3
-     86 U00ba
-     87 U00ba							;------------------------------------------------
-     88 U00ba							; Start of ROM
-     89 U00ba							;------------------------------------------------
-     90  10000 ????				       SEG	Bank0
-     91  f000					      ORG	$F000
-     92  f000
-     93  f000				   Start
+     13  0000 ????
+     14  0000 ????						;------------------------------------------------
+     15  0000 ????						; Constants
+     16  0000 ????						;------------------------------------------------
+     17  0000 ????	       00 00	   BLACK      =	#$00
+     18  0000 ????	       00 07	   SCORE_HEIGHT =	#7
+     19  0000 ????	       00 06	   BIKE_HEIGHT =	#6
+     20  0000 ????	       00 a0	   PLAY_HEIGHT =	#160
+     21  0000 ????	       00 04	   BALL_HEIGHT =	#4
+     22  0000 ????	       00 04	   COLLECT_HEIGHT =	#4
+     23  0000 ????
+     24  0000 ????	       00 00	   STATE_TITLE =	0
+     25  0000 ????	       00 01	   STATE_PLAYING =	1
+     26  0000 ????	       00 02	   STATE_GAMEOVER =	2
+     27  0000 ????
+     28  0000 ????	       00 01	   SND_HIT    =	1
+     29  0000 ????	       00 02	   SND_COLLECT =	2
+     30  0000 ????	       00 03	   SND_GAMEOVER =	3
+     31  0000 ????	       00 04	   SND_STEP   =	4
+     32  0000 ????
+     33  0000 ????	       00 14	   STEP_SPEED_MIN =	20
+     34  0000 ????
+     35  0000 ????						;------------------------------------------------
+     36  0000 ????						; RAM
+     37  0000 ????						;------------------------------------------------
+     38 U00bb ????				      SEG.U	variables
+     39 U0080					      ORG	$80
+     40 U0080
+     41 U0080		       00	   bgcolor    .byte.b
+     42 U0081		       00	   frame      .byte.b
+     43 U0082		       00	   p0x	      .byte.b
+     44 U0083		       00	   p0y	      .byte.b
+     45 U0084
+     46 U0084		       00	   p1x	      .byte.b
+     47 U0085		       00	   monsterTimer .byte.b
+     48 U0086		       00	   monsterSpeed .byte.b
+     49 U0087
+     50 U0087		       00 00 00    score      ds	3
+     51 U008a		       00 00 00 00*scorepointers ds	14
+     52 U0098		       00	   scoreHeight .byte.b
+     53 U0099		       00	   temp       .byte.b
+     54 U009a		       00	   temp2      .byte.b
+     55 U009b
+     56 U009b		       00	   collectCount .byte.b
+     57 U009c
+     58 U009c		       00 00	   sprite0gfx ds	2
+     59 U009e		       00	   p0gfx      .byte.b
+     60 U009f		       00	   p0color    .byte.b
+     61 U00a0		       00	   p0ycounter .byte.b
+     62 U00a1
+     63 U00a1		       00	   bally      .byte.b
+     64 U00a2		       00	   temp_bally .byte.b
+     65 U00a3		       00	   ballactive .byte.b
+     66 U00a4		       00	   balldelay  .byte.b
+     67 U00a5		       00	   ballneedpos .byte.b
+     68 U00a6		       00	   balltimer  .byte.b
+     69 U00a7		       00	   ballDriftDir .byte.b
+     70 U00a8
+     71 U00a8		       00	   collectX   .byte.b
+     72 U00a9		       00	   collectY   .byte.b
+     73 U00aa		       00	   collectActive .byte.b
+     74 U00ab		       00	   collectDelay .byte.b
+     75 U00ac		       00	   temp_collecty .byte.b
+     76 U00ad
+     77 U00ad		       00	   scoreTimer .byte.b
+     78 U00ae
+     79 U00ae		       00	   lives      .byte.b
+     80 U00af		       00	   invincible .byte.b
+     81 U00b0
+     82 U00b0		       00	   gameState  .byte.b
+     83 U00b1		       00	   fireDebounce .byte.b
+     84 U00b2		       00	   gameVariation .byte.b
+     85 U00b3		       00	   selectDebounce .byte.b
+     86 U00b4		       00	   resetDebounce .byte.b
+     87 U00b5
+     88 U00b5		       00	   soundTimer .byte.b
+     89 U00b6		       00	   soundType  .byte.b
+     90 U00b7
+     91 U00b7		       00	   goTimer    .byte.b
+     92 U00b8		       00 00 00    finalScore ds	3
+     93 U00bb
+     94 U00bb							;------------------------------------------------
+     95 U00bb							; Start of ROM
+     96 U00bb							;------------------------------------------------
+     97  10000 ????				       SEG	Bank0
+     98  f000					      ORG	$F000
+     99  f000
+    100  f000				   Start
       0  f000					      CLEAN_START
       1  f000		       78		      sei
       2  f001		       d8		      cld
@@ -482,1871 +489,1976 @@
      13  f007		       48		      pha
      14  f008		       d0 fb		      bne	.CLEAR_STACK
      15  f00a
-     95  f00a
-     96  f00a		       a9 00		      lda	#STATE_TITLE
-     97  f00c		       85 b0		      sta	gameState
-     98  f00e		       a9 00		      lda	#0
-     99  f010		       85 b1		      sta	fireDebounce
-    100  f012		       85 b3		      sta	selectDebounce
-    101  f014		       85 b2		      sta	gameVariation
-    102  f016		       85 b4		      sta	soundTimer
-    103  f018		       85 b5		      sta	soundType
-    104  f01a
-    105  f01a				   InitGame
-    106  f01a		       a9 50		      lda	#80
-    107  f01c		       85 82		      sta	p0x
-    108  f01e		       a9 3c		      lda	#60
-    109  f020		       85 83		      sta	p0y
-    110  f022
-    111  f022		       a9 00		      lda	#0
-    112  f024		       85 84		      sta	p1x
-    113  f026		       85 85		      sta	monsterTimer
-    114  f028		       a9 50		      lda	#80
-    115  f02a		       85 86		      sta	monsterSpeed
-    116  f02c
-    117  f02c		       a9 00		      lda	#<PlayerGfx
-    118  f02e		       85 9c		      sta	sprite0gfx
-    119  f030		       a9 fc		      lda	#>PlayerGfx
-    120  f032		       85 9d		      sta	sprite0gfx+1
-    121  f034
-    122  f034		       a2 0b		      ldx	#11
-    123  f036				   .initScore
-    124  f036		       a9 fb		      lda	#>scoretable
-    125  f038		       95 8a		      sta	scorepointers,x
-    126  f03a		       ca		      dex
-    127  f03b		       a9 00		      lda	#<scoretable
-    128  f03d		       95 8a		      sta	scorepointers,x
-    129  f03f		       ca		      dex
-    130  f040		       10 f4		      bpl	.initScore
-    131  f042
-    132  f042		       a9 50		      lda	#<blank
-    133  f044		       85 96		      sta	scorepointers+12
-    134  f046		       a9 fb		      lda	#>blank
-    135  f048		       85 97		      sta	scorepointers+13
-    136  f04a
-    137  f04a		       a9 00		      lda	#0
-    138  f04c		       85 a3		      sta	ballactive
-    139  f04e		       85 a5		      sta	ballneedpos
-    140  f050		       a9 14		      lda	#20
-    141  f052		       85 a1		      sta	bally
-    142  f054		       a9 5a		      lda	#90
-    143  f056		       85 a4		      sta	balldelay
-    144  f058
-    145  f058		       a9 00		      lda	#0
-    146  f05a		       85 ad		      sta	scoreTimer
-    147  f05c		       85 87		      sta	score
-    148  f05e		       85 88		      sta	score+1
-    149  f060		       85 89		      sta	score+2
-    150  f062		       85 9b		      sta	collectCount
-    151  f064		       20 c1 f9 	      jsr	LoadScorePointers
-    152  f067
-    153  f067		       a5 b2		      lda	gameVariation
-    154  f069		       c9 01		      cmp	#1
-    155  f06b		       f0 09		      beq	.twoLives
-    156  f06d		       c9 02		      cmp	#2
-    157  f06f		       f0 0a		      beq	.oneLife
-    158  f071		       a9 03		      lda	#3
-    159  f073		       4c 7d f0 	      jmp	.setLives
-    160  f076				   .twoLives
-    161  f076		       a9 02		      lda	#2
-    162  f078		       4c 7d f0 	      jmp	.setLives
-    163  f07b				   .oneLife
-    164  f07b		       a9 01		      lda	#1
-    165  f07d				   .setLives
-    166  f07d		       85 ae		      sta	lives
-    167  f07f		       a9 00		      lda	#0
-    168  f081		       85 af		      sta	invincible
-    169  f083
-    170  f083		       a9 00		      lda	#0
-    171  f085		       85 aa		      sta	collectActive
-    172  f087		       a9 5a		      lda	#90
-    173  f089		       85 ab		      sta	collectDelay
-    174  f08b		       a9 00		      lda	#0
-    175  f08d		       85 b6		      sta	goTimer
-    176  f08f
-    177  f08f							;------------------------------------------------
-    178  f08f							; Main Loop
-    179  f08f							;------------------------------------------------
-    180  f08f				   MainLoop
-    181  f08f		       a9 02		      lda	#2
-    182  f091		       85 00		      sta	VSYNC
-    183  f093		       85 02		      sta	WSYNC
-    184  f095		       85 02		      sta	WSYNC
-    185  f097		       85 02		      sta	WSYNC
-    186  f099		       a9 2b		      lda	#43
-    187  f09b		       8d 96 02 	      sta	TIM64T
-    188  f09e		       a9 00		      lda	#0
-    189  f0a0		       85 00		      sta	VSYNC
-    190  f0a2
-    191  f0a2		       a9 0e		      lda	#$0E
-    192  f0a4		       85 80		      sta	bgcolor
-    193  f0a6
-    194  f0a6		       85 2c		      sta	CXCLR
-    195  f0a8		       85 2b		      sta	HMCLR
-    196  f0aa
-    197  f0aa		       e6 81		      inc	frame
-    198  f0ac
-    199  f0ac		       a5 b0		      lda	gameState
-    200  f0ae		       c9 01		      cmp	#STATE_PLAYING
-    201  f0b0		       f0 07		      beq	.doPlaying
-    202  f0b2		       c9 02		      cmp	#STATE_GAMEOVER
-    203  f0b4		       f0 06		      beq	.doGameOver
-    204  f0b6		       4c bf f0 	      jmp	DoTitle
-    205  f0b9
-    206  f0b9				   .doPlaying
-    207  f0b9		       4c 47 f1 	      jmp	DoPlaying
-    208  f0bc				   .doGameOver
-    209  f0bc		       4c 14 f1 	      jmp	DoGameOver
-    210  f0bf
-    211  f0bf							; ===================
-    212  f0bf							; TITLE SCREEN LOGIC
-    213  f0bf							; ===================
-    214  f0bf				   DoTitle
-    215  f0bf		       ad 82 02 	      lda	SWCHB
-    216  f0c2		       29 02		      and	#%00000010
-    217  f0c4		       d0 1f		      bne	.selectNotPressed
-    218  f0c6		       a5 b3		      lda	selectDebounce
-    219  f0c8		       d0 1f		      bne	.selectHeld
-    220  f0ca		       a9 01		      lda	#1
-    221  f0cc		       85 b3		      sta	selectDebounce
-    222  f0ce		       e6 b2		      inc	gameVariation
-    223  f0d0		       a5 b2		      lda	gameVariation
-    224  f0d2		       c9 03		      cmp	#3
-    225  f0d4		       90 04		      bcc	.varOk
-    226  f0d6		       a9 00		      lda	#0
-    227  f0d8		       85 b2		      sta	gameVariation
-    228  f0da				   .varOk
-    229  f0da		       a9 04		      lda	#4
-    230  f0dc		       85 b4		      sta	soundTimer
-    231  f0de		       a9 02		      lda	#2
-    232  f0e0		       85 b5		      sta	soundType
-    233  f0e2		       4c e9 f0 	      jmp	.selectDone
-    234  f0e5				   .selectNotPressed
-    235  f0e5		       a9 00		      lda	#0
-    236  f0e7		       85 b3		      sta	selectDebounce
-    237  f0e9				   .selectHeld
-    238  f0e9				   .selectDone
-    239  f0e9
-    240  f0e9		       ad 82 02 	      lda	SWCHB
-    241  f0ec		       29 01		      and	#%00000001
-    242  f0ee		       f0 04		      beq	.startGame
-    243  f0f0
-    244  f0f0		       a5 0c		      lda	INPT4
-    245  f0f2		       30 0f		      bmi	.noFireTitle
-    246  f0f4				   .startGame
-    247  f0f4		       a5 b1		      lda	fireDebounce
-    248  f0f6		       d0 0b		      bne	.noFireTitle
-    249  f0f8		       a9 01		      lda	#1
-    250  f0fa		       85 b1		      sta	fireDebounce
-    251  f0fc		       a9 01		      lda	#STATE_PLAYING
-    252  f0fe		       85 b0		      sta	gameState
-    253  f100		       4c 1a f0 	      jmp	InitGame
-    254  f103				   .noFireTitle
-    255  f103		       a5 0c		      lda	INPT4
-    256  f105		       30 03		      bmi	.resetDebounce
-    257  f107		       4c 0e f1 	      jmp	.skipResetDebounce
-    258  f10a				   .resetDebounce
-    259  f10a		       a9 00		      lda	#0
-    260  f10c		       85 b1		      sta	fireDebounce
-    261  f10e				   .skipResetDebounce
-    262  f10e
-    263  f10e		       20 04 f9 	      jsr	UpdateSound
-    264  f111		       4c 53 f2 	      jmp	WaitVBlankEnd
-    265  f114
-    266  f114							; ===================
-    267  f114							; GAME OVER LOGIC
-    268  f114							; ===================
-    269  f114				   DoGameOver
-    270  f114		       e6 b6		      inc	goTimer
-    271  f116
-    272  f116		       ad 82 02 	      lda	SWCHB
-    273  f119		       29 01		      and	#%00000001
-    274  f11b		       f0 08		      beq	.goToTitle
-    275  f11d
-    276  f11d		       a5 0c		      lda	INPT4
-    277  f11f		       30 15		      bmi	.noFireGO
-    278  f121		       a5 b1		      lda	fireDebounce
-    279  f123		       d0 11		      bne	.noFireGO
-    280  f125				   .goToTitle
-    281  f125		       a5 b6		      lda	goTimer
-    282  f127		       c9 3c		      cmp	#60
-    283  f129		       90 0b		      bcc	.noFireGO
-    284  f12b		       a9 00		      lda	#STATE_TITLE
-    285  f12d		       85 b0		      sta	gameState
-    286  f12f		       a9 00		      lda	#0
-    287  f131		       85 b1		      sta	fireDebounce
-    288  f133		       4c 8f f0 	      jmp	MainLoop
-    289  f136				   .noFireGO
-    290  f136		       a5 0c		      lda	INPT4
-    291  f138		       30 03		      bmi	.resetDebounceGO
-    292  f13a		       4c 41 f1 	      jmp	.skipResetGO
-    293  f13d				   .resetDebounceGO
-    294  f13d		       a9 00		      lda	#0
-    295  f13f		       85 b1		      sta	fireDebounce
-    296  f141				   .skipResetGO
-    297  f141
-    298  f141		       20 04 f9 	      jsr	UpdateSound
-    299  f144		       4c 53 f2 	      jmp	WaitVBlankEnd
-    300  f147
-    301  f147							; ===================
-    302  f147							; PLAYING LOGIC
-    303  f147							; ===================
-    304  f147				   DoPlaying
-    305  f147		       e6 ad		      inc	scoreTimer
-    306  f149		       a5 ad		      lda	scoreTimer
-    307  f14b		       c9 3c		      cmp	#60
-    308  f14d		       90 10		      bcc	.skipScore
-    309  f14f		       a9 00		      lda	#0
-    310  f151		       85 ad		      sta	scoreTimer
-    311  f153		       a9 01		      lda	#1
-    312  f155		       a2 00		      ldx	#0
-    313  f157		       a0 00		      ldy	#0
-    314  f159		       20 49 f9 	      jsr	AddScore
-    315  f15c		       20 c1 f9 	      jsr	LoadScorePointers
-    316  f15f				   .skipScore
-    317  f15f
-    318  f15f		       e6 85		      inc	monsterTimer
-    319  f161		       a5 85		      lda	monsterTimer
-    320  f163		       c5 86		      cmp	monsterSpeed
-    321  f165		       90 0f		      bcc	.skipMonster
-    322  f167		       a9 00		      lda	#0
-    323  f169		       85 85		      sta	monsterTimer
-    324  f16b		       a5 84		      lda	p1x
-    325  f16d		       c9 8c		      cmp	#140
-    326  f16f		       90 03		      bcc	.moveMonster
-    327  f171		       4c e5 f8 	      jmp	TriggerGameOver
-    328  f174				   .moveMonster
-    329  f174		       e6 84		      inc	p1x
-    330  f176				   .skipMonster
-    331  f176
-    332  f176		       a5 af		      lda	invincible
-    333  f178		       f0 02		      beq	.noInvCount
-    334  f17a		       c6 af		      dec	invincible
-    335  f17c				   .noInvCount
-    336  f17c
-    337  f17c				   MoveBall
-    338  f17c		       a5 a4		      lda	balldelay
-    339  f17e		       f0 05		      beq	.noDelay
-    340  f180		       c6 a4		      dec	balldelay
-    341  f182		       4c dd f1 	      jmp	.ballLogicDone
-    342  f185				   .noDelay
-    343  f185		       a5 a3		      lda	ballactive
-    344  f187		       f0 35		      beq	.spawnBall
-    345  f189		       c6 a6		      dec	balltimer
-    346  f18b		       d0 0b		      bne	.driftBall
-    347  f18d		       a9 00		      lda	#0
-    348  f18f		       85 a3		      sta	ballactive
-    349  f191		       a5 86		      lda	monsterSpeed
-    350  f193		       85 a4		      sta	balldelay
-    351  f195		       4c dd f1 	      jmp	.ballLogicDone
-    352  f198
-    353  f198				   .driftBall
-    354  f198		       a5 a5		      lda	ballneedpos
-    355  f19a		       d0 41		      bne	.ballLogicDone
-    356  f19c		       a5 a7		      lda	ballDriftDir
-    357  f19e		       f0 0f		      beq	.driftDown
-    358  f1a0				   .driftUp
-    359  f1a0		       c6 a1		      dec	bally
-    360  f1a2		       a5 a1		      lda	bally
-    361  f1a4		       c9 04		      cmp	#4
-    362  f1a6		       b0 35		      bcs	.ballLogicDone
-    363  f1a8		       a9 04		      lda	#4
-    364  f1aa		       85 a1		      sta	bally
-    365  f1ac		       4c dd f1 	      jmp	.ballLogicDone
-    366  f1af				   .driftDown
-    367  f1af		       e6 a1		      inc	bally
-    368  f1b1		       a5 a1		      lda	bally
-    369  f1b3		       c9 9a		      cmp	#PLAY_HEIGHT-BALL_HEIGHT-2
-    370  f1b5		       90 26		      bcc	.ballLogicDone
-    371  f1b7		       a9 9a		      lda	#PLAY_HEIGHT-BALL_HEIGHT-2
-    372  f1b9		       85 a1		      sta	bally
-    373  f1bb		       4c dd f1 	      jmp	.ballLogicDone
-    374  f1be
-    375  f1be				   .spawnBall
-    376  f1be		       a9 01		      lda	#1
-    377  f1c0		       85 a3		      sta	ballactive
-    378  f1c2		       a5 a7		      lda	ballDriftDir
-    379  f1c4		       49 01		      eor	#1
-    380  f1c6		       85 a7		      sta	ballDriftDir
-    381  f1c8		       a9 02		      lda	#2
-    382  f1ca		       85 a5		      sta	ballneedpos
-    383  f1cc		       a9 4d		      lda	#77
-    384  f1ce		       85 a6		      sta	balltimer
-    385  f1d0		       a5 a1		      lda	bally
-    386  f1d2		       18		      clc
-    387  f1d3		       69 0c		      adc	#12
-    388  f1d5		       c9 9a		      cmp	#PLAY_HEIGHT-6
-    389  f1d7		       90 02		      bcc	.yOk
-    390  f1d9		       a9 14		      lda	#20
-    391  f1db				   .yOk
-    392  f1db		       85 a1		      sta	bally
-    393  f1dd				   .ballLogicDone
-    394  f1dd
-    395  f1dd		       a5 ab		      lda	collectDelay
-    396  f1df		       f0 05		      beq	.noCollectDelay
-    397  f1e1		       c6 ab		      dec	collectDelay
-    398  f1e3		       4c 04 f2 	      jmp	.collectLogicDone
-    399  f1e6				   .noCollectDelay
-    400  f1e6		       a5 aa		      lda	collectActive
-    401  f1e8		       d0 1a		      bne	.collectLogicDone
-    402  f1ea		       a5 81		      lda	frame
-    403  f1ec		       29 07		      and	#%00000111
-    404  f1ee		       c9 06		      cmp	#6
-    405  f1f0		       90 02		      bcc	.indexOk
-    406  f1f2		       e9 06		      sbc	#6
-    407  f1f4				   .indexOk
-    408  f1f4		       0a		      asl
-    409  f1f5		       aa		      tax
-    410  f1f6		       bd a0 fd 	      lda	collectSpawnTable,x
-    411  f1f9		       85 a8		      sta	collectX
-    412  f1fb		       bd a1 fd 	      lda	collectSpawnTable+1,x
-    413  f1fe		       85 a9		      sta	collectY
-    414  f200		       a9 01		      lda	#1
-    415  f202		       85 aa		      sta	collectActive
-    416  f204				   .collectLogicDone
-    417  f204
-    418  f204				   CheckUp
-    419  f204		       a9 10		      lda	#%00010000
-    420  f206		       2c 80 02 	      bit	SWCHA
-    421  f209		       d0 0a		      bne	.endUp
-    422  f20b		       a5 83		      lda	p0y
-    423  f20d		       c9 9a		      cmp	#PLAY_HEIGHT-BIKE_HEIGHT
-    424  f20f		       b0 04		      bcs	.endUp
-    425  f211		       e6 83		      inc	p0y
-    426  f213		       e6 83		      inc	p0y
-    427  f215				   .endUp
-    428  f215				   CheckDown
-    429  f215		       a9 20		      lda	#%00100000
-    430  f217		       2c 80 02 	      bit	SWCHA
-    431  f21a		       d0 0a		      bne	.endDown
-    432  f21c		       a5 83		      lda	p0y
-    433  f21e		       c9 0c		      cmp	#BIKE_HEIGHT+BIKE_HEIGHT
-    434  f220		       90 04		      bcc	.endDown
-    435  f222		       c6 83		      dec	p0y
-    436  f224		       c6 83		      dec	p0y
-    437  f226				   .endDown
-    438  f226				   CheckRight
-    439  f226		       a9 80		      lda	#%10000000
-    440  f228		       2c 80 02 	      bit	SWCHA
-    441  f22b		       d0 0e		      bne	.endRight
-    442  f22d		       a9 00		      lda	#0
-    443  f22f		       85 0b		      sta	REFP0
-    444  f231		       a5 82		      lda	p0x
-    445  f233		       c9 94		      cmp	#148
-    446  f235		       b0 04		      bcs	.endRight
-    447  f237		       e6 82		      inc	p0x
-    448  f239		       e6 82		      inc	p0x
-    449  f23b				   .endRight
-    450  f23b				   CheckLeft
-    451  f23b		       a9 40		      lda	#%01000000
-    452  f23d		       2c 80 02 	      bit	SWCHA
-    453  f240		       d0 0e		      bne	EndInput
-    454  f242		       a9 08		      lda	#%00001000
-    455  f244		       85 0b		      sta	REFP0
-    456  f246		       a5 82		      lda	p0x
-    457  f248		       c9 02		      cmp	#2
-    458  f24a		       90 04		      bcc	EndInput
-    459  f24c		       c6 82		      dec	p0x
-    460  f24e		       c6 82		      dec	p0x
-    461  f250				   EndInput
-    462  f250
-    463  f250		       20 04 f9 	      jsr	UpdateSound
-    464  f253
-    465  f253				   WaitVBlankEnd
-    466  f253		       85 02		      sta	WSYNC
-    467  f255				   .waitForVBlank
-    468  f255		       ad 84 02 	      lda	INTIM
-    469  f258		       d0 fb		      bne	.waitForVBlank
-    470  f25a		       85 02		      sta	WSYNC
-    471  f25c		       85 01		      sta	VBLANK
-    472  f25e
-    473  f25e		       a5 b0		      lda	gameState
-    474  f260		       c9 01		      cmp	#STATE_PLAYING
-    475  f262		       f0 07		      beq	.kernelPlay
-    476  f264		       c9 02		      cmp	#STATE_GAMEOVER
-    477  f266		       f0 06		      beq	.kernelGO
-    478  f268		       4c 71 f2 	      jmp	TitleKernel
-    479  f26b				   .kernelPlay
-    480  f26b		       4c 00 f6 	      jmp	StartDrawScreen
-    481  f26e				   .kernelGO
-    482  f26e		       4c fb f3 	      jmp	GameOverKernel
-    483  f271
-    484  f271							; ===================
-    485  f271							; TITLE SCREEN KERNEL
-    486  f271							; ===================
-    487  f271				   TitleKernel
-    488  f271		       a9 00		      lda	#0
-    489  f273		       85 1b		      sta	GRP0
-    490  f275		       85 1c		      sta	GRP1
-    491  f277		       85 0d		      sta	PF0
-    492  f279		       85 0e		      sta	PF1
-    493  f27b		       85 0f		      sta	PF2
-    494  f27d		       85 1d		      sta	ENAM0
-    495  f27f		       85 1e		      sta	ENAM1
-    496  f281		       85 1f		      sta	ENABL
-    497  f283
-    498  f283		       a9 01		      lda	#%00000001
-    499  f285		       85 0a		      sta	CTRLPF
-    500  f287		       a9 00		      lda	#$00
-    501  f289		       85 09		      sta	COLUBK
-    502  f28b
-    503  f28b		       a9 fb		      lda	#>scoretable
-    504  f28d		       85 8b		      sta	scorepointers+1
-    505  f28f		       85 8d		      sta	scorepointers+3
-    506  f291		       85 8f		      sta	scorepointers+5
-    507  f293		       85 91		      sta	scorepointers+7
-    508  f295		       85 93		      sta	scorepointers+9
-    509  f297		       85 95		      sta	scorepointers+11
-    510  f299
-    511  f299		       a2 14		      ldx	#20
-    512  f29b				   .titleTopSpc
-    513  f29b		       85 02		      sta	WSYNC
-    514  f29d		       ca		      dex
-    515  f29e		       d0 fb		      bne	.titleTopSpc
-    516  f2a0
-    517  f2a0		       a5 81		      lda	frame
-    518  f2a2		       29 20		      and	#%00100000
-    519  f2a4		       d0 0a		      bne	.drawPressFire
-    520  f2a6
-    521  f2a6		       a2 20		      ldx	#32
-    522  f2a8				   .titleBlankText
-    523  f2a8		       85 02		      sta	WSYNC
-    524  f2aa		       ca		      dex
-    525  f2ab		       d0 fb		      bne	.titleBlankText
-    526  f2ad		       4c 45 f3 	      jmp	.afterPressFire
-    527  f2b0
-    528  f2b0				   .drawPressFire
-    529  f2b0		       a9 46		      lda	#$46
-    530  f2b2		       85 06		      sta	COLUP0
-    531  f2b4		       85 07		      sta	COLUP1
-    532  f2b6
-    533  f2b6		       a9 90		      lda	#<LetterP
-    534  f2b8		       85 8a		      sta	scorepointers
-    535  f2ba		       a9 88		      lda	#<LetterR
-    536  f2bc		       85 8c		      sta	scorepointers+2
-    537  f2be		       a9 70		      lda	#<LetterE
-    538  f2c0		       85 8e		      sta	scorepointers+4
-    539  f2c2		       a9 98		      lda	#<LetterS
-    540  f2c4		       85 90		      sta	scorepointers+6
-    541  f2c6		       85 92		      sta	scorepointers+8
-    542  f2c8		       a9 50		      lda	#<blank
-    543  f2ca		       85 94		      sta	scorepointers+10
-    544  f2cc
-    545  f2cc		       20 4b f5 	      jsr	Setup48Pixel
-    546  f2cf				   .pressLoop
-    547  f2cf		       a4 98		      ldy	scoreHeight
-    548  f2d1		       b1 8a		      lda	(scorepointers),y
-    549  f2d3		       85 1b		      sta	GRP0
-    550  f2d5		       85 02		      sta	WSYNC
-    551  f2d7		       b1 8c		      lda	(scorepointers+2),y
-    552  f2d9		       85 1c		      sta	GRP1
-    553  f2db		       b1 8e		      lda	(scorepointers+4),y
-    554  f2dd		       85 1b		      sta	GRP0
-    555  f2df		       b1 90		      lda	(scorepointers+6),y
-    556  f2e1		       85 99		      sta	temp
-    557  f2e3		       b1 92		      lda	(scorepointers+8),y
-    558  f2e5		       aa		      tax
-    559  f2e6		       b1 94		      lda	(scorepointers+10),y
-    560  f2e8		       a8		      tay
-    561  f2e9		       a5 99		      lda	temp
-    562  f2eb		       85 1c		      sta	GRP1
-    563  f2ed		       86 1b		      stx	GRP0
-    564  f2ef		       84 1c		      sty	GRP1
-    565  f2f1		       85 1b		      sta	GRP0
-    566  f2f3		       c6 98		      dec	scoreHeight
-    567  f2f5		       10 d8		      bpl	.pressLoop
-    568  f2f7		       20 7e f5 	      jsr	End48Pixel
-    569  f2fa
-    570  f2fa		       a2 06		      ldx	#6
-    571  f2fc				   .pfGap
-    572  f2fc		       85 02		      sta	WSYNC
-    573  f2fe		       ca		      dex
-    574  f2ff		       d0 fb		      bne	.pfGap
-    575  f301
-    576  f301		       a9 a0		      lda	#<LetterF
-    577  f303		       85 8a		      sta	scorepointers
-    578  f305		       a9 a8		      lda	#<LetterI
-    579  f307		       85 8c		      sta	scorepointers+2
-    580  f309		       a9 88		      lda	#<LetterR
-    581  f30b		       85 8e		      sta	scorepointers+4
-    582  f30d		       a9 70		      lda	#<LetterE
-    583  f30f		       85 90		      sta	scorepointers+6
-    584  f311		       a9 50		      lda	#<blank
-    585  f313		       85 92		      sta	scorepointers+8
-    586  f315		       85 94		      sta	scorepointers+10
-    587  f317
-    588  f317		       20 4b f5 	      jsr	Setup48Pixel
-    589  f31a				   .fireLoop
-    590  f31a		       a4 98		      ldy	scoreHeight
-    591  f31c		       b1 8a		      lda	(scorepointers),y
-    592  f31e		       85 1b		      sta	GRP0
-    593  f320		       85 02		      sta	WSYNC
-    594  f322		       b1 8c		      lda	(scorepointers+2),y
-    595  f324		       85 1c		      sta	GRP1
-    596  f326		       b1 8e		      lda	(scorepointers+4),y
-    597  f328		       85 1b		      sta	GRP0
-    598  f32a		       b1 90		      lda	(scorepointers+6),y
-    599  f32c		       85 99		      sta	temp
-    600  f32e		       b1 92		      lda	(scorepointers+8),y
-    601  f330		       aa		      tax
-    602  f331		       b1 94		      lda	(scorepointers+10),y
-    603  f333		       a8		      tay
-    604  f334		       a5 99		      lda	temp
-    605  f336		       85 1c		      sta	GRP1
-    606  f338		       86 1b		      stx	GRP0
-    607  f33a		       84 1c		      sty	GRP1
-    608  f33c		       85 1b		      sta	GRP0
-    609  f33e		       c6 98		      dec	scoreHeight
-    610  f340		       10 d8		      bpl	.fireLoop
-    611  f342		       20 7e f5 	      jsr	End48Pixel
-    612  f345
-    613  f345				   .afterPressFire
-    614  f345		       a2 14		      ldx	#20
-    615  f347				   .titleMidGap
-    616  f347		       85 02		      sta	WSYNC
-    617  f349		       ca		      dex
-    618  f34a		       d0 fb		      bne	.titleMidGap
-    619  f34c
-    620  f34c		       a9 0e		      lda	#$0E
-    621  f34e		       85 06		      sta	COLUP0
-    622  f350		       85 07		      sta	COLUP1
-    623  f352
-    624  f352		       a9 b0		      lda	#<LetterL
-    625  f354		       85 8a		      sta	scorepointers
-    626  f356		       a9 a8		      lda	#<LetterI
-    627  f358		       85 8c		      sta	scorepointers+2
-    628  f35a		       a9 80		      lda	#<LetterV
-    629  f35c		       85 8e		      sta	scorepointers+4
-    630  f35e		       a9 70		      lda	#<LetterE
-    631  f360		       85 90		      sta	scorepointers+6
-    632  f362		       a9 98		      lda	#<LetterS
-    633  f364		       85 92		      sta	scorepointers+8
-    634  f366		       a9 50		      lda	#<blank
-    635  f368		       85 94		      sta	scorepointers+10
-    636  f36a
-    637  f36a		       20 4b f5 	      jsr	Setup48Pixel
-    638  f36d				   .livesLoop
-    639  f36d		       a4 98		      ldy	scoreHeight
-    640  f36f		       b1 8a		      lda	(scorepointers),y
-    641  f371		       85 1b		      sta	GRP0
-    642  f373		       85 02		      sta	WSYNC
-    643  f375		       b1 8c		      lda	(scorepointers+2),y
-    644  f377		       85 1c		      sta	GRP1
-    645  f379		       b1 8e		      lda	(scorepointers+4),y
-    646  f37b		       85 1b		      sta	GRP0
-    647  f37d		       b1 90		      lda	(scorepointers+6),y
-    648  f37f		       85 99		      sta	temp
-    649  f381		       b1 92		      lda	(scorepointers+8),y
-    650  f383		       aa		      tax
-    651  f384		       b1 94		      lda	(scorepointers+10),y
-    652  f386		       a8		      tay
-    653  f387		       a5 99		      lda	temp
-    654  f389		       85 1c		      sta	GRP1
-    655  f38b		       86 1b		      stx	GRP0
-    656  f38d		       84 1c		      sty	GRP1
-    657  f38f		       85 1b		      sta	GRP0
-    658  f391		       c6 98		      dec	scoreHeight
-    659  f393		       10 d8		      bpl	.livesLoop
-    660  f395		       20 7e f5 	      jsr	End48Pixel
-    661  f398
-    662  f398		       a2 06		      ldx	#6
-    663  f39a				   .livesGap
-    664  f39a		       85 02		      sta	WSYNC
-    665  f39c		       ca		      dex
-    666  f39d		       d0 fb		      bne	.livesGap
-    667  f39f
-    668  f39f		       a9 50		      lda	#<blank
-    669  f3a1		       85 8a		      sta	scorepointers
-    670  f3a3		       85 8c		      sta	scorepointers+2
-    671  f3a5		       85 90		      sta	scorepointers+6
-    672  f3a7		       85 92		      sta	scorepointers+8
-    673  f3a9		       85 94		      sta	scorepointers+10
-    674  f3ab
-    675  f3ab		       a5 b2		      lda	gameVariation
-    676  f3ad		       c9 00		      cmp	#0
-    677  f3af		       f0 09		      beq	.show3
-    678  f3b1		       c9 01		      cmp	#1
-    679  f3b3		       f0 0a		      beq	.show2
-    680  f3b5				   .show1
-    681  f3b5		       a9 08		      lda	#<one
-    682  f3b7		       4c c1 f3 	      jmp	.setNum
-    683  f3ba				   .show3
-    684  f3ba		       a9 18		      lda	#<three
-    685  f3bc		       4c c1 f3 	      jmp	.setNum
-    686  f3bf				   .show2
-    687  f3bf		       a9 10		      lda	#<two
-    688  f3c1				   .setNum
-    689  f3c1		       85 8e		      sta	scorepointers+4
-    690  f3c3
-    691  f3c3		       20 4b f5 	      jsr	Setup48Pixel
-    692  f3c6				   .numLoop
-    693  f3c6		       a4 98		      ldy	scoreHeight
-    694  f3c8		       b1 8a		      lda	(scorepointers),y
-    695  f3ca		       85 1b		      sta	GRP0
-    696  f3cc		       85 02		      sta	WSYNC
-    697  f3ce		       b1 8c		      lda	(scorepointers+2),y
-    698  f3d0		       85 1c		      sta	GRP1
-    699  f3d2		       b1 8e		      lda	(scorepointers+4),y
-    700  f3d4		       85 1b		      sta	GRP0
-    701  f3d6		       b1 90		      lda	(scorepointers+6),y
-    702  f3d8		       85 99		      sta	temp
-    703  f3da		       b1 92		      lda	(scorepointers+8),y
-    704  f3dc		       aa		      tax
-    705  f3dd		       b1 94		      lda	(scorepointers+10),y
-    706  f3df		       a8		      tay
-    707  f3e0		       a5 99		      lda	temp
-    708  f3e2		       85 1c		      sta	GRP1
-    709  f3e4		       86 1b		      stx	GRP0
-    710  f3e6		       84 1c		      sty	GRP1
-    711  f3e8		       85 1b		      sta	GRP0
-    712  f3ea		       c6 98		      dec	scoreHeight
-    713  f3ec		       10 d8		      bpl	.numLoop
-    714  f3ee		       20 7e f5 	      jsr	End48Pixel
-    715  f3f1
-    716  f3f1		       a2 58		      ldx	#88
-    717  f3f3				   .titleBotSpc
-    718  f3f3		       85 02		      sta	WSYNC
-    719  f3f5		       ca		      dex
-    720  f3f6		       d0 fb		      bne	.titleBotSpc
-    721  f3f8
-    722  f3f8		       4c 5d f8 	      jmp	DoOverscan
-    723  f3fb
-    724  f3fb							; ===================
-    725  f3fb							; GAME OVER KERNEL
-    726  f3fb							; ===================
-    727  f3fb				   GameOverKernel
-    728  f3fb		       a9 00		      lda	#0
-    729  f3fd		       85 1b		      sta	GRP0
-    730  f3ff		       85 1c		      sta	GRP1
-    731  f401		       85 1d		      sta	ENAM0
-    732  f403		       85 1e		      sta	ENAM1
-    733  f405		       85 1f		      sta	ENABL
-    734  f407		       85 0d		      sta	PF0
-    735  f409		       85 0e		      sta	PF1
-    736  f40b		       85 0f		      sta	PF2
-    737  f40d		       85 2b		      sta	HMCLR
-    738  f40f		       85 28		      sta	RESMP0
-    739  f411		       85 29		      sta	RESMP1
-    740  f413
-    741  f413		       a5 b7		      lda	finalScore
-    742  f415		       85 87		      sta	score
-    743  f417		       a5 b8		      lda	finalScore+1
-    744  f419		       85 88		      sta	score+1
-    745  f41b		       a5 b9		      lda	finalScore+2
-    746  f41d		       85 89		      sta	score+2
-    747  f41f		       20 c1 f9 	      jsr	LoadScorePointers
-    748  f422
-    749  f422		       a9 36		      lda	#$36
-    750  f424		       85 09		      sta	COLUBK
-    751  f426
-    752  f426		       a5 81		      lda	frame
-    753  f428		       29 10		      and	#%00010000
-    754  f42a		       f0 05		      beq	.goColorA
-    755  f42c		       a9 0e		      lda	#$0E
-    756  f42e		       4c 33 f4 	      jmp	.goSetColor
-    757  f431				   .goColorA
-    758  f431		       a9 48		      lda	#$48
-    759  f433				   .goSetColor
-    760  f433		       85 06		      sta	COLUP0
-    761  f435		       85 07		      sta	COLUP1
-    762  f437
-    763  f437		       a9 01		      lda	#%00000001
-    764  f439		       85 0a		      sta	CTRLPF
-    765  f43b
-    766  f43b		       a2 1b		      ldx	#27
-    767  f43d				   .goTopSpacer
-    768  f43d		       85 02		      sta	WSYNC
-    769  f43f		       ca		      dex
-    770  f440		       d0 fb		      bne	.goTopSpacer
-    771  f442
-    772  f442		       20 4b f5 	      jsr	Setup48Pixel
-    773  f445
-    774  f445				   .goScoreLoop
-    775  f445		       a4 98		      ldy	scoreHeight
-    776  f447		       b1 8a		      lda	(scorepointers),y
-    777  f449		       85 1b		      sta	GRP0
-    778  f44b		       85 02		      sta	WSYNC
-    779  f44d		       b1 8c		      lda	(scorepointers+2),y
-    780  f44f		       85 1c		      sta	GRP1
-    781  f451		       b1 8e		      lda	(scorepointers+4),y
-    782  f453		       85 1b		      sta	GRP0
-    783  f455		       b1 90		      lda	(scorepointers+6),y
-    784  f457		       85 99		      sta	temp
-    785  f459		       b1 92		      lda	(scorepointers+8),y
-    786  f45b		       aa		      tax
-    787  f45c		       b1 94		      lda	(scorepointers+10),y
-    788  f45e		       a8		      tay
-    789  f45f		       a5 99		      lda	temp
-    790  f461		       85 1c		      sta	GRP1
-    791  f463		       86 1b		      stx	GRP0
-    792  f465		       84 1c		      sty	GRP1
-    793  f467		       85 1b		      sta	GRP0
-    794  f469		       c6 98		      dec	scoreHeight
-    795  f46b		       10 d8		      bpl	.goScoreLoop
-    796  f46d
-    797  f46d		       20 7e f5 	      jsr	End48Pixel
-    798  f470
-    799  f470		       a2 14		      ldx	#20
-    800  f472				   .goGap1
-    801  f472		       85 02		      sta	WSYNC
-    802  f474		       ca		      dex
-    803  f475		       d0 fb		      bne	.goGap1
-    804  f477
-    805  f477		       a9 58		      lda	#<LetterG
-    806  f479		       85 8a		      sta	scorepointers
-    807  f47b		       a9 fb		      lda	#>LetterG
-    808  f47d		       85 8b		      sta	scorepointers+1
-    809  f47f		       a9 60		      lda	#<LetterA
-    810  f481		       85 8c		      sta	scorepointers+2
-    811  f483		       a9 fb		      lda	#>LetterA
-    812  f485		       85 8d		      sta	scorepointers+3
-    813  f487		       a9 68		      lda	#<LetterM
-    814  f489		       85 8e		      sta	scorepointers+4
-    815  f48b		       a9 fb		      lda	#>LetterM
-    816  f48d		       85 8f		      sta	scorepointers+5
-    817  f48f		       a9 70		      lda	#<LetterE
-    818  f491		       85 90		      sta	scorepointers+6
-    819  f493		       a9 fb		      lda	#>LetterE
-    820  f495		       85 91		      sta	scorepointers+7
-    821  f497		       a9 50		      lda	#<blank
-    822  f499		       85 92		      sta	scorepointers+8
-    823  f49b		       a9 fb		      lda	#>blank
-    824  f49d		       85 93		      sta	scorepointers+9
-    825  f49f		       a9 50		      lda	#<blank
-    826  f4a1		       85 94		      sta	scorepointers+10
-    827  f4a3		       a9 fb		      lda	#>blank
-    828  f4a5		       85 95		      sta	scorepointers+11
-    829  f4a7
-    830  f4a7		       20 4b f5 	      jsr	Setup48Pixel
-    831  f4aa
-    832  f4aa				   .goGameLoop
-    833  f4aa		       a4 98		      ldy	scoreHeight
-    834  f4ac		       b1 8a		      lda	(scorepointers),y
-    835  f4ae		       85 1b		      sta	GRP0
-    836  f4b0		       85 02		      sta	WSYNC
-    837  f4b2		       b1 8c		      lda	(scorepointers+2),y
-    838  f4b4		       85 1c		      sta	GRP1
-    839  f4b6		       b1 8e		      lda	(scorepointers+4),y
-    840  f4b8		       85 1b		      sta	GRP0
-    841  f4ba		       b1 90		      lda	(scorepointers+6),y
-    842  f4bc		       85 99		      sta	temp
-    843  f4be		       b1 92		      lda	(scorepointers+8),y
-    844  f4c0		       aa		      tax
-    845  f4c1		       b1 94		      lda	(scorepointers+10),y
-    846  f4c3		       a8		      tay
-    847  f4c4		       a5 99		      lda	temp
-    848  f4c6		       85 1c		      sta	GRP1
-    849  f4c8		       86 1b		      stx	GRP0
-    850  f4ca		       84 1c		      sty	GRP1
-    851  f4cc		       85 1b		      sta	GRP0
-    852  f4ce		       c6 98		      dec	scoreHeight
-    853  f4d0		       10 d8		      bpl	.goGameLoop
-    854  f4d2
-    855  f4d2		       20 7e f5 	      jsr	End48Pixel
-    856  f4d5
-    857  f4d5		       a2 06		      ldx	#6
-    858  f4d7				   .goGap2
-    859  f4d7		       85 02		      sta	WSYNC
-    860  f4d9		       ca		      dex
-    861  f4da		       d0 fb		      bne	.goGap2
-    862  f4dc
-    863  f4dc		       a9 78		      lda	#<LetterO
-    864  f4de		       85 8a		      sta	scorepointers
-    865  f4e0		       a9 fb		      lda	#>LetterO
-    866  f4e2		       85 8b		      sta	scorepointers+1
-    867  f4e4		       a9 80		      lda	#<LetterV
-    868  f4e6		       85 8c		      sta	scorepointers+2
-    869  f4e8		       a9 fb		      lda	#>LetterV
-    870  f4ea		       85 8d		      sta	scorepointers+3
-    871  f4ec		       a9 70		      lda	#<LetterE
-    872  f4ee		       85 8e		      sta	scorepointers+4
-    873  f4f0		       a9 fb		      lda	#>LetterE
-    874  f4f2		       85 8f		      sta	scorepointers+5
-    875  f4f4		       a9 88		      lda	#<LetterR
-    876  f4f6		       85 90		      sta	scorepointers+6
-    877  f4f8		       a9 fb		      lda	#>LetterR
-    878  f4fa		       85 91		      sta	scorepointers+7
-    879  f4fc		       a9 50		      lda	#<blank
-    880  f4fe		       85 92		      sta	scorepointers+8
-    881  f500		       a9 fb		      lda	#>blank
-    882  f502		       85 93		      sta	scorepointers+9
-    883  f504		       a9 50		      lda	#<blank
-    884  f506		       85 94		      sta	scorepointers+10
-    885  f508		       a9 fb		      lda	#>blank
-    886  f50a		       85 95		      sta	scorepointers+11
-    887  f50c
-    888  f50c		       20 4b f5 	      jsr	Setup48Pixel
-    889  f50f
-    890  f50f				   .goOverLoop
-    891  f50f		       a4 98		      ldy	scoreHeight
-    892  f511		       b1 8a		      lda	(scorepointers),y
-    893  f513		       85 1b		      sta	GRP0
-    894  f515		       85 02		      sta	WSYNC
-    895  f517		       b1 8c		      lda	(scorepointers+2),y
-    896  f519		       85 1c		      sta	GRP1
-    897  f51b		       b1 8e		      lda	(scorepointers+4),y
-    898  f51d		       85 1b		      sta	GRP0
-    899  f51f		       b1 90		      lda	(scorepointers+6),y
-    900  f521		       85 99		      sta	temp
-    901  f523		       b1 92		      lda	(scorepointers+8),y
-    902  f525		       aa		      tax
-    903  f526		       b1 94		      lda	(scorepointers+10),y
-    904  f528		       a8		      tay
-    905  f529		       a5 99		      lda	temp
-    906  f52b		       85 1c		      sta	GRP1
-    907  f52d		       86 1b		      stx	GRP0
-    908  f52f		       84 1c		      sty	GRP1
-    909  f531		       85 1b		      sta	GRP0
-    910  f533		       c6 98		      dec	scoreHeight
-    911  f535		       10 d8		      bpl	.goOverLoop
-    912  f537
-    913  f537		       20 7e f5 	      jsr	End48Pixel
-    914  f53a
-    915  f53a		       a2 14		      ldx	#20
-    916  f53c				   .goGap3
-    917  f53c		       85 02		      sta	WSYNC
-    918  f53e		       ca		      dex
-    919  f53f		       d0 fb		      bne	.goGap3
-    920  f541
-    921  f541		       a2 53		      ldx	#83
-    922  f543				   .goBottom
-    923  f543		       85 02		      sta	WSYNC
-    924  f545		       ca		      dex
-    925  f546		       d0 fb		      bne	.goBottom
-    926  f548
-    927  f548		       4c 5d f8 	      jmp	DoOverscan
-    928  f54b
-    929  f54b							; ===================
-    930  f54b							; 48-pixel setup/teardown subroutines
-    931  f54b							; ===================
-    932  f54b				   Setup48Pixel
-    933  f54b		       a9 00		      lda	#0
-    934  f54d		       85 02		      sta	WSYNC
-    935  f54f		       85 0b		      sta	REFP0
-    936  f551		       85 0c		      sta	REFP1
-    937  f553		       85 1b		      sta	GRP0
-    938  f555		       85 1c		      sta	GRP1
-    939  f557		       85 02		      sta	WSYNC
-    940  f559		       ea		      nop
-    941  f55a		       85 1b		      sta	GRP0
-    942  f55c		       85 1c		      sta	GRP1
-    943  f55e		       a0 07		      ldy	#SCORE_HEIGHT
-    944  f560		       84 98		      sty	scoreHeight
-    945  f562		       a9 03		      lda	#$03
-    946  f564		       85 04		      sta	NUSIZ0
-    947  f566		       85 05		      sta	NUSIZ1
-    948  f568		       85 25		      sta	VDELP0
-    949  f56a		       85 26		      sta	VDELP1
-    950  f56c		       a9 f0		      lda	#$F0
-    951  f56e		       85 20		      sta	HMP0
-    952  f570		       a9 00		      lda	#0
-    953  f572		       ea		      nop
-    954  f573		       85 10		      sta	RESP0
-    955  f575		       85 11		      sta	RESP1
-    956  f577		       85 02		      sta	WSYNC
-    957  f579		       85 2a		      sta	HMOVE
-    958  f57b		       85 02		      sta	WSYNC
-    959  f57d		       60		      rts
-    960  f57e
-    961  f57e				   End48Pixel
-    962  f57e		       85 02		      sta	WSYNC
-    963  f580		       a9 00		      lda	#0
-    964  f582		       85 25		      sta	VDELP0
-    965  f584		       85 26		      sta	VDELP1
-    966  f586		       85 1b		      sta	GRP0
-    967  f588		       85 1c		      sta	GRP1
-    968  f58a		       85 1b		      sta	GRP0
-    969  f58c		       85 04		      sta	NUSIZ0
-    970  f58e		       85 05		      sta	NUSIZ1
-    971  f590		       60		      rts
-    972  f591
-    973  f591							;------------------------------------------------
-    974  f591							; Game Kernel (playing state)
-    975  f591							;------------------------------------------------
-    976  f600		       00 00 00 00*	      align	256
-    977  f600				   StartDrawScreen
-    978  f600				   DrawScreen
-    979  f600		       a9 00		      lda	#0
-    980  f602		       85 1b		      sta	GRP0
-    981  f604		       85 1c		      sta	GRP1
-    982  f606
-    983  f606		       a9 00		      lda	#$00
-    984  f608		       85 09		      sta	COLUBK
-    985  f60a
-    986  f60a		       a2 09		      ldx	#9
-    987  f60c				   .topSpacer
-    988  f60c		       e0 07		      cpx	#7
-    989  f60e		       b0 44		      bcs	.noLivesDraw
-    990  f610		       e0 04		      cpx	#4
-    991  f612		       90 40		      bcc	.noLivesDraw
-    992  f614
-    993  f614		       a9 46		      lda	#$46
-    994  f616		       85 08		      sta	COLUPF
-    995  f618		       a9 00		      lda	#0
-    996  f61a		       85 0d		      sta	PF0
-    997  f61c		       85 0f		      sta	PF2
-    998  f61e		       a5 ae		      lda	lives
-    999  f620		       c9 05		      cmp	#5
-   1000  f622		       90 05		      bcc	.not5
-   1001  f624		       a9 55		      lda	#%01010101
-   1002  f626		       4c 4f f6 	      jmp	.setLivesPF
-   1003  f629				   .not5
-   1004  f629		       c9 04		      cmp	#4
-   1005  f62b		       90 05		      bcc	.not4
-   1006  f62d		       a9 55		      lda	#%01010101
-   1007  f62f		       4c 4f f6 	      jmp	.setLivesPF
-   1008  f632				   .not4
-   1009  f632		       c9 03		      cmp	#3
-   1010  f634		       90 05		      bcc	.not3
-   1011  f636		       a9 54		      lda	#%01010100
-   1012  f638		       4c 4f f6 	      jmp	.setLivesPF
-   1013  f63b				   .not3
-   1014  f63b		       c9 02		      cmp	#2
-   1015  f63d		       90 05		      bcc	.not2
-   1016  f63f		       a9 50		      lda	#%01010000
-   1017  f641		       4c 4f f6 	      jmp	.setLivesPF
-   1018  f644				   .not2
-   1019  f644		       c9 01		      cmp	#1
-   1020  f646		       90 05		      bcc	.noLivesBlk
-   1021  f648		       a9 40		      lda	#%01000000
-   1022  f64a		       4c 4f f6 	      jmp	.setLivesPF
-   1023  f64d				   .noLivesBlk
-   1024  f64d		       a9 00		      lda	#0
-   1025  f64f				   .setLivesPF
-   1026  f64f		       85 0e		      sta	PF1
-   1027  f651		       4c 5c f6 	      jmp	.doneLives
-   1028  f654				   .noLivesDraw
-   1029  f654		       a9 00		      lda	#0
-   1030  f656		       85 0d		      sta	PF0
-   1031  f658		       85 0e		      sta	PF1
-   1032  f65a		       85 0f		      sta	PF2
-   1033  f65c				   .doneLives
-   1034  f65c		       a5 80		      lda	bgcolor
-   1035  f65e		       85 06		      sta	COLUP0
-   1036  f660		       85 07		      sta	COLUP1
-   1037  f662		       ca		      dex
-   1038  f663		       85 02		      sta	WSYNC
-   1039  f665		       d0 a5		      bne	.topSpacer
-   1040  f667
-   1041  f667		       a9 00		      lda	#0
-   1042  f669		       85 0d		      sta	PF0
-   1043  f66b		       85 0e		      sta	PF1
-   1044  f66d		       85 0f		      sta	PF2
-   1045  f66f
-   1046  f66f		       a9 00		      lda	#0
-   1047  f671		       85 02		      sta	WSYNC
-   1048  f673		       85 0b		      sta	REFP0
-   1049  f675		       85 0c		      sta	REFP1
-   1050  f677		       85 1b		      sta	GRP0
-   1051  f679		       85 1c		      sta	GRP1
-   1052  f67b		       85 1d		      sta	ENAM0
-   1053  f67d		       85 1e		      sta	ENAM1
-   1054  f67f		       85 1f		      sta	ENABL
-   1055  f681		       85 02		      sta	WSYNC
-   1056  f683		       ea		      nop
-   1057  f684		       85 1b		      sta	GRP0
-   1058  f686		       85 1c		      sta	GRP1
-   1059  f688		       a0 07		      ldy	#SCORE_HEIGHT
-   1060  f68a		       84 98		      sty	scoreHeight
-   1061  f68c		       a9 03		      lda	#$03
-   1062  f68e		       85 04		      sta	NUSIZ0
-   1063  f690		       85 05		      sta	NUSIZ1
-   1064  f692		       85 25		      sta	VDELP0
-   1065  f694		       85 26		      sta	VDELP1
-   1066  f696		       a9 f0		      lda	#$F0
-   1067  f698		       85 20		      sta	HMP0
-   1068  f69a		       a9 00		      lda	#0
-   1069  f69c		       ea		      nop
-   1070  f69d		       85 10		      sta	RESP0
-   1071  f69f		       85 11		      sta	RESP1
-   1072  f6a1		       85 02		      sta	WSYNC
-   1073  f6a3		       85 2a		      sta	HMOVE
-   1074  f6a5		       85 02		      sta	WSYNC
-   1075  f6a7
-   1076  f6a7				   .scoreLoop
-   1077  f6a7		       a4 98		      ldy	scoreHeight
-   1078  f6a9		       b1 8a		      lda	(scorepointers),y
-   1079  f6ab		       85 1b		      sta	GRP0
-   1080  f6ad		       85 02		      sta	WSYNC
-   1081  f6af		       b1 8c		      lda	(scorepointers+2),y
-   1082  f6b1		       85 1c		      sta	GRP1
-   1083  f6b3		       b1 8e		      lda	(scorepointers+4),y
-   1084  f6b5		       85 1b		      sta	GRP0
-   1085  f6b7		       b1 90		      lda	(scorepointers+6),y
-   1086  f6b9		       85 99		      sta	temp
-   1087  f6bb		       b1 92		      lda	(scorepointers+8),y
-   1088  f6bd		       aa		      tax
-   1089  f6be		       b1 94		      lda	(scorepointers+10),y
-   1090  f6c0		       a8		      tay
-   1091  f6c1		       a5 99		      lda	temp
-   1092  f6c3		       85 1c		      sta	GRP1
-   1093  f6c5		       86 1b		      stx	GRP0
-   1094  f6c7		       84 1c		      sty	GRP1
-   1095  f6c9		       85 1b		      sta	GRP0
-   1096  f6cb		       c6 98		      dec	scoreHeight
-   1097  f6cd		       10 d8		      bpl	.scoreLoop
-   1098  f6cf
-   1099  f6cf		       85 02		      sta	WSYNC
-   1100  f6d1		       a9 00		      lda	#0
-   1101  f6d3		       85 06		      sta	COLUP0
-   1102  f6d5		       85 07		      sta	COLUP1
-   1103  f6d7		       85 25		      sta	VDELP0
-   1104  f6d9		       85 26		      sta	VDELP1
-   1105  f6db		       85 1b		      sta	GRP0
-   1106  f6dd		       85 1c		      sta	GRP1
-   1107  f6df		       85 1b		      sta	GRP0
-   1108  f6e1		       85 04		      sta	NUSIZ0
-   1109  f6e3		       85 05		      sta	NUSIZ1
-   1110  f6e5
-   1111  f6e5		       4c 00 f7 	      jmp	.skipAlignPadding
-   1112  f700		       00 00 00 00*	      align	256
-   1113  f700				   .skipAlignPadding
-   1114  f700
-   1115  f700		       a5 82		      lda	p0x
-   1116  f702		       a2 00		      ldx	#0
-   1117  f704		       85 02		      sta	WSYNC
-   1118  f706		       38		      sec
-   1119  f707				   .divLoop
-   1120  f707		       e9 0f		      sbc	#15
-   1121  f709		       b0 fc		      bcs	.divLoop
-   1122  f70b		       49 07		      eor	#7
-   1123  f70d		       0a		      asl
-   1124  f70e		       0a		      asl
-   1125  f70f		       0a		      asl
-   1126  f710		       0a		      asl
-   1127  f711		       95 20		      sta	HMP0,x
-   1128  f713		       95 10		      sta	RESP0,x
-   1129  f715
-   1130  f715		       85 02		      sta	WSYNC
-   1131  f717
-   1132  f717		       a5 84		      lda	p1x
-   1133  f719		       a2 01		      ldx	#1
-   1134  f71b		       85 02		      sta	WSYNC
-   1135  f71d		       38		      sec
-   1136  f71e				   .divLoopM
-   1137  f71e		       e9 0f		      sbc	#15
-   1138  f720		       b0 fc		      bcs	.divLoopM
-   1139  f722		       49 07		      eor	#7
-   1140  f724		       0a		      asl
-   1141  f725		       0a		      asl
-   1142  f726		       0a		      asl
-   1143  f727		       0a		      asl
-   1144  f728		       95 20		      sta	HMP0,x
-   1145  f72a		       95 10		      sta	RESP0,x
-   1146  f72c		       85 02		      sta	WSYNC
-   1147  f72e
-   1148  f72e		       a5 aa		      lda	collectActive
-   1149  f730		       f0 18		      beq	.skipMissilePos
-   1150  f732		       a5 a8		      lda	collectX
-   1151  f734		       85 02		      sta	WSYNC
-   1152  f736		       38		      sec
-   1153  f737				   .divLoopC
-   1154  f737		       e9 0f		      sbc	#15
-   1155  f739		       b0 fc		      bcs	.divLoopC
-   1156  f73b		       49 07		      eor	#7
-   1157  f73d		       0a		      asl
-   1158  f73e		       0a		      asl
-   1159  f73f		       0a		      asl
-   1160  f740		       0a		      asl
-   1161  f741		       85 23		      sta	HMM1
-   1162  f743		       85 13		      sta	RESM1
-   1163  f745		       85 02		      sta	WSYNC
-   1164  f747		       4c 4e f7 	      jmp	.doneM0Pos
-   1165  f74a				   .skipMissilePos
-   1166  f74a		       85 02		      sta	WSYNC
-   1167  f74c		       85 02		      sta	WSYNC
-   1168  f74e				   .doneM0Pos
-   1169  f74e
-   1170  f74e		       a5 a5		      lda	ballneedpos
-   1171  f750		       c9 02		      cmp	#2
-   1172  f752		       d0 07		      bne	.checkSettle
-   1173  f754		       85 14		      sta	RESBL
-   1174  f756		       c6 a5		      dec	ballneedpos
-   1175  f758		       4c 61 f7 	      jmp	.donePos
-   1176  f75b
-   1177  f75b				   .checkSettle
-   1178  f75b		       c9 01		      cmp	#1
-   1179  f75d		       d0 02		      bne	.donePos
-   1180  f75f		       c6 a5		      dec	ballneedpos
-   1181  f761
-   1182  f761				   .donePos
-   1183  f761		       a5 a3		      lda	ballactive
-   1184  f763		       f0 0b		      beq	.noMotion
-   1185  f765		       a5 a5		      lda	ballneedpos
-   1186  f767		       d0 07		      bne	.noMotion
-   1187  f769		       a9 e0		      lda	#$E0
-   1188  f76b		       85 24		      sta	HMBL
-   1189  f76d		       4c 70 f7 	      jmp	.motionSet
-   1190  f770
-   1191  f770				   .noMotion
-   1192  f770				   .motionSet
-   1193  f770		       85 02		      sta	WSYNC
-   1194  f772		       85 2a		      sta	HMOVE
-   1195  f774		       85 02		      sta	WSYNC
-   1196  f776
-   1197  f776		       a9 00		      lda	#0
-   1198  f778		       85 1b		      sta	GRP0
-   1199  f77a		       85 04		      sta	NUSIZ0
-   1200  f77c		       85 9e		      sta	p0gfx
-   1201  f77e
-   1202  f77e		       a5 af		      lda	invincible
-   1203  f780		       f0 06		      beq	.normalColor
-   1204  f782		       a5 81		      lda	frame
-   1205  f784		       29 04		      and	#%00000100
-   1206  f786		       f0 05		      beq	.flashOff
-   1207  f788				   .normalColor
-   1208  f788		       a9 0e		      lda	#$0E
-   1209  f78a		       4c 8f f7 	      jmp	.setP0Color
-   1210  f78d				   .flashOff
-   1211  f78d		       a9 00		      lda	#$00
-   1212  f78f				   .setP0Color
-   1213  f78f		       85 06		      sta	COLUP0
-   1214  f791
-   1215  f791		       a9 27		      lda	#$27
-   1216  f793		       85 05		      sta	NUSIZ1
-   1217  f795		       a9 c4		      lda	#$C4
-   1218  f797		       85 07		      sta	COLUP1
-   1219  f799
-   1220  f799		       a9 36		      lda	#$36
-   1221  f79b		       85 08		      sta	COLUPF
-   1222  f79d		       a9 24		      lda	#%00100100
-   1223  f79f		       85 0a		      sta	CTRLPF
-   1224  f7a1
-   1225  f7a1		       a5 81		      lda	frame
-   1226  f7a3		       4a		      lsr
-   1227  f7a4		       4a		      lsr
-   1228  f7a5		       4a		      lsr
-   1229  f7a6		       4a		      lsr
-   1230  f7a7		       4a		      lsr
-   1231  f7a8		       29 01		      and	#%00000001
-   1232  f7aa		       0a		      asl
-   1233  f7ab		       09 80		      ora	#%10000000
-   1234  f7ad		       85 80		      sta	bgcolor
-   1235  f7af
-   1236  f7af		       85 02		      sta	WSYNC
-   1237  f7b1
-   1238  f7b1		       a5 a3		      lda	ballactive
-   1239  f7b3		       f0 0b		      beq	.disableBall
-   1240  f7b5		       a5 a5		      lda	ballneedpos
-   1241  f7b7		       d0 07		      bne	.disableBall
-   1242  f7b9		       a5 a1		      lda	bally
-   1243  f7bb		       85 a2		      sta	temp_bally
-   1244  f7bd		       4c c8 f7 	      jmp	.ballSetupDone
-   1245  f7c0				   .disableBall
-   1246  f7c0		       a9 c8		      lda	#200
-   1247  f7c2		       85 a2		      sta	temp_bally
-   1248  f7c4		       a9 00		      lda	#0
-   1249  f7c6		       85 1f		      sta	ENABL
-   1250  f7c8				   .ballSetupDone
-   1251  f7c8
-   1252  f7c8		       a5 aa		      lda	collectActive
-   1253  f7ca		       f0 07		      beq	.disableCollect
-   1254  f7cc		       a5 a9		      lda	collectY
-   1255  f7ce		       85 ac		      sta	temp_collecty
-   1256  f7d0		       4c d7 f7 	      jmp	.collectSetupDone
-   1257  f7d3				   .disableCollect
-   1258  f7d3		       a9 c8		      lda	#200
-   1259  f7d5		       85 ac		      sta	temp_collecty
-   1260  f7d7				   .collectSetupDone
-   1261  f7d7
-   1262  f7d7		       85 02		      sta	WSYNC
-   1263  f7d9
-   1264  f7d9		       a2 a0		      ldx	#PLAY_HEIGHT
-   1265  f7db				   .playArea
-   1266  f7db		       a5 9e		      lda	p0gfx
-   1267  f7dd		       85 1b		      sta	GRP0
-   1268  f7df		       bd ff fc 	      lda	MonsterGfx-1,x
-   1269  f7e2		       85 1c		      sta	GRP1
-   1270  f7e4
-   1271  f7e4		       8a		      txa
-   1272  f7e5		       38		      sec
-   1273  f7e6		       e5 83		      sbc	p0y
-   1274  f7e8		       c9 07		      cmp	#BIKE_HEIGHT+1
-   1275  f7ea		       b0 07		      bcs	.hideP0_1
-   1276  f7ec		       a8		      tay
-   1277  f7ed		       b9 00 fc 	      lda	PlayerGfx,y
-   1278  f7f0		       4c f5 f7 	      jmp	.storeP0_1
-   1279  f7f3				   .hideP0_1
-   1280  f7f3		       a9 00		      lda	#0
-   1281  f7f5				   .storeP0_1
-   1282  f7f5		       85 9e		      sta	p0gfx
-   1283  f7f7
-   1284  f7f7		       8a		      txa
-   1285  f7f8		       38		      sec
-   1286  f7f9		       e5 a2		      sbc	temp_bally
-   1287  f7fb		       c9 04		      cmp	#BALL_HEIGHT
-   1288  f7fd		       b0 05		      bcs	.hideBall
-   1289  f7ff		       a9 02		      lda	#2
-   1290  f801		       4c 06 f8 	      jmp	.storeBall
-   1291  f804				   .hideBall
-   1292  f804		       a9 00		      lda	#0
-   1293  f806				   .storeBall
-   1294  f806		       85 02		      sta	WSYNC
-   1295  f808		       85 1f		      sta	ENABL
-   1296  f80a		       a5 80		      lda	bgcolor
-   1297  f80c		       85 09		      sta	COLUBK
-   1298  f80e
-   1299  f80e		       ca		      dex
-   1300  f80f
-   1301  f80f		       a5 9e		      lda	p0gfx
-   1302  f811		       85 1b		      sta	GRP0
-   1303  f813		       bd ff fc 	      lda	MonsterGfx-1,x
-   1304  f816		       85 1c		      sta	GRP1
-   1305  f818
-   1306  f818		       8a		      txa
-   1307  f819		       38		      sec
-   1308  f81a		       e5 83		      sbc	p0y
-   1309  f81c		       c9 07		      cmp	#BIKE_HEIGHT+1
-   1310  f81e		       b0 0c		      bcs	.hideP0_2
-   1311  f820		       49 ff		      eor	#$FF
-   1312  f822		       18		      clc
-   1313  f823		       69 07		      adc	#BIKE_HEIGHT+1
-   1314  f825		       a8		      tay
-   1315  f826		       b9 00 fc 	      lda	PlayerGfx,y
-   1316  f829		       4c 2e f8 	      jmp	.storeP0_2
-   1317  f82c				   .hideP0_2
-   1318  f82c		       a9 00		      lda	#0
-   1319  f82e				   .storeP0_2
-   1320  f82e		       85 9e		      sta	p0gfx
-   1321  f830
-   1322  f830		       8a		      txa
-   1323  f831		       38		      sec
-   1324  f832		       e5 ac		      sbc	temp_collecty
-   1325  f834		       c9 04		      cmp	#COLLECT_HEIGHT
-   1326  f836		       b0 05		      bcs	.hideCollect
-   1327  f838		       a9 02		      lda	#2
-   1328  f83a		       4c 3f f8 	      jmp	.storeCollect
-   1329  f83d				   .hideCollect
-   1330  f83d		       a9 00		      lda	#0
-   1331  f83f				   .storeCollect
-   1332  f83f		       85 02		      sta	WSYNC
-   1333  f841		       85 1e		      sta	ENAM1
-   1334  f843		       a5 80		      lda	bgcolor
-   1335  f845		       85 09		      sta	COLUBK
-   1336  f847
-   1337  f847		       ca		      dex
-   1338  f848		       d0 91		      bne	.playArea
-   1339  f84a
-   1340  f84a		       a9 00		      lda	#0
-   1341  f84c		       85 09		      sta	COLUBK
-   1342  f84e		       85 1b		      sta	GRP0
-   1343  f850		       85 1c		      sta	GRP1
-   1344  f852		       85 1f		      sta	ENABL
-   1345  f854		       85 1e		      sta	ENAM1
-   1346  f856
-   1347  f856		       a2 01		      ldx	#1
-   1348  f858				   .padLoop
-   1349  f858		       85 02		      sta	WSYNC
-   1350  f85a		       ca		      dex
-   1351  f85b		       d0 fb		      bne	.padLoop
-   1352  f85d
-   1353  f85d							;------------------------------------------------
-   1354  f85d							; Overscan (shared)
-   1355  f85d							;------------------------------------------------
-   1356  f85d				   DoOverscan
-   1357  f85d		       a9 42		      lda	#%01000010
-   1358  f85f		       85 02		      sta	WSYNC
-   1359  f861		       85 01		      sta	VBLANK
-   1360  f863		       a9 24		      lda	#36
-   1361  f865		       8d 96 02 	      sta	TIM64T
-   1362  f868
-   1363  f868		       a9 00		      lda	#0
-   1364  f86a		       85 1b		      sta	GRP0
-   1365  f86c		       85 1c		      sta	GRP1
-   1366  f86e		       85 1f		      sta	ENABL
-   1367  f870		       85 0d		      sta	PF0
-   1368  f872		       85 0e		      sta	PF1
-   1369  f874		       85 0f		      sta	PF2
-   1370  f876
-   1371  f876		       a5 b0		      lda	gameState
-   1372  f878		       c9 01		      cmp	#STATE_PLAYING
-   1373  f87a		       d0 61		      bne	.skipAllCollision
-   1374  f87c
-   1375  f87c		       a5 af		      lda	invincible
-   1376  f87e		       d0 2c		      bne	.noCollision
-   1377  f880
-   1378  f880		       a5 02		      lda	CXP0FB
-   1379  f882		       29 40		      and	#%01000000
-   1380  f884		       d0 09		      bne	.playerHit
-   1381  f886
-   1382  f886		       a5 07		      lda	CXPPMM
-   1383  f888		       29 80		      and	#%10000000
-   1384  f88a		       d0 03		      bne	.playerHit
-   1385  f88c
-   1386  f88c		       4c ac f8 	      jmp	.noCollision
-   1387  f88f
-   1388  f88f				   .playerHit
-   1389  f88f		       c6 ae		      dec	lives
-   1390  f891		       a5 ae		      lda	lives
-   1391  f893		       d0 03		      bne	.stillAlive
-   1392  f895		       4c e5 f8 	      jmp	TriggerGameOver
-   1393  f898
-   1394  f898				   .stillAlive
-   1395  f898		       a9 78		      lda	#120
-   1396  f89a		       85 af		      sta	invincible
-   1397  f89c		       a9 0f		      lda	#15
-   1398  f89e		       85 b4		      sta	soundTimer
-   1399  f8a0		       a9 01		      lda	#1
-   1400  f8a2		       85 b5		      sta	soundType
-   1401  f8a4
-   1402  f8a4		       a9 00		      lda	#0	; Reset monster all the way back to start
-   1403  f8a6		       85 84		      sta	p1x
-   1404  f8a8		       a9 42		      lda	#$42
-   1405  f8aa		       85 80		      sta	bgcolor
-   1406  f8ac
-   1407  f8ac				   .noCollision
-   1408  f8ac		       a5 01		      lda	CXM1P
-   1409  f8ae		       29 80		      and	#%10000000
-   1410  f8b0		       f0 2b		      beq	.noCollectHit
-   1411  f8b2		       a5 aa		      lda	collectActive
-   1412  f8b4		       f0 27		      beq	.noCollectHit
-   1413  f8b6
-   1414  f8b6		       a9 0a		      lda	#10
-   1415  f8b8		       85 b4		      sta	soundTimer
-   1416  f8ba		       a9 02		      lda	#2
-   1417  f8bc		       85 b5		      sta	soundType
-   1418  f8be
-   1419  f8be		       a9 50		      lda	#$50
-   1420  f8c0		       a2 00		      ldx	#0
-   1421  f8c2		       a0 00		      ldy	#0
-   1422  f8c4		       20 49 f9 	      jsr	AddScore
-   1423  f8c7		       20 c1 f9 	      jsr	LoadScorePointers
-   1424  f8ca
-   1425  f8ca		       a5 84		      lda	p1x
-   1426  f8cc		       38		      sec
-   1427  f8cd		       e9 0f		      sbc	#15
-   1428  f8cf		       b0 02		      bcs	.storeMonsterX
-   1429  f8d1		       a9 00		      lda	#0
-   1430  f8d3				   .storeMonsterX
-   1431  f8d3		       85 84		      sta	p1x
-   1432  f8d5		       a9 00		      lda	#0
-   1433  f8d7		       85 aa		      sta	collectActive
-   1434  f8d9		       a9 14		      lda	#20
-   1435  f8db		       85 ab		      sta	collectDelay
-   1436  f8dd
-   1437  f8dd				   .noCollectHit
-   1438  f8dd				   .skipAllCollision
-   1439  f8dd
-   1440  f8dd				   .waitForOverscan
-   1441  f8dd		       ad 84 02 	      lda	INTIM
-   1442  f8e0		       d0 fb		      bne	.waitForOverscan
-   1443  f8e2		       4c 8f f0 	      jmp	MainLoop
-   1444  f8e5
-   1445  f8e5							; ===================
-   1446  f8e5							; Trigger Game Over
-   1447  f8e5							; ===================
-   1448  f8e5				   TriggerGameOver
-   1449  f8e5		       a5 87		      lda	score
-   1450  f8e7		       85 b7		      sta	finalScore
-   1451  f8e9		       a5 88		      lda	score+1
-   1452  f8eb		       85 b8		      sta	finalScore+1
-   1453  f8ed		       a5 89		      lda	score+2
-   1454  f8ef		       85 b9		      sta	finalScore+2
-   1455  f8f1		       a9 02		      lda	#STATE_GAMEOVER
-   1456  f8f3		       85 b0		      sta	gameState
-   1457  f8f5		       a9 00		      lda	#0
-   1458  f8f7		       85 b6		      sta	goTimer
-   1459  f8f9		       a9 1e		      lda	#30
-   1460  f8fb		       85 b4		      sta	soundTimer
-   1461  f8fd		       a9 03		      lda	#3
-   1462  f8ff		       85 b5		      sta	soundType
-   1463  f901		       4c 8f f0 	      jmp	MainLoop
-   1464  f904
-   1465  f904							;------------------------------------------------
-   1466  f904							; Subroutines
-   1467  f904							;------------------------------------------------
-   1468  f904				   UpdateSound
-   1469  f904		       a5 b4		      lda	soundTimer
-   1470  f906		       f0 3a		      beq	.soundOff
-   1471  f908		       c6 b4		      dec	soundTimer
-   1472  f90a		       a5 b5		      lda	soundType
-   1473  f90c		       c9 01		      cmp	#1
-   1474  f90e		       f0 0b		      beq	.hitSound
-   1475  f910		       c9 02		      cmp	#2
-   1476  f912		       f0 14		      beq	.collectSound
-   1477  f914		       c9 03		      cmp	#3
-   1478  f916		       f0 1d		      beq	.gameOverSound
-   1479  f918		       4c 42 f9 	      jmp	.soundOff
-   1480  f91b				   .hitSound
-   1481  f91b		       a9 08		      lda	#8
-   1482  f91d		       85 15		      sta	AUDC0
-   1483  f91f		       a9 06		      lda	#6
-   1484  f921		       85 17		      sta	AUDF0
-   1485  f923		       a9 08		      lda	#8
-   1486  f925		       85 19		      sta	AUDV0
-   1487  f927		       60		      rts
-   1488  f928				   .collectSound
-   1489  f928		       a9 04		      lda	#4
-   1490  f92a		       85 15		      sta	AUDC0
-   1491  f92c		       a9 0f		      lda	#15
-   1492  f92e		       85 17		      sta	AUDF0
-   1493  f930		       a9 08		      lda	#8
-   1494  f932		       85 19		      sta	AUDV0
-   1495  f934		       60		      rts
-   1496  f935				   .gameOverSound
-   1497  f935		       a5 b4		      lda	soundTimer
-   1498  f937		       85 17		      sta	AUDF0
-   1499  f939		       a9 04		      lda	#4
-   1500  f93b		       85 15		      sta	AUDC0
-   1501  f93d		       a9 0a		      lda	#10
-   1502  f93f		       85 19		      sta	AUDV0
-   1503  f941		       60		      rts
-   1504  f942				   .soundOff
-   1505  f942		       a9 00		      lda	#0
-   1506  f944		       85 19		      sta	AUDV0
-   1507  f946		       85 b5		      sta	soundType
-   1508  f948		       60		      rts
-   1509  f949
-   1510  f949				   AddScore
-   1511  f949		       85 9a		      sta	temp2
-   1512  f94b		       f8		      sed
-   1513  f94c		       18		      clc
-   1514  f94d		       65 88		      adc	score+1
-   1515  f94f		       85 88		      sta	score+1
-   1516  f951		       8a		      txa
-   1517  f952		       65 87		      adc	score
-   1518  f954		       85 87		      sta	score
-   1519  f956		       90 06		      bcc	.noCarryHigh
-   1520  f958		       a5 89		      lda	score+2
-   1521  f95a		       69 00		      adc	#0
-   1522  f95c		       85 89		      sta	score+2
-   1523  f95e				   .noCarryHigh
-   1524  f95e		       d8		      cld
-   1525  f95f		       a5 9a		      lda	temp2
-   1526  f961		       c9 50		      cmp	#$50
-   1527  f963		       f0 19		      beq	.speedSub50
-   1528  f965		       c9 01		      cmp	#$01
-   1529  f967		       f0 01		      beq	.speedSub1
-   1530  f969		       60		      rts
-   1531  f96a
-   1532  f96a							; Time-based tick: reduce speed toward 6, then stop
-   1533  f96a				   .speedSub1
-   1534  f96a		       a5 86		      lda	monsterSpeed
-   1535  f96c		       c9 06		      cmp	#6
-   1536  f96e		       f0 0d		      beq	.skipSpeedSub	; If speed is exactly 6, do nothing
-   1537  f970		       90 0b		      bcc	.skipSpeedSub	; If speed is below 6 (5 or 4), do nothing!
-   1538  f972		       38		      sec
-   1539  f973		       e9 01		      sbc	#1
-   1540  f975		       c9 06		      cmp	#6
-   1541  f977		       b0 02		      bcs	.storeSpeed
-   1542  f979		       a9 06		      lda	#6	; Floor at 6 if subtraction went too far
-   1543  f97b				   .storeSpeed
-   1544  f97b		       85 86		      sta	monsterSpeed
-   1545  f97d				   .skipSpeedSub
-   1546  f97d		       60		      rts
-   1547  f97e
-   1548  f97e							; Collect-based: normal -2 above 6, then staged 6->5->4
-   1549  f97e				   .speedSub50
-   1550  f97e		       a5 86		      lda	monsterSpeed
-   1551  f980		       c9 06		      cmp	#6
-   1552  f982		       90 25		      bcc	.checkStage5	; speed already below 6, check stage 5->4
-   1553  f984		       f0 12		      beq	.checkStage6	; speed exactly 6, check stage 6->5
-   1554  f986							; speed > 6: subtract 2, floor at 6, reset counter
-   1555  f986		       a9 00		      lda	#0
-   1556  f988		       85 9b		      sta	collectCount
-   1557  f98a		       a5 86		      lda	monsterSpeed
-   1558  f98c		       38		      sec
-   1559  f98d		       e9 02		      sbc	#2
-   1560  f98f		       c9 06		      cmp	#6
-   1561  f991		       b0 02		      bcs	.storeCollSpeed
-   1562  f993		       a9 06		      lda	#6
-   1563  f995				   .storeCollSpeed
-   1564  f995		       85 86		      sta	monsterSpeed
-   1565  f997		       60		      rts
-   1566  f998
-   1567  f998				   .checkStage6
-   1568  f998							; at speed 6: count collects until 5, then drop to 5
-   1569  f998		       e6 9b		      inc	collectCount
-   1570  f99a		       a5 9b		      lda	collectCount
-   1571  f99c		       c9 19		      cmp	#25
-   1572  f99e		       90 08		      bcc	.noChange
-   1573  f9a0		       a9 05		      lda	#5
-   1574  f9a2		       85 86		      sta	monsterSpeed
-   1575  f9a4		       a9 00		      lda	#0
-   1576  f9a6		       85 9b		      sta	collectCount
-   1577  f9a8				   .noChange
-   1578  f9a8		       60		      rts
-   1579  f9a9
-   1580  f9a9				   .checkStage5
-   1581  f9a9							; below 6: only act if exactly 5
-   1582  f9a9		       a5 86		      lda	monsterSpeed
-   1583  f9ab		       c9 05		      cmp	#5
-   1584  f9ad		       d0 11		      bne	.atFloor	; speed is 4 or lower, done
-   1585  f9af		       e6 9b		      inc	collectCount
-   1586  f9b1		       a5 9b		      lda	collectCount
-   1587  f9b3		       c9 19		      cmp	#25
-   1588  f9b5		       90 08		      bcc	.noChange2
-   1589  f9b7		       a9 04		      lda	#4
-   1590  f9b9		       85 86		      sta	monsterSpeed
-   1591  f9bb		       a9 00		      lda	#0
-   1592  f9bd		       85 9b		      sta	collectCount
-   1593  f9bf				   .noChange2
-   1594  f9bf		       60		      rts
-   1595  f9c0				   .atFloor
-   1596  f9c0		       60		      rts
-   1597  f9c1
-   1598  f9c1				   LoadScorePointers
-   1599  f9c1							; ten-thousands: score+2 low nibble (always shown, even if 0)
-   1600  f9c1		       a5 89		      lda	score+2
-   1601  f9c3		       29 0f		      and	#$0F
-   1602  f9c5		       aa		      tax
-   1603  f9c6		       bd 16 fa 	      lda	scoretableIndex,x
-   1604  f9c9		       85 8a		      sta	scorepointers
-   1605  f9cb		       a9 fb		      lda	#>scoretable
-   1606  f9cd		       85 8b		      sta	scorepointers+1
-   1607  f9cf
-   1608  f9cf							; thousands: score high nibble
-   1609  f9cf		       a5 87		      lda	score
-   1610  f9d1		       29 f0		      and	#$F0
-   1611  f9d3		       4a		      lsr
-   1612  f9d4		       4a		      lsr
-   1613  f9d5		       4a		      lsr
-   1614  f9d6		       4a		      lsr
-   1615  f9d7		       aa		      tax
-   1616  f9d8		       bd 16 fa 	      lda	scoretableIndex,x
-   1617  f9db		       85 8c		      sta	scorepointers+2
-   1618  f9dd
-   1619  f9dd							; hundreds: score low nibble
-   1620  f9dd		       a5 87		      lda	score
-   1621  f9df		       29 0f		      and	#$0F
-   1622  f9e1		       aa		      tax
-   1623  f9e2		       bd 16 fa 	      lda	scoretableIndex,x
-   1624  f9e5		       85 8e		      sta	scorepointers+4
-   1625  f9e7
-   1626  f9e7							; tens: score+1 high nibble
-   1627  f9e7		       a5 88		      lda	score+1
-   1628  f9e9		       29 f0		      and	#$F0
-   1629  f9eb		       4a		      lsr
-   1630  f9ec		       4a		      lsr
-   1631  f9ed		       4a		      lsr
-   1632  f9ee		       4a		      lsr
-   1633  f9ef		       aa		      tax
-   1634  f9f0		       bd 16 fa 	      lda	scoretableIndex,x
-   1635  f9f3		       85 90		      sta	scorepointers+6
-   1636  f9f5
-   1637  f9f5							; ones: score+1 low nibble
-   1638  f9f5		       a5 88		      lda	score+1
-   1639  f9f7		       29 0f		      and	#$0F
-   1640  f9f9		       aa		      tax
-   1641  f9fa		       bd 16 fa 	      lda	scoretableIndex,x
-   1642  f9fd		       85 92		      sta	scorepointers+8
-   1643  f9ff
-   1644  f9ff							; trailing blank slot
-   1645  f9ff		       a9 50		      lda	#<blank
-   1646  fa01		       85 94		      sta	scorepointers+10
-   1647  fa03		       85 96		      sta	scorepointers+12
-   1648  fa05
-   1649  fa05		       a9 fb		      lda	#>scoretable
-   1650  fa07		       85 8d		      sta	scorepointers+3
-   1651  fa09		       85 8f		      sta	scorepointers+5
-   1652  fa0b		       85 91		      sta	scorepointers+7
-   1653  fa0d		       85 93		      sta	scorepointers+9
-   1654  fa0f		       a9 fb		      lda	#>blank
-   1655  fa11		       85 95		      sta	scorepointers+11
-   1656  fa13		       85 97		      sta	scorepointers+13
-   1657  fa15		       60		      rts
-   1658  fa16
-   1659  fa16							;------------------------------------------------
-   1660  fa16							; ROM Tables
-   1661  fa16							;------------------------------------------------
-   1662  fa16				   scoretableIndex
-   1663  fa16		       00 08 10 18*	      .byte.b	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
-   1664  fa20
-   1665  fb00		       00 00 00 00*	      align	256
-   1666  fb00				   scoretable
-   1667  fb00				   zero
-   1668  fb00		       3c		      .byte.b	%00111100
-   1669  fb01		       66		      .byte.b	%01100110
-   1670  fb02		       66		      .byte.b	%01100110
-   1671  fb03		       66		      .byte.b	%01100110
-   1672  fb04		       66		      .byte.b	%01100110
-   1673  fb05		       66		      .byte.b	%01100110
-   1674  fb06		       66		      .byte.b	%01100110
-   1675  fb07		       3c		      .byte.b	%00111100
-   1676  fb08				   one
-   1677  fb08		       3c		      .byte.b	%00111100
-   1678  fb09		       18		      .byte.b	%00011000
-   1679  fb0a		       18		      .byte.b	%00011000
-   1680  fb0b		       18		      .byte.b	%00011000
-   1681  fb0c		       18		      .byte.b	%00011000
-   1682  fb0d		       18		      .byte.b	%00011000
-   1683  fb0e		       38		      .byte.b	%00111000
-   1684  fb0f		       18		      .byte.b	%00011000
-   1685  fb10				   two
-   1686  fb10		       7e		      .byte.b	%01111110
-   1687  fb11		       60		      .byte.b	%01100000
-   1688  fb12		       60		      .byte.b	%01100000
-   1689  fb13		       3c		      .byte.b	%00111100
-   1690  fb14		       06		      .byte.b	%00000110
-   1691  fb15		       06		      .byte.b	%00000110
-   1692  fb16		       46		      .byte.b	%01000110
-   1693  fb17		       3c		      .byte.b	%00111100
-   1694  fb18				   three
-   1695  fb18		       3c		      .byte.b	%00111100
-   1696  fb19		       46		      .byte.b	%01000110
-   1697  fb1a		       06		      .byte.b	%00000110
-   1698  fb1b		       0c		      .byte.b	%00001100
-   1699  fb1c		       0c		      .byte.b	%00001100
-   1700  fb1d		       06		      .byte.b	%00000110
-   1701  fb1e		       46		      .byte.b	%01000110
-   1702  fb1f		       3c		      .byte.b	%00111100
-   1703  fb20				   four
-   1704  fb20		       0c		      .byte.b	%00001100
-   1705  fb21		       0c		      .byte.b	%00001100
-   1706  fb22		       0c		      .byte.b	%00001100
-   1707  fb23		       7e		      .byte.b	%01111110
-   1708  fb24		       4c		      .byte.b	%01001100
-   1709  fb25		       2c		      .byte.b	%00101100
-   1710  fb26		       1c		      .byte.b	%00011100
-   1711  fb27		       0c		      .byte.b	%00001100
-   1712  fb28				   five
-   1713  fb28		       7c		      .byte.b	%01111100
-   1714  fb29		       46		      .byte.b	%01000110
-   1715  fb2a		       06		      .byte.b	%00000110
-   1716  fb2b		       06		      .byte.b	%00000110
-   1717  fb2c		       7c		      .byte.b	%01111100
-   1718  fb2d		       60		      .byte.b	%01100000
-   1719  fb2e		       60		      .byte.b	%01100000
-   1720  fb2f		       7e		      .byte.b	%01111110
-   1721  fb30				   six
-   1722  fb30		       3c		      .byte.b	%00111100
-   1723  fb31		       66		      .byte.b	%01100110
-   1724  fb32		       66		      .byte.b	%01100110
-   1725  fb33		       66		      .byte.b	%01100110
-   1726  fb34		       7c		      .byte.b	%01111100
-   1727  fb35		       60		      .byte.b	%01100000
-   1728  fb36		       62		      .byte.b	%01100010
-   1729  fb37		       3c		      .byte.b	%00111100
-   1730  fb38				   seven
-   1731  fb38		       18		      .byte.b	%00011000
-   1732  fb39		       18		      .byte.b	%00011000
-   1733  fb3a		       18		      .byte.b	%00011000
-   1734  fb3b		       18		      .byte.b	%00011000
-   1735  fb3c		       0c		      .byte.b	%00001100
-   1736  fb3d		       06		      .byte.b	%00000110
-   1737  fb3e		       42		      .byte.b	%01000010
-   1738  fb3f		       7e		      .byte.b	%01111110
-   1739  fb40				   eight
-   1740  fb40		       3c		      .byte.b	%00111100
-   1741  fb41		       66		      .byte.b	%01100110
-   1742  fb42		       66		      .byte.b	%01100110
-   1743  fb43		       3c		      .byte.b	%00111100
-   1744  fb44		       3c		      .byte.b	%00111100
-   1745  fb45		       66		      .byte.b	%01100110
-   1746  fb46		       66		      .byte.b	%01100110
-   1747  fb47		       3c		      .byte.b	%00111100
-   1748  fb48				   nine
-   1749  fb48		       3c		      .byte.b	%00111100
-   1750  fb49		       46		      .byte.b	%01000110
-   1751  fb4a		       06		      .byte.b	%00000110
-   1752  fb4b		       3e		      .byte.b	%00111110
-   1753  fb4c		       66		      .byte.b	%01100110
-   1754  fb4d		       66		      .byte.b	%01100110
-   1755  fb4e		       66		      .byte.b	%01100110
-   1756  fb4f		       3c		      .byte.b	%00111100
-   1757  fb50				   blank
-   1758  fb50		       00		      .byte.b	%00000000
-   1759  fb51		       00		      .byte.b	%00000000
-   1760  fb52		       00		      .byte.b	%00000000
-   1761  fb53		       00		      .byte.b	%00000000
-   1762  fb54		       00		      .byte.b	%00000000
-   1763  fb55		       00		      .byte.b	%00000000
-   1764  fb56		       00		      .byte.b	%00000000
-   1765  fb57		       00		      .byte.b	%00000000
-   1766  fb58
-   1767  fb58							; ===================
-   1768  fb58							; Text Graphic Data
-   1769  fb58							; ===================
-   1770  fb58				   LetterG
-   1771  fb58		       3c		      .byte.b	%00111100
-   1772  fb59		       66		      .byte.b	%01100110
-   1773  fb5a		       6e		      .byte.b	%01101110
-   1774  fb5b		       60		      .byte.b	%01100000
-   1775  fb5c		       60		      .byte.b	%01100000
-   1776  fb5d		       66		      .byte.b	%01100110
-   1777  fb5e		       66		      .byte.b	%01100110
-   1778  fb5f		       3c		      .byte.b	%00111100
-   1779  fb60
-   1780  fb60				   LetterA
-   1781  fb60		       66		      .byte.b	%01100110
-   1782  fb61		       66		      .byte.b	%01100110
-   1783  fb62		       7e		      .byte.b	%01111110
-   1784  fb63		       66		      .byte.b	%01100110
-   1785  fb64		       24		      .byte.b	%00100100
-   1786  fb65		       24		      .byte.b	%00100100
-   1787  fb66		       18		      .byte.b	%00011000
-   1788  fb67		       18		      .byte.b	%00011000
-   1789  fb68
-   1790  fb68				   LetterM
-   1791  fb68		       66		      .byte.b	%01100110
-   1792  fb69		       66		      .byte.b	%01100110
-   1793  fb6a		       66		      .byte.b	%01100110
-   1794  fb6b		       66		      .byte.b	%01100110
-   1795  fb6c		       7e		      .byte.b	%01111110
-   1796  fb6d		       7e		      .byte.b	%01111110
-   1797  fb6e		       66		      .byte.b	%01100110
-   1798  fb6f		       66		      .byte.b	%01100110
-   1799  fb70
-   1800  fb70				   LetterE
-   1801  fb70		       7e		      .byte.b	%01111110
-   1802  fb71		       60		      .byte.b	%01100000
-   1803  fb72		       60		      .byte.b	%01100000
-   1804  fb73		       7c		      .byte.b	%01111100
-   1805  fb74		       60		      .byte.b	%01100000
-   1806  fb75		       60		      .byte.b	%01100000
-   1807  fb76		       60		      .byte.b	%01100000
-   1808  fb77		       7e		      .byte.b	%01111110
-   1809  fb78
-   1810  fb78				   LetterO
-   1811  fb78		       3c		      .byte.b	%00111100
-   1812  fb79		       66		      .byte.b	%01100110
-   1813  fb7a		       66		      .byte.b	%01100110
-   1814  fb7b		       66		      .byte.b	%01100110
-   1815  fb7c		       66		      .byte.b	%01100110
-   1816  fb7d		       66		      .byte.b	%01100110
-   1817  fb7e		       66		      .byte.b	%01100110
-   1818  fb7f		       3c		      .byte.b	%00111100
-   1819  fb80
-   1820  fb80				   LetterV
-   1821  fb80		       18		      .byte.b	%00011000
-   1822  fb81		       18		      .byte.b	%00011000
-   1823  fb82		       3c		      .byte.b	%00111100
-   1824  fb83		       24		      .byte.b	%00100100
-   1825  fb84		       66		      .byte.b	%01100110
-   1826  fb85		       66		      .byte.b	%01100110
-   1827  fb86		       66		      .byte.b	%01100110
-   1828  fb87		       66		      .byte.b	%01100110
-   1829  fb88
-   1830  fb88				   LetterR
-   1831  fb88		       66		      .byte.b	%01100110
-   1832  fb89		       66		      .byte.b	%01100110
-   1833  fb8a		       66		      .byte.b	%01100110
-   1834  fb8b		       7c		      .byte.b	%01111100
-   1835  fb8c		       66		      .byte.b	%01100110
-   1836  fb8d		       66		      .byte.b	%01100110
-   1837  fb8e		       66		      .byte.b	%01100110
-   1838  fb8f		       7c		      .byte.b	%01111100
-   1839  fb90
-   1840  fb90				   LetterP
-   1841  fb90		       60		      .byte.b	%01100000
-   1842  fb91		       60		      .byte.b	%01100000
-   1843  fb92		       60		      .byte.b	%01100000
-   1844  fb93		       7c		      .byte.b	%01111100
-   1845  fb94		       66		      .byte.b	%01100110
-   1846  fb95		       66		      .byte.b	%01100110
-   1847  fb96		       7c		      .byte.b	%01111100
-   1848  fb97		       00		      .byte.b	%00000000
-   1849  fb98
-   1850  fb98				   LetterS
-   1851  fb98		       7c		      .byte.b	%01111100
-   1852  fb99		       66		      .byte.b	%01100110
-   1853  fb9a		       06		      .byte.b	%00000110
-   1854  fb9b		       3c		      .byte.b	%00111100
-   1855  fb9c		       60		      .byte.b	%01100000
-   1856  fb9d		       66		      .byte.b	%01100110
-   1857  fb9e		       7c		      .byte.b	%01111100
-   1858  fb9f		       00		      .byte.b	%00000000
-   1859  fba0
-   1860  fba0				   LetterF
-   1861  fba0		       60		      .byte.b	%01100000
-   1862  fba1		       60		      .byte.b	%01100000
-   1863  fba2		       60		      .byte.b	%01100000
-   1864  fba3		       7c		      .byte.b	%01111100
-   1865  fba4		       60		      .byte.b	%01100000
-   1866  fba5		       60		      .byte.b	%01100000
-   1867  fba6		       7e		      .byte.b	%01111110
-   1868  fba7		       00		      .byte.b	%00000000
-   1869  fba8
-   1870  fba8				   LetterI
-   1871  fba8		       3c		      .byte.b	%00111100
-   1872  fba9		       18		      .byte.b	%00011000
-   1873  fbaa		       18		      .byte.b	%00011000
-   1874  fbab		       18		      .byte.b	%00011000
-   1875  fbac		       18		      .byte.b	%00011000
-   1876  fbad		       18		      .byte.b	%00011000
-   1877  fbae		       3c		      .byte.b	%00111100
-   1878  fbaf		       00		      .byte.b	%00000000
-   1879  fbb0
-   1880  fbb0				   LetterL
-   1881  fbb0		       7e		      .byte.b	%01111110
-   1882  fbb1		       60		      .byte.b	%01100000
-   1883  fbb2		       60		      .byte.b	%01100000
-   1884  fbb3		       60		      .byte.b	%01100000
-   1885  fbb4		       60		      .byte.b	%01100000
-   1886  fbb5		       60		      .byte.b	%01100000
-   1887  fbb6		       60		      .byte.b	%01100000
-   1888  fbb7		       00		      .byte.b	%00000000
-   1889  fbb8
-   1890  fc00		       00 00 00 00*	      align	256
-   1891  fc00				   PlayerGfx
-   1892  fc00		       00		      .byte.b	%00000000
-   1893  fc01		       66		      .byte.b	%01100110
-   1894  fc02		       ff		      .byte.b	%11111111
-   1895  fc03		       7e		      .byte.b	%01111110
-   1896  fc04		       3c		      .byte.b	%00111100
-   1897  fc05		       3c		      .byte.b	%00111100
-   1898  fc06		       18		      .byte.b	%00011000
-   1899  fc07		       00		      .byte.b	%00000000
-   1900  fd00		       00 00 00 00*	      align	256
-   1901  fd00				   MonsterGfx
-   1902  fd00		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1903  fd04		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1904  fd08		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1905  fd0c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1906  fd10		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1907  fd14		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1908  fd18		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1909  fd1c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1910  fd20
-   1911  fd20		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1912  fd24		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1913  fd28		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1914  fd2c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1915  fd30		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1916  fd34		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1917  fd38		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1918  fd3c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1919  fd40
-   1920  fd40		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1921  fd44		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1922  fd48		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1923  fd4c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1924  fd50		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1925  fd54		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1926  fd58		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1927  fd5c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1928  fd60
-   1929  fd60		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1930  fd64		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1931  fd68		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1932  fd6c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1933  fd70		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1934  fd74		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1935  fd78		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1936  fd7c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1937  fd80
-   1938  fd80		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
-   1939  fd84		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1940  fd88		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1941  fd8c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1942  fd90		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
-   1943  fd94		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
-   1944  fd98		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
-   1945  fd9c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
-   1946  fda0
-   1947  fda0				   collectSpawnTable
-   1948  fda0		       64 1e		      .byte.b	100, 30
-   1949  fda2		       82 32		      .byte.b	130, 50
-   1950  fda4		       5a 50		      .byte.b	90, 80
-   1951  fda6		       8c 64		      .byte.b	140, 100
-   1952  fda8		       6e 78		      .byte.b	110, 120
-   1953  fdaa		       7d 8c		      .byte.b	125, 140
-   1954  fdac
- 3500  ROM bytes used
-   1955  fdac					      echo	[*-$F000]d, " ROM bytes used"
-   1956  fffa					      ORG	$FFFA
-   1957  fffa		       00 f0		      .word.w	Start
-   1958  fffc		       00 f0		      .word.w	Start
-   1959  fffe		       00 f0		      .word.w	Start
-   1960  10000
-   1961  10000					       END
+    102  f00a
+    103  f00a		       a9 00		      lda	#STATE_TITLE
+    104  f00c		       85 b0		      sta	gameState
+    105  f00e		       a9 00		      lda	#0
+    106  f010		       85 b1		      sta	fireDebounce
+    107  f012		       85 b3		      sta	selectDebounce
+    108  f014		       85 b4		      sta	resetDebounce
+    109  f016		       85 b2		      sta	gameVariation
+    110  f018		       85 b5		      sta	soundTimer
+    111  f01a		       85 b6		      sta	soundType
+    112  f01c
+    113  f01c				   InitGame
+    114  f01c		       a9 50		      lda	#80
+    115  f01e		       85 82		      sta	p0x
+    116  f020		       a9 3c		      lda	#60
+    117  f022		       85 83		      sta	p0y
+    118  f024
+    119  f024		       a9 00		      lda	#0
+    120  f026		       85 84		      sta	p1x
+    121  f028		       85 85		      sta	monsterTimer
+    122  f02a		       a9 50		      lda	#80
+    123  f02c		       85 86		      sta	monsterSpeed
+    124  f02e
+    125  f02e		       a9 00		      lda	#<PlayerGfx
+    126  f030		       85 9c		      sta	sprite0gfx
+    127  f032		       a9 fd		      lda	#>PlayerGfx
+    128  f034		       85 9d		      sta	sprite0gfx+1
+    129  f036
+    130  f036		       a2 0b		      ldx	#11
+    131  f038				   .initScore
+    132  f038		       a9 fc		      lda	#>scoretable
+    133  f03a		       95 8a		      sta	scorepointers,x
+    134  f03c		       ca		      dex
+    135  f03d		       a9 00		      lda	#<scoretable
+    136  f03f		       95 8a		      sta	scorepointers,x
+    137  f041		       ca		      dex
+    138  f042		       10 f4		      bpl	.initScore
+    139  f044
+    140  f044		       a9 50		      lda	#<blank
+    141  f046		       85 96		      sta	scorepointers+12
+    142  f048		       a9 fc		      lda	#>blank
+    143  f04a		       85 97		      sta	scorepointers+13
+    144  f04c
+    145  f04c		       a9 00		      lda	#0
+    146  f04e		       85 a3		      sta	ballactive
+    147  f050		       85 a5		      sta	ballneedpos
+    148  f052		       a9 14		      lda	#20
+    149  f054		       85 a1		      sta	bally
+    150  f056		       a9 5a		      lda	#90
+    151  f058		       85 a4		      sta	balldelay
+    152  f05a
+    153  f05a		       a9 00		      lda	#0
+    154  f05c		       85 ad		      sta	scoreTimer
+    155  f05e		       85 87		      sta	score
+    156  f060		       85 88		      sta	score+1
+    157  f062		       85 89		      sta	score+2
+    158  f064		       85 9b		      sta	collectCount
+    159  f066		       20 dc fa 	      jsr	LoadScorePointers
+    160  f069
+    161  f069		       a5 b2		      lda	gameVariation
+    162  f06b		       c9 01		      cmp	#1
+    163  f06d		       f0 09		      beq	.twoLives
+    164  f06f		       c9 02		      cmp	#2
+    165  f071		       f0 0a		      beq	.oneLife
+    166  f073		       a9 03		      lda	#3
+    167  f075		       4c 7f f0 	      jmp	.setLives
+    168  f078				   .twoLives
+    169  f078		       a9 02		      lda	#2
+    170  f07a		       4c 7f f0 	      jmp	.setLives
+    171  f07d				   .oneLife
+    172  f07d		       a9 01		      lda	#1
+    173  f07f				   .setLives
+    174  f07f		       85 ae		      sta	lives
+    175  f081		       a9 00		      lda	#0
+    176  f083		       85 af		      sta	invincible
+    177  f085
+    178  f085		       a9 00		      lda	#0
+    179  f087		       85 aa		      sta	collectActive
+    180  f089		       a9 5a		      lda	#90
+    181  f08b		       85 ab		      sta	collectDelay
+    182  f08d		       a9 00		      lda	#0
+    183  f08f		       85 b7		      sta	goTimer
+    184  f091
+    185  f091							;------------------------------------------------
+    186  f091							; Main Loop
+    187  f091							;------------------------------------------------
+    188  f091				   MainLoop
+    189  f091		       a9 02		      lda	#2
+    190  f093		       85 00		      sta	VSYNC
+    191  f095		       85 02		      sta	WSYNC
+    192  f097		       85 02		      sta	WSYNC
+    193  f099		       85 02		      sta	WSYNC
+    194  f09b		       a9 2b		      lda	#43
+    195  f09d		       8d 96 02 	      sta	TIM64T
+    196  f0a0		       a9 00		      lda	#0
+    197  f0a2		       85 00		      sta	VSYNC
+    198  f0a4
+    199  f0a4		       a9 0e		      lda	#$0E
+    200  f0a6		       85 80		      sta	bgcolor
+    201  f0a8
+    202  f0a8		       85 2c		      sta	CXCLR
+    203  f0aa		       85 2b		      sta	HMCLR
+    204  f0ac
+    205  f0ac		       e6 81		      inc	frame
+    206  f0ae
+    207  f0ae		       a5 b0		      lda	gameState
+    208  f0b0		       c9 01		      cmp	#STATE_PLAYING
+    209  f0b2		       f0 07		      beq	.doPlaying
+    210  f0b4		       c9 02		      cmp	#STATE_GAMEOVER
+    211  f0b6		       f0 06		      beq	.doGameOver
+    212  f0b8		       4c c1 f0 	      jmp	DoTitle
+    213  f0bb
+    214  f0bb				   .doPlaying
+    215  f0bb		       4c 79 f1 	      jmp	DoPlaying
+    216  f0be				   .doGameOver
+    217  f0be		       4c 30 f1 	      jmp	DoGameOver
+    218  f0c1
+    219  f0c1							;------------------------------------------------
+    220  f0c1							; TITLE SCREEN LOGIC
+    221  f0c1							;------------------------------------------------
+    222  f0c1				   DoTitle
+    223  f0c1		       ad 82 02 	      lda	SWCHB
+    224  f0c4		       29 02		      and	#%00000010
+    225  f0c6		       d0 1f		      bne	.selectNotPressed
+    226  f0c8		       a5 b3		      lda	selectDebounce
+    227  f0ca		       d0 1f		      bne	.selectHeld
+    228  f0cc		       a9 01		      lda	#1
+    229  f0ce		       85 b3		      sta	selectDebounce
+    230  f0d0		       e6 b2		      inc	gameVariation
+    231  f0d2		       a5 b2		      lda	gameVariation
+    232  f0d4		       c9 03		      cmp	#3
+    233  f0d6		       90 04		      bcc	.varOk
+    234  f0d8		       a9 00		      lda	#0
+    235  f0da		       85 b2		      sta	gameVariation
+    236  f0dc				   .varOk
+    237  f0dc		       a9 04		      lda	#4
+    238  f0de		       85 b5		      sta	soundTimer
+    239  f0e0		       a9 02		      lda	#SND_COLLECT
+    240  f0e2		       85 b6		      sta	soundType
+    241  f0e4		       4c eb f0 	      jmp	.selectDone
+    242  f0e7				   .selectNotPressed
+    243  f0e7		       a9 00		      lda	#0
+    244  f0e9		       85 b3		      sta	selectDebounce
+    245  f0eb				   .selectHeld
+    246  f0eb				   .selectDone
+    247  f0eb
+    248  f0eb		       ad 82 02 	      lda	SWCHB
+    249  f0ee		       29 01		      and	#%00000001
+    250  f0f0		       f0 13		      beq	.checkResetStart
+    251  f0f2
+    252  f0f2		       a5 0c		      lda	INPT4
+    253  f0f4		       30 1e		      bmi	.noFireTitle
+    254  f0f6				   .startGame
+    255  f0f6		       a5 b1		      lda	fireDebounce
+    256  f0f8		       d0 1a		      bne	.noFireTitle
+    257  f0fa		       a9 01		      lda	#1
+    258  f0fc		       85 b1		      sta	fireDebounce
+    259  f0fe		       a9 01		      lda	#STATE_PLAYING
+    260  f100		       85 b0		      sta	gameState
+    261  f102		       4c 1c f0 	      jmp	InitGame
+    262  f105
+    263  f105				   .checkResetStart
+    264  f105		       a5 b4		      lda	resetDebounce
+    265  f107		       d0 0b		      bne	.noFireTitle
+    266  f109		       a9 01		      lda	#1
+    267  f10b		       85 b4		      sta	resetDebounce
+    268  f10d		       a9 01		      lda	#STATE_PLAYING
+    269  f10f		       85 b0		      sta	gameState
+    270  f111		       4c 1c f0 	      jmp	InitGame
+    271  f114
+    272  f114				   .noFireTitle
+    273  f114		       ad 82 02 	      lda	SWCHB
+    274  f117		       29 01		      and	#%00000001
+    275  f119		       f0 0f		      beq	.skipResetDebounce
+    276  f11b		       a9 00		      lda	#0
+    277  f11d		       85 b4		      sta	resetDebounce
+    278  f11f		       a5 0c		      lda	INPT4
+    279  f121		       30 03		      bmi	.resetDebounce
+    280  f123		       4c 2a f1 	      jmp	.skipResetDebounce
+    281  f126				   .resetDebounce
+    282  f126		       a9 00		      lda	#0
+    283  f128		       85 b1		      sta	fireDebounce
+    284  f12a				   .skipResetDebounce
+    285  f12a
+    286  f12a		       20 0e fa 	      jsr	UpdateSound
+    287  f12d		       4c ed f2 	      jmp	WaitVBlankEnd
+    288  f130
+    289  f130							;------------------------------------------------
+    290  f130							; GAME OVER LOGIC
+    291  f130							;------------------------------------------------
+    292  f130				   DoGameOver
+    293  f130		       e6 b7		      inc	goTimer
+    294  f132
+    295  f132		       ad 82 02 	      lda	SWCHB
+    296  f135		       29 01		      and	#%00000001
+    297  f137		       f0 0b		      beq	.checkResetGO
+    298  f139
+    299  f139		       a5 0c		      lda	INPT4
+    300  f13b		       30 20		      bmi	.noFireGO
+    301  f13d		       a5 b1		      lda	fireDebounce
+    302  f13f		       d0 1c		      bne	.noFireGO
+    303  f141		       4c 4c f1 	      jmp	.goToTitle
+    304  f144
+    305  f144				   .checkResetGO
+    306  f144		       a5 b4		      lda	resetDebounce
+    307  f146		       d0 15		      bne	.noFireGO
+    308  f148		       a9 01		      lda	#1
+    309  f14a		       85 b4		      sta	resetDebounce
+    310  f14c
+    311  f14c				   .goToTitle
+    312  f14c		       a5 b7		      lda	goTimer
+    313  f14e		       c9 3c		      cmp	#60
+    314  f150		       90 0b		      bcc	.noFireGO
+    315  f152		       a9 00		      lda	#STATE_TITLE
+    316  f154		       85 b0		      sta	gameState
+    317  f156		       a9 00		      lda	#0
+    318  f158		       85 b1		      sta	fireDebounce
+    319  f15a		       4c 91 f0 	      jmp	MainLoop
+    320  f15d
+    321  f15d				   .noFireGO
+    322  f15d		       ad 82 02 	      lda	SWCHB
+    323  f160		       29 01		      and	#%00000001
+    324  f162		       f0 0f		      beq	.skipResetGO
+    325  f164		       a9 00		      lda	#0
+    326  f166		       85 b4		      sta	resetDebounce
+    327  f168		       a5 0c		      lda	INPT4
+    328  f16a		       30 03		      bmi	.resetDebounceGO
+    329  f16c		       4c 73 f1 	      jmp	.skipResetGO
+    330  f16f				   .resetDebounceGO
+    331  f16f		       a9 00		      lda	#0
+    332  f171		       85 b1		      sta	fireDebounce
+    333  f173				   .skipResetGO
+    334  f173
+    335  f173		       20 0e fa 	      jsr	UpdateSound
+    336  f176		       4c ed f2 	      jmp	WaitVBlankEnd
+    337  f179
+    338  f179							;------------------------------------------------
+    339  f179							; PLAYING LOGIC
+    340  f179							;------------------------------------------------
+    341  f179				   DoPlaying
+    342  f179		       ad 82 02 	      lda	SWCHB
+    343  f17c		       29 01		      and	#%00000001
+    344  f17e		       d0 1b		      bne	.resetNotPressed
+    345  f180
+    346  f180		       a5 b4		      lda	resetDebounce
+    347  f182		       d0 1b		      bne	.skipResetAction
+    348  f184
+    349  f184		       a9 01		      lda	#1
+    350  f186		       85 b4		      sta	resetDebounce
+    351  f188		       a9 00		      lda	#STATE_TITLE
+    352  f18a		       85 b0		      sta	gameState
+    353  f18c		       a9 01		      lda	#1
+    354  f18e		       85 b1		      sta	fireDebounce
+    355  f190		       85 b5		      sta	soundTimer
+    356  f192		       a9 00		      lda	#0
+    357  f194		       85 b6		      sta	soundType
+    358  f196		       85 1a		      sta	AUDV1
+    359  f198		       4c 1c f0 	      jmp	InitGame
+    360  f19b
+    361  f19b				   .resetNotPressed
+    362  f19b		       a9 00		      lda	#0
+    363  f19d		       85 b4		      sta	resetDebounce
+    364  f19f				   .skipResetAction
+    365  f19f
+    366  f19f		       e6 ad		      inc	scoreTimer
+    367  f1a1		       a5 ad		      lda	scoreTimer
+    368  f1a3		       c9 3c		      cmp	#60
+    369  f1a5		       90 10		      bcc	.skipScore
+    370  f1a7		       a9 00		      lda	#0
+    371  f1a9		       85 ad		      sta	scoreTimer
+    372  f1ab		       a9 01		      lda	#1
+    373  f1ad		       a2 00		      ldx	#0
+    374  f1af		       a0 00		      ldy	#0
+    375  f1b1		       20 64 fa 	      jsr	AddScore
+    376  f1b4		       20 dc fa 	      jsr	LoadScorePointers
+    377  f1b7				   .skipScore
+    378  f1b7
+    379  f1b7		       e6 85		      inc	monsterTimer
+    380  f1b9		       a5 85		      lda	monsterTimer
+    381  f1bb		       c5 86		      cmp	monsterSpeed
+    382  f1bd		       90 21		      bcc	.skipMonster
+    383  f1bf		       a9 00		      lda	#0
+    384  f1c1		       85 85		      sta	monsterTimer
+    385  f1c3		       a5 84		      lda	p1x
+    386  f1c5		       c9 8c		      cmp	#140
+    387  f1c7		       90 03		      bcc	.moveMonster
+    388  f1c9		       4c ed f9 	      jmp	TriggerGameOver
+    389  f1cc				   .moveMonster
+    390  f1cc		       e6 84		      inc	p1x
+    391  f1ce
+    392  f1ce		       a5 86		      lda	monsterSpeed
+    393  f1d0		       c9 14		      cmp	#STEP_SPEED_MIN
+    394  f1d2		       90 0c		      bcc	.skipStepSound
+    395  f1d4		       a5 b5		      lda	soundTimer
+    396  f1d6		       d0 08		      bne	.skipStepSound
+    397  f1d8		       a9 03		      lda	#3
+    398  f1da		       85 b5		      sta	soundTimer
+    399  f1dc		       a9 04		      lda	#SND_STEP
+    400  f1de		       85 b6		      sta	soundType
+    401  f1e0				   .skipStepSound
+    402  f1e0
+    403  f1e0				   .skipMonster
+    404  f1e0
+    405  f1e0		       a5 af		      lda	invincible
+    406  f1e2		       f0 02		      beq	.noInvCount
+    407  f1e4		       c6 af		      dec	invincible
+    408  f1e6				   .noInvCount
+    409  f1e6
+    410  f1e6				   MoveBall
+    411  f1e6		       a5 a4		      lda	balldelay
+    412  f1e8		       f0 05		      beq	.noDelay
+    413  f1ea		       c6 a4		      dec	balldelay
+    414  f1ec		       4c 4e f2 	      jmp	.ballLogicDone
+    415  f1ef				   .noDelay
+    416  f1ef		       a5 a3		      lda	ballactive
+    417  f1f1		       f0 3c		      beq	.spawnBall
+    418  f1f3		       c6 a6		      dec	balltimer
+    419  f1f5		       d0 12		      bne	.driftBall
+    420  f1f7		       a9 00		      lda	#0
+    421  f1f9		       85 a3		      sta	ballactive
+    422  f1fb		       a5 86		      lda	monsterSpeed
+    423  f1fd		       4a		      lsr
+    424  f1fe		       c9 0f		      cmp	#15
+    425  f200		       b0 02		      bcs	.ballDelayOk
+    426  f202		       a9 0f		      lda	#15
+    427  f204				   .ballDelayOk
+    428  f204		       85 a4		      sta	balldelay
+    429  f206		       4c 4e f2 	      jmp	.ballLogicDone
+    430  f209
+    431  f209				   .driftBall
+    432  f209		       a5 a5		      lda	ballneedpos
+    433  f20b		       d0 41		      bne	.ballLogicDone
+    434  f20d		       a5 a7		      lda	ballDriftDir
+    435  f20f		       f0 0f		      beq	.driftDown
+    436  f211				   .driftUp
+    437  f211		       c6 a1		      dec	bally
+    438  f213		       a5 a1		      lda	bally
+    439  f215		       c9 04		      cmp	#4
+    440  f217		       b0 35		      bcs	.ballLogicDone
+    441  f219		       a9 04		      lda	#4
+    442  f21b		       85 a1		      sta	bally
+    443  f21d		       4c 4e f2 	      jmp	.ballLogicDone
+    444  f220				   .driftDown
+    445  f220		       e6 a1		      inc	bally
+    446  f222		       a5 a1		      lda	bally
+    447  f224		       c9 9a		      cmp	#PLAY_HEIGHT-BALL_HEIGHT-2
+    448  f226		       90 26		      bcc	.ballLogicDone
+    449  f228		       a9 9a		      lda	#PLAY_HEIGHT-BALL_HEIGHT-2
+    450  f22a		       85 a1		      sta	bally
+    451  f22c		       4c 4e f2 	      jmp	.ballLogicDone
+    452  f22f
+    453  f22f				   .spawnBall
+    454  f22f		       a9 01		      lda	#1
+    455  f231		       85 a3		      sta	ballactive
+    456  f233		       a5 a7		      lda	ballDriftDir
+    457  f235		       49 01		      eor	#1
+    458  f237		       85 a7		      sta	ballDriftDir
+    459  f239		       a9 02		      lda	#2
+    460  f23b		       85 a5		      sta	ballneedpos
+    461  f23d		       a9 4d		      lda	#77
+    462  f23f		       85 a6		      sta	balltimer
+    463  f241		       a5 a1		      lda	bally
+    464  f243		       18		      clc
+    465  f244		       69 0c		      adc	#12
+    466  f246		       c9 9a		      cmp	#PLAY_HEIGHT-6
+    467  f248		       90 02		      bcc	.yOk
+    468  f24a		       a9 14		      lda	#20
+    469  f24c				   .yOk
+    470  f24c		       85 a1		      sta	bally
+    471  f24e				   .ballLogicDone
+    472  f24e
+    473  f24e		       a5 ab		      lda	collectDelay
+    474  f250		       f0 05		      beq	.noCollectDelay
+    475  f252		       c6 ab		      dec	collectDelay
+    476  f254		       4c 6f f2 	      jmp	.collectLogicDone
+    477  f257				   .noCollectDelay
+    478  f257		       a5 aa		      lda	collectActive
+    479  f259		       d0 14		      bne	.collectLogicDone
+    480  f25b		       a5 81		      lda	frame
+    481  f25d		       29 07		      and	#%00000111
+    482  f25f		       0a		      asl
+    483  f260		       aa		      tax
+    484  f261		       bd a0 fe 	      lda	collectSpawnTable,x
+    485  f264		       85 a8		      sta	collectX
+    486  f266		       bd a1 fe 	      lda	collectSpawnTable+1,x
+    487  f269		       85 a9		      sta	collectY
+    488  f26b		       a9 01		      lda	#1
+    489  f26d		       85 aa		      sta	collectActive
+    490  f26f				   .collectLogicDone
+    491  f26f
+    492  f26f				   CheckUp
+    493  f26f		       a9 10		      lda	#%00010000
+    494  f271		       2c 80 02 	      bit	SWCHA
+    495  f274		       d0 0a		      bne	.endUp
+    496  f276		       a5 83		      lda	p0y
+    497  f278		       c9 9a		      cmp	#PLAY_HEIGHT-BIKE_HEIGHT
+    498  f27a		       b0 04		      bcs	.endUp
+    499  f27c		       e6 83		      inc	p0y
+    500  f27e		       e6 83		      inc	p0y
+    501  f280				   .endUp
+    502  f280				   CheckDown
+    503  f280		       a9 20		      lda	#%00100000
+    504  f282		       2c 80 02 	      bit	SWCHA
+    505  f285		       d0 0a		      bne	.endDown
+    506  f287		       a5 83		      lda	p0y
+    507  f289		       c9 0c		      cmp	#BIKE_HEIGHT+BIKE_HEIGHT
+    508  f28b		       90 04		      bcc	.endDown
+    509  f28d		       c6 83		      dec	p0y
+    510  f28f		       c6 83		      dec	p0y
+    511  f291				   .endDown
+    512  f291				   CheckRight
+    513  f291		       a9 80		      lda	#%10000000
+    514  f293		       2c 80 02 	      bit	SWCHA
+    515  f296		       d0 0e		      bne	.endRight
+    516  f298		       a9 00		      lda	#0
+    517  f29a		       85 0b		      sta	REFP0
+    518  f29c		       a5 82		      lda	p0x
+    519  f29e		       c9 94		      cmp	#148
+    520  f2a0		       b0 04		      bcs	.endRight
+    521  f2a2		       e6 82		      inc	p0x
+    522  f2a4		       e6 82		      inc	p0x
+    523  f2a6				   .endRight
+    524  f2a6				   CheckLeft
+    525  f2a6		       a9 40		      lda	#%01000000
+    526  f2a8		       2c 80 02 	      bit	SWCHA
+    527  f2ab		       d0 0e		      bne	EndInput
+    528  f2ad		       a9 08		      lda	#%00001000
+    529  f2af		       85 0b		      sta	REFP0
+    530  f2b1		       a5 82		      lda	p0x
+    531  f2b3		       c9 02		      cmp	#2
+    532  f2b5		       90 04		      bcc	EndInput
+    533  f2b7		       c6 82		      dec	p0x
+    534  f2b9		       c6 82		      dec	p0x
+    535  f2bb				   EndInput
+    536  f2bb
+    537  f2bb		       a5 86		      lda	monsterSpeed
+    538  f2bd		       c9 14		      cmp	#STEP_SPEED_MIN
+    539  f2bf		       b0 25		      bcs	.silenceRumble
+    540  f2c1		       c9 0a		      cmp	#10
+    541  f2c3		       90 07		      bcc	.fastBeat
+    542  f2c5				   .slowBeat
+    543  f2c5		       a5 81		      lda	frame
+    544  f2c7		       29 20		      and	#%00100000
+    545  f2c9		       4c d0 f2 	      jmp	.selectNote
+    546  f2cc				   .fastBeat
+    547  f2cc		       a5 81		      lda	frame
+    548  f2ce		       29 10		      and	#%00010000
+    549  f2d0				   .selectNote
+    550  f2d0		       f0 05		      beq	.noteA
+    551  f2d2		       a9 0a		      lda	#10
+    552  f2d4		       4c d9 f2 	      jmp	.playNote
+    553  f2d7				   .noteA
+    554  f2d7		       a9 0c		      lda	#12
+    555  f2d9				   .playNote
+    556  f2d9		       85 18		      sta	AUDF1
+    557  f2db		       a9 06		      lda	#6
+    558  f2dd		       85 16		      sta	AUDC1
+    559  f2df		       a9 04		      lda	#4
+    560  f2e1		       85 1a		      sta	AUDV1
+    561  f2e3		       4c ea f2 	      jmp	.rumbleDone
+    562  f2e6				   .silenceRumble
+    563  f2e6		       a9 00		      lda	#0
+    564  f2e8		       85 1a		      sta	AUDV1
+    565  f2ea				   .rumbleDone
+    566  f2ea
+    567  f2ea		       20 0e fa 	      jsr	UpdateSound
+    568  f2ed
+    569  f2ed				   WaitVBlankEnd
+    570  f2ed		       85 02		      sta	WSYNC
+    571  f2ef				   .waitForVBlank
+    572  f2ef		       ad 84 02 	      lda	INTIM
+    573  f2f2		       d0 fb		      bne	.waitForVBlank
+    574  f2f4		       85 02		      sta	WSYNC
+    575  f2f6		       85 01		      sta	VBLANK
+    576  f2f8
+    577  f2f8		       a5 b0		      lda	gameState
+    578  f2fa		       c9 01		      cmp	#STATE_PLAYING
+    579  f2fc		       f0 07		      beq	.kernelPlay
+    580  f2fe		       c9 02		      cmp	#STATE_GAMEOVER
+    581  f300		       f0 06		      beq	.kernelGO
+    582  f302		       4c 0b f3 	      jmp	TitleKernel
+    583  f305				   .kernelPlay
+    584  f305		       4c 00 f7 	      jmp	StartDrawScreen
+    585  f308				   .kernelGO
+    586  f308		       4c 95 f4 	      jmp	GameOverKernel
+    587  f30b
+    588  f30b							;------------------------------------------------
+    589  f30b							; TITLE SCREEN KERNEL
+    590  f30b							;------------------------------------------------
+    591  f30b				   TitleKernel
+    592  f30b		       a9 00		      lda	#0
+    593  f30d		       85 1b		      sta	GRP0
+    594  f30f		       85 1c		      sta	GRP1
+    595  f311		       85 0d		      sta	PF0
+    596  f313		       85 0e		      sta	PF1
+    597  f315		       85 0f		      sta	PF2
+    598  f317		       85 1d		      sta	ENAM0
+    599  f319		       85 1e		      sta	ENAM1
+    600  f31b		       85 1f		      sta	ENABL
+    601  f31d
+    602  f31d		       a9 01		      lda	#%00000001
+    603  f31f		       85 0a		      sta	CTRLPF
+    604  f321		       a9 00		      lda	#$00
+    605  f323		       85 09		      sta	COLUBK
+    606  f325
+    607  f325		       a9 fc		      lda	#>scoretable
+    608  f327		       85 8b		      sta	scorepointers+1
+    609  f329		       85 8d		      sta	scorepointers+3
+    610  f32b		       85 8f		      sta	scorepointers+5
+    611  f32d		       85 91		      sta	scorepointers+7
+    612  f32f		       85 93		      sta	scorepointers+9
+    613  f331		       85 95		      sta	scorepointers+11
+    614  f333
+    615  f333		       a2 14		      ldx	#20
+    616  f335				   .titleTopSpc
+    617  f335		       85 02		      sta	WSYNC
+    618  f337		       ca		      dex
+    619  f338		       d0 fb		      bne	.titleTopSpc
+    620  f33a
+    621  f33a		       a5 81		      lda	frame
+    622  f33c		       29 20		      and	#%00100000
+    623  f33e		       d0 0a		      bne	.drawPressFire
+    624  f340
+    625  f340		       a2 20		      ldx	#32
+    626  f342				   .titleBlankText
+    627  f342		       85 02		      sta	WSYNC
+    628  f344		       ca		      dex
+    629  f345		       d0 fb		      bne	.titleBlankText
+    630  f347		       4c df f3 	      jmp	.afterPressFire
+    631  f34a
+    632  f34a				   .drawPressFire
+    633  f34a		       a9 46		      lda	#$46
+    634  f34c		       85 06		      sta	COLUP0
+    635  f34e		       85 07		      sta	COLUP1
+    636  f350
+    637  f350		       a9 90		      lda	#<LetterP
+    638  f352		       85 8a		      sta	scorepointers
+    639  f354		       a9 88		      lda	#<LetterR
+    640  f356		       85 8c		      sta	scorepointers+2
+    641  f358		       a9 70		      lda	#<LetterE
+    642  f35a		       85 8e		      sta	scorepointers+4
+    643  f35c		       a9 98		      lda	#<LetterS
+    644  f35e		       85 90		      sta	scorepointers+6
+    645  f360		       85 92		      sta	scorepointers+8
+    646  f362		       a9 50		      lda	#<blank
+    647  f364		       85 94		      sta	scorepointers+10
+    648  f366
+    649  f366		       20 e5 f5 	      jsr	Setup48Pixel
+    650  f369				   .pressLoop
+    651  f369		       a4 98		      ldy	scoreHeight
+    652  f36b		       b1 8a		      lda	(scorepointers),y
+    653  f36d		       85 1b		      sta	GRP0
+    654  f36f		       85 02		      sta	WSYNC
+    655  f371		       b1 8c		      lda	(scorepointers+2),y
+    656  f373		       85 1c		      sta	GRP1
+    657  f375		       b1 8e		      lda	(scorepointers+4),y
+    658  f377		       85 1b		      sta	GRP0
+    659  f379		       b1 90		      lda	(scorepointers+6),y
+    660  f37b		       85 99		      sta	temp
+    661  f37d		       b1 92		      lda	(scorepointers+8),y
+    662  f37f		       aa		      tax
+    663  f380		       b1 94		      lda	(scorepointers+10),y
+    664  f382		       a8		      tay
+    665  f383		       a5 99		      lda	temp
+    666  f385		       85 1c		      sta	GRP1
+    667  f387		       86 1b		      stx	GRP0
+    668  f389		       84 1c		      sty	GRP1
+    669  f38b		       85 1b		      sta	GRP0
+    670  f38d		       c6 98		      dec	scoreHeight
+    671  f38f		       10 d8		      bpl	.pressLoop
+    672  f391		       20 18 f6 	      jsr	End48Pixel
+    673  f394
+    674  f394		       a2 06		      ldx	#6
+    675  f396				   .pfGap
+    676  f396		       85 02		      sta	WSYNC
+    677  f398		       ca		      dex
+    678  f399		       d0 fb		      bne	.pfGap
+    679  f39b
+    680  f39b		       a9 a0		      lda	#<LetterF
+    681  f39d		       85 8a		      sta	scorepointers
+    682  f39f		       a9 a8		      lda	#<LetterI
+    683  f3a1		       85 8c		      sta	scorepointers+2
+    684  f3a3		       a9 88		      lda	#<LetterR
+    685  f3a5		       85 8e		      sta	scorepointers+4
+    686  f3a7		       a9 70		      lda	#<LetterE
+    687  f3a9		       85 90		      sta	scorepointers+6
+    688  f3ab		       a9 50		      lda	#<blank
+    689  f3ad		       85 92		      sta	scorepointers+8
+    690  f3af		       85 94		      sta	scorepointers+10
+    691  f3b1
+    692  f3b1		       20 e5 f5 	      jsr	Setup48Pixel
+    693  f3b4				   .fireLoop
+    694  f3b4		       a4 98		      ldy	scoreHeight
+    695  f3b6		       b1 8a		      lda	(scorepointers),y
+    696  f3b8		       85 1b		      sta	GRP0
+    697  f3ba		       85 02		      sta	WSYNC
+    698  f3bc		       b1 8c		      lda	(scorepointers+2),y
+    699  f3be		       85 1c		      sta	GRP1
+    700  f3c0		       b1 8e		      lda	(scorepointers+4),y
+    701  f3c2		       85 1b		      sta	GRP0
+    702  f3c4		       b1 90		      lda	(scorepointers+6),y
+    703  f3c6		       85 99		      sta	temp
+    704  f3c8		       b1 92		      lda	(scorepointers+8),y
+    705  f3ca		       aa		      tax
+    706  f3cb		       b1 94		      lda	(scorepointers+10),y
+    707  f3cd		       a8		      tay
+    708  f3ce		       a5 99		      lda	temp
+    709  f3d0		       85 1c		      sta	GRP1
+    710  f3d2		       86 1b		      stx	GRP0
+    711  f3d4		       84 1c		      sty	GRP1
+    712  f3d6		       85 1b		      sta	GRP0
+    713  f3d8		       c6 98		      dec	scoreHeight
+    714  f3da		       10 d8		      bpl	.fireLoop
+    715  f3dc		       20 18 f6 	      jsr	End48Pixel
+    716  f3df
+    717  f3df				   .afterPressFire
+    718  f3df		       a2 14		      ldx	#20
+    719  f3e1				   .titleMidGap
+    720  f3e1		       85 02		      sta	WSYNC
+    721  f3e3		       ca		      dex
+    722  f3e4		       d0 fb		      bne	.titleMidGap
+    723  f3e6
+    724  f3e6		       a9 0e		      lda	#$0E
+    725  f3e8		       85 06		      sta	COLUP0
+    726  f3ea		       85 07		      sta	COLUP1
+    727  f3ec
+    728  f3ec		       a9 b0		      lda	#<LetterL
+    729  f3ee		       85 8a		      sta	scorepointers
+    730  f3f0		       a9 a8		      lda	#<LetterI
+    731  f3f2		       85 8c		      sta	scorepointers+2
+    732  f3f4		       a9 80		      lda	#<LetterV
+    733  f3f6		       85 8e		      sta	scorepointers+4
+    734  f3f8		       a9 70		      lda	#<LetterE
+    735  f3fa		       85 90		      sta	scorepointers+6
+    736  f3fc		       a9 98		      lda	#<LetterS
+    737  f3fe		       85 92		      sta	scorepointers+8
+    738  f400		       a9 50		      lda	#<blank
+    739  f402		       85 94		      sta	scorepointers+10
+    740  f404
+    741  f404		       20 e5 f5 	      jsr	Setup48Pixel
+    742  f407				   .livesLoop
+    743  f407		       a4 98		      ldy	scoreHeight
+    744  f409		       b1 8a		      lda	(scorepointers),y
+    745  f40b		       85 1b		      sta	GRP0
+    746  f40d		       85 02		      sta	WSYNC
+    747  f40f		       b1 8c		      lda	(scorepointers+2),y
+    748  f411		       85 1c		      sta	GRP1
+    749  f413		       b1 8e		      lda	(scorepointers+4),y
+    750  f415		       85 1b		      sta	GRP0
+    751  f417		       b1 90		      lda	(scorepointers+6),y
+    752  f419		       85 99		      sta	temp
+    753  f41b		       b1 92		      lda	(scorepointers+8),y
+    754  f41d		       aa		      tax
+    755  f41e		       b1 94		      lda	(scorepointers+10),y
+    756  f420		       a8		      tay
+    757  f421		       a5 99		      lda	temp
+    758  f423		       85 1c		      sta	GRP1
+    759  f425		       86 1b		      stx	GRP0
+    760  f427		       84 1c		      sty	GRP1
+    761  f429		       85 1b		      sta	GRP0
+    762  f42b		       c6 98		      dec	scoreHeight
+    763  f42d		       10 d8		      bpl	.livesLoop
+    764  f42f		       20 18 f6 	      jsr	End48Pixel
+    765  f432
+    766  f432		       a2 06		      ldx	#6
+    767  f434				   .livesGap
+    768  f434		       85 02		      sta	WSYNC
+    769  f436		       ca		      dex
+    770  f437		       d0 fb		      bne	.livesGap
+    771  f439
+    772  f439		       a9 50		      lda	#<blank
+    773  f43b		       85 8a		      sta	scorepointers
+    774  f43d		       85 8c		      sta	scorepointers+2
+    775  f43f		       85 90		      sta	scorepointers+6
+    776  f441		       85 92		      sta	scorepointers+8
+    777  f443		       85 94		      sta	scorepointers+10
+    778  f445
+    779  f445		       a5 b2		      lda	gameVariation
+    780  f447		       c9 00		      cmp	#0
+    781  f449		       f0 09		      beq	.show3
+    782  f44b		       c9 01		      cmp	#1
+    783  f44d		       f0 0a		      beq	.show2
+    784  f44f				   .show1
+    785  f44f		       a9 08		      lda	#<one
+    786  f451		       4c 5b f4 	      jmp	.setNum
+    787  f454				   .show3
+    788  f454		       a9 18		      lda	#<three
+    789  f456		       4c 5b f4 	      jmp	.setNum
+    790  f459				   .show2
+    791  f459		       a9 10		      lda	#<two
+    792  f45b				   .setNum
+    793  f45b		       85 8e		      sta	scorepointers+4
+    794  f45d
+    795  f45d		       20 e5 f5 	      jsr	Setup48Pixel
+    796  f460				   .numLoop
+    797  f460		       a4 98		      ldy	scoreHeight
+    798  f462		       b1 8a		      lda	(scorepointers),y
+    799  f464		       85 1b		      sta	GRP0
+    800  f466		       85 02		      sta	WSYNC
+    801  f468		       b1 8c		      lda	(scorepointers+2),y
+    802  f46a		       85 1c		      sta	GRP1
+    803  f46c		       b1 8e		      lda	(scorepointers+4),y
+    804  f46e		       85 1b		      sta	GRP0
+    805  f470		       b1 90		      lda	(scorepointers+6),y
+    806  f472		       85 99		      sta	temp
+    807  f474		       b1 92		      lda	(scorepointers+8),y
+    808  f476		       aa		      tax
+    809  f477		       b1 94		      lda	(scorepointers+10),y
+    810  f479		       a8		      tay
+    811  f47a		       a5 99		      lda	temp
+    812  f47c		       85 1c		      sta	GRP1
+    813  f47e		       86 1b		      stx	GRP0
+    814  f480		       84 1c		      sty	GRP1
+    815  f482		       85 1b		      sta	GRP0
+    816  f484		       c6 98		      dec	scoreHeight
+    817  f486		       10 d8		      bpl	.numLoop
+    818  f488		       20 18 f6 	      jsr	End48Pixel
+    819  f48b
+    820  f48b		       a2 58		      ldx	#88
+    821  f48d				   .titleBotSpc
+    822  f48d		       85 02		      sta	WSYNC
+    823  f48f		       ca		      dex
+    824  f490		       d0 fb		      bne	.titleBotSpc
+    825  f492
+    826  f492		       4c 5d f9 	      jmp	DoOverscan
+    827  f495
+    828  f495							;------------------------------------------------
+    829  f495							; GAME OVER KERNEL
+    830  f495							;------------------------------------------------
+    831  f495				   GameOverKernel
+    832  f495		       a9 00		      lda	#0
+    833  f497		       85 1b		      sta	GRP0
+    834  f499		       85 1c		      sta	GRP1
+    835  f49b		       85 1d		      sta	ENAM0
+    836  f49d		       85 1e		      sta	ENAM1
+    837  f49f		       85 1f		      sta	ENABL
+    838  f4a1		       85 0d		      sta	PF0
+    839  f4a3		       85 0e		      sta	PF1
+    840  f4a5		       85 0f		      sta	PF2
+    841  f4a7		       85 2b		      sta	HMCLR
+    842  f4a9		       85 28		      sta	RESMP0
+    843  f4ab		       85 29		      sta	RESMP1
+    844  f4ad
+    845  f4ad		       a5 b8		      lda	finalScore
+    846  f4af		       85 87		      sta	score
+    847  f4b1		       a5 b9		      lda	finalScore+1
+    848  f4b3		       85 88		      sta	score+1
+    849  f4b5		       a5 ba		      lda	finalScore+2
+    850  f4b7		       85 89		      sta	score+2
+    851  f4b9		       20 dc fa 	      jsr	LoadScorePointers
+    852  f4bc
+    853  f4bc		       a9 36		      lda	#$36
+    854  f4be		       85 09		      sta	COLUBK
+    855  f4c0
+    856  f4c0		       a5 81		      lda	frame
+    857  f4c2		       29 10		      and	#%00010000
+    858  f4c4		       f0 05		      beq	.goColorA
+    859  f4c6		       a9 0e		      lda	#$0E
+    860  f4c8		       4c cd f4 	      jmp	.goSetColor
+    861  f4cb				   .goColorA
+    862  f4cb		       a9 48		      lda	#$48
+    863  f4cd				   .goSetColor
+    864  f4cd		       85 06		      sta	COLUP0
+    865  f4cf		       85 07		      sta	COLUP1
+    866  f4d1
+    867  f4d1		       a9 01		      lda	#%00000001
+    868  f4d3		       85 0a		      sta	CTRLPF
+    869  f4d5
+    870  f4d5		       a2 1b		      ldx	#27
+    871  f4d7				   .goTopSpacer
+    872  f4d7		       85 02		      sta	WSYNC
+    873  f4d9		       ca		      dex
+    874  f4da		       d0 fb		      bne	.goTopSpacer
+    875  f4dc
+    876  f4dc		       20 e5 f5 	      jsr	Setup48Pixel
+    877  f4df
+    878  f4df				   .goScoreLoop
+    879  f4df		       a4 98		      ldy	scoreHeight
+    880  f4e1		       b1 8a		      lda	(scorepointers),y
+    881  f4e3		       85 1b		      sta	GRP0
+    882  f4e5		       85 02		      sta	WSYNC
+    883  f4e7		       b1 8c		      lda	(scorepointers+2),y
+    884  f4e9		       85 1c		      sta	GRP1
+    885  f4eb		       b1 8e		      lda	(scorepointers+4),y
+    886  f4ed		       85 1b		      sta	GRP0
+    887  f4ef		       b1 90		      lda	(scorepointers+6),y
+    888  f4f1		       85 99		      sta	temp
+    889  f4f3		       b1 92		      lda	(scorepointers+8),y
+    890  f4f5		       aa		      tax
+    891  f4f6		       b1 94		      lda	(scorepointers+10),y
+    892  f4f8		       a8		      tay
+    893  f4f9		       a5 99		      lda	temp
+    894  f4fb		       85 1c		      sta	GRP1
+    895  f4fd		       86 1b		      stx	GRP0
+    896  f4ff		       84 1c		      sty	GRP1
+    897  f501		       85 1b		      sta	GRP0
+    898  f503		       c6 98		      dec	scoreHeight
+    899  f505		       10 d8		      bpl	.goScoreLoop
+    900  f507
+    901  f507		       20 18 f6 	      jsr	End48Pixel
+    902  f50a
+    903  f50a		       a2 14		      ldx	#20
+    904  f50c				   .goGap1
+    905  f50c		       85 02		      sta	WSYNC
+    906  f50e		       ca		      dex
+    907  f50f		       d0 fb		      bne	.goGap1
+    908  f511
+    909  f511		       a9 58		      lda	#<LetterG
+    910  f513		       85 8a		      sta	scorepointers
+    911  f515		       a9 fc		      lda	#>LetterG
+    912  f517		       85 8b		      sta	scorepointers+1
+    913  f519		       a9 60		      lda	#<LetterA
+    914  f51b		       85 8c		      sta	scorepointers+2
+    915  f51d		       a9 fc		      lda	#>LetterA
+    916  f51f		       85 8d		      sta	scorepointers+3
+    917  f521		       a9 68		      lda	#<LetterM
+    918  f523		       85 8e		      sta	scorepointers+4
+    919  f525		       a9 fc		      lda	#>LetterM
+    920  f527		       85 8f		      sta	scorepointers+5
+    921  f529		       a9 70		      lda	#<LetterE
+    922  f52b		       85 90		      sta	scorepointers+6
+    923  f52d		       a9 fc		      lda	#>LetterE
+    924  f52f		       85 91		      sta	scorepointers+7
+    925  f531		       a9 50		      lda	#<blank
+    926  f533		       85 92		      sta	scorepointers+8
+    927  f535		       a9 fc		      lda	#>blank
+    928  f537		       85 93		      sta	scorepointers+9
+    929  f539		       a9 50		      lda	#<blank
+    930  f53b		       85 94		      sta	scorepointers+10
+    931  f53d		       a9 fc		      lda	#>blank
+    932  f53f		       85 95		      sta	scorepointers+11
+    933  f541
+    934  f541		       20 e5 f5 	      jsr	Setup48Pixel
+    935  f544
+    936  f544				   .goGameLoop
+    937  f544		       a4 98		      ldy	scoreHeight
+    938  f546		       b1 8a		      lda	(scorepointers),y
+    939  f548		       85 1b		      sta	GRP0
+    940  f54a		       85 02		      sta	WSYNC
+    941  f54c		       b1 8c		      lda	(scorepointers+2),y
+    942  f54e		       85 1c		      sta	GRP1
+    943  f550		       b1 8e		      lda	(scorepointers+4),y
+    944  f552		       85 1b		      sta	GRP0
+    945  f554		       b1 90		      lda	(scorepointers+6),y
+    946  f556		       85 99		      sta	temp
+    947  f558		       b1 92		      lda	(scorepointers+8),y
+    948  f55a		       aa		      tax
+    949  f55b		       b1 94		      lda	(scorepointers+10),y
+    950  f55d		       a8		      tay
+    951  f55e		       a5 99		      lda	temp
+    952  f560		       85 1c		      sta	GRP1
+    953  f562		       86 1b		      stx	GRP0
+    954  f564		       84 1c		      sty	GRP1
+    955  f566		       85 1b		      sta	GRP0
+    956  f568		       c6 98		      dec	scoreHeight
+    957  f56a		       10 d8		      bpl	.goGameLoop
+    958  f56c
+    959  f56c		       20 18 f6 	      jsr	End48Pixel
+    960  f56f
+    961  f56f		       a2 06		      ldx	#6
+    962  f571				   .goGap2
+    963  f571		       85 02		      sta	WSYNC
+    964  f573		       ca		      dex
+    965  f574		       d0 fb		      bne	.goGap2
+    966  f576
+    967  f576		       a9 78		      lda	#<LetterO
+    968  f578		       85 8a		      sta	scorepointers
+    969  f57a		       a9 fc		      lda	#>LetterO
+    970  f57c		       85 8b		      sta	scorepointers+1
+    971  f57e		       a9 80		      lda	#<LetterV
+    972  f580		       85 8c		      sta	scorepointers+2
+    973  f582		       a9 fc		      lda	#>LetterV
+    974  f584		       85 8d		      sta	scorepointers+3
+    975  f586		       a9 70		      lda	#<LetterE
+    976  f588		       85 8e		      sta	scorepointers+4
+    977  f58a		       a9 fc		      lda	#>LetterE
+    978  f58c		       85 8f		      sta	scorepointers+5
+    979  f58e		       a9 88		      lda	#<LetterR
+    980  f590		       85 90		      sta	scorepointers+6
+    981  f592		       a9 fc		      lda	#>LetterR
+    982  f594		       85 91		      sta	scorepointers+7
+    983  f596		       a9 50		      lda	#<blank
+    984  f598		       85 92		      sta	scorepointers+8
+    985  f59a		       a9 fc		      lda	#>blank
+    986  f59c		       85 93		      sta	scorepointers+9
+    987  f59e		       a9 50		      lda	#<blank
+    988  f5a0		       85 94		      sta	scorepointers+10
+    989  f5a2		       a9 fc		      lda	#>blank
+    990  f5a4		       85 95		      sta	scorepointers+11
+    991  f5a6
+    992  f5a6		       20 e5 f5 	      jsr	Setup48Pixel
+    993  f5a9
+    994  f5a9				   .goOverLoop
+    995  f5a9		       a4 98		      ldy	scoreHeight
+    996  f5ab		       b1 8a		      lda	(scorepointers),y
+    997  f5ad		       85 1b		      sta	GRP0
+    998  f5af		       85 02		      sta	WSYNC
+    999  f5b1		       b1 8c		      lda	(scorepointers+2),y
+   1000  f5b3		       85 1c		      sta	GRP1
+   1001  f5b5		       b1 8e		      lda	(scorepointers+4),y
+   1002  f5b7		       85 1b		      sta	GRP0
+   1003  f5b9		       b1 90		      lda	(scorepointers+6),y
+   1004  f5bb		       85 99		      sta	temp
+   1005  f5bd		       b1 92		      lda	(scorepointers+8),y
+   1006  f5bf		       aa		      tax
+   1007  f5c0		       b1 94		      lda	(scorepointers+10),y
+   1008  f5c2		       a8		      tay
+   1009  f5c3		       a5 99		      lda	temp
+   1010  f5c5		       85 1c		      sta	GRP1
+   1011  f5c7		       86 1b		      stx	GRP0
+   1012  f5c9		       84 1c		      sty	GRP1
+   1013  f5cb		       85 1b		      sta	GRP0
+   1014  f5cd		       c6 98		      dec	scoreHeight
+   1015  f5cf		       10 d8		      bpl	.goOverLoop
+   1016  f5d1
+   1017  f5d1		       20 18 f6 	      jsr	End48Pixel
+   1018  f5d4
+   1019  f5d4		       a2 14		      ldx	#20
+   1020  f5d6				   .goGap3
+   1021  f5d6		       85 02		      sta	WSYNC
+   1022  f5d8		       ca		      dex
+   1023  f5d9		       d0 fb		      bne	.goGap3
+   1024  f5db
+   1025  f5db		       a2 53		      ldx	#83
+   1026  f5dd				   .goBottom
+   1027  f5dd		       85 02		      sta	WSYNC
+   1028  f5df		       ca		      dex
+   1029  f5e0		       d0 fb		      bne	.goBottom
+   1030  f5e2
+   1031  f5e2		       4c 5d f9 	      jmp	DoOverscan
+   1032  f5e5
+   1033  f5e5							;------------------------------------------------
+   1034  f5e5							; 48-pixel setup/teardown subroutines
+   1035  f5e5							;------------------------------------------------
+   1036  f5e5				   Setup48Pixel
+   1037  f5e5		       a9 00		      lda	#0
+   1038  f5e7		       85 02		      sta	WSYNC
+   1039  f5e9		       85 0b		      sta	REFP0
+   1040  f5eb		       85 0c		      sta	REFP1
+   1041  f5ed		       85 1b		      sta	GRP0
+   1042  f5ef		       85 1c		      sta	GRP1
+   1043  f5f1		       85 02		      sta	WSYNC
+   1044  f5f3		       ea		      nop
+   1045  f5f4		       85 1b		      sta	GRP0
+   1046  f5f6		       85 1c		      sta	GRP1
+   1047  f5f8		       a0 07		      ldy	#SCORE_HEIGHT
+   1048  f5fa		       84 98		      sty	scoreHeight
+   1049  f5fc		       a9 03		      lda	#$03
+   1050  f5fe		       85 04		      sta	NUSIZ0
+   1051  f600		       85 05		      sta	NUSIZ1
+   1052  f602		       85 25		      sta	VDELP0
+   1053  f604		       85 26		      sta	VDELP1
+   1054  f606		       a9 f0		      lda	#$F0
+   1055  f608		       85 20		      sta	HMP0
+   1056  f60a		       a9 00		      lda	#0
+   1057  f60c		       ea		      nop
+   1058  f60d		       85 10		      sta	RESP0
+   1059  f60f		       85 11		      sta	RESP1
+   1060  f611		       85 02		      sta	WSYNC
+   1061  f613		       85 2a		      sta	HMOVE
+   1062  f615		       85 02		      sta	WSYNC
+   1063  f617		       60		      rts
+   1064  f618
+   1065  f618				   End48Pixel
+   1066  f618		       85 02		      sta	WSYNC
+   1067  f61a		       a9 00		      lda	#0
+   1068  f61c		       85 25		      sta	VDELP0
+   1069  f61e		       85 26		      sta	VDELP1
+   1070  f620		       85 1b		      sta	GRP0
+   1071  f622		       85 1c		      sta	GRP1
+   1072  f624		       85 1b		      sta	GRP0
+   1073  f626		       85 04		      sta	NUSIZ0
+   1074  f628		       85 05		      sta	NUSIZ1
+   1075  f62a		       60		      rts
+   1076  f62b
+   1077  f62b							;------------------------------------------------
+   1078  f62b							; Game Kernel (playing state)
+   1079  f62b							;------------------------------------------------
+   1080  f700		       00 00 00 00*	      align	256
+   1081  f700				   StartDrawScreen
+   1082  f700				   DrawScreen
+   1083  f700		       a9 00		      lda	#0
+   1084  f702		       85 1b		      sta	GRP0
+   1085  f704		       85 1c		      sta	GRP1
+   1086  f706
+   1087  f706		       a9 00		      lda	#$00
+   1088  f708		       85 09		      sta	COLUBK
+   1089  f70a
+   1090  f70a		       a2 09		      ldx	#9
+   1091  f70c				   .topSpacer
+   1092  f70c		       e0 07		      cpx	#7
+   1093  f70e		       b0 44		      bcs	.noLivesDraw
+   1094  f710		       e0 04		      cpx	#4
+   1095  f712		       90 40		      bcc	.noLivesDraw
+   1096  f714
+   1097  f714		       a9 46		      lda	#$46
+   1098  f716		       85 08		      sta	COLUPF
+   1099  f718		       a9 00		      lda	#0
+   1100  f71a		       85 0d		      sta	PF0
+   1101  f71c		       85 0f		      sta	PF2
+   1102  f71e		       a5 ae		      lda	lives
+   1103  f720		       c9 05		      cmp	#5
+   1104  f722		       90 05		      bcc	.not5
+   1105  f724		       a9 55		      lda	#%01010101
+   1106  f726		       4c 4f f7 	      jmp	.setLivesPF
+   1107  f729				   .not5
+   1108  f729		       c9 04		      cmp	#4
+   1109  f72b		       90 05		      bcc	.not4
+   1110  f72d		       a9 55		      lda	#%01010101
+   1111  f72f		       4c 4f f7 	      jmp	.setLivesPF
+   1112  f732				   .not4
+   1113  f732		       c9 03		      cmp	#3
+   1114  f734		       90 05		      bcc	.not3
+   1115  f736		       a9 54		      lda	#%01010100
+   1116  f738		       4c 4f f7 	      jmp	.setLivesPF
+   1117  f73b				   .not3
+   1118  f73b		       c9 02		      cmp	#2
+   1119  f73d		       90 05		      bcc	.not2
+   1120  f73f		       a9 50		      lda	#%01010000
+   1121  f741		       4c 4f f7 	      jmp	.setLivesPF
+   1122  f744				   .not2
+   1123  f744		       c9 01		      cmp	#1
+   1124  f746		       90 05		      bcc	.noLivesBlk
+   1125  f748		       a9 40		      lda	#%01000000
+   1126  f74a		       4c 4f f7 	      jmp	.setLivesPF
+   1127  f74d				   .noLivesBlk
+   1128  f74d		       a9 00		      lda	#0
+   1129  f74f				   .setLivesPF
+   1130  f74f		       85 0e		      sta	PF1
+   1131  f751		       4c 5c f7 	      jmp	.doneLives
+   1132  f754				   .noLivesDraw
+   1133  f754		       a9 00		      lda	#0
+   1134  f756		       85 0d		      sta	PF0
+   1135  f758		       85 0e		      sta	PF1
+   1136  f75a		       85 0f		      sta	PF2
+   1137  f75c				   .doneLives
+   1138  f75c		       a5 80		      lda	bgcolor
+   1139  f75e		       85 06		      sta	COLUP0
+   1140  f760		       85 07		      sta	COLUP1
+   1141  f762		       ca		      dex
+   1142  f763		       85 02		      sta	WSYNC
+   1143  f765		       d0 a5		      bne	.topSpacer
+   1144  f767
+   1145  f767		       a9 00		      lda	#0
+   1146  f769		       85 0d		      sta	PF0
+   1147  f76b		       85 0e		      sta	PF1
+   1148  f76d		       85 0f		      sta	PF2
+   1149  f76f
+   1150  f76f		       a9 00		      lda	#0
+   1151  f771		       85 02		      sta	WSYNC
+   1152  f773		       85 0b		      sta	REFP0
+   1153  f775		       85 0c		      sta	REFP1
+   1154  f777		       85 1b		      sta	GRP0
+   1155  f779		       85 1c		      sta	GRP1
+   1156  f77b		       85 1d		      sta	ENAM0
+   1157  f77d		       85 1e		      sta	ENAM1
+   1158  f77f		       85 1f		      sta	ENABL
+   1159  f781		       85 02		      sta	WSYNC
+   1160  f783		       ea		      nop
+   1161  f784		       85 1b		      sta	GRP0
+   1162  f786		       85 1c		      sta	GRP1
+   1163  f788		       a0 07		      ldy	#SCORE_HEIGHT
+   1164  f78a		       84 98		      sty	scoreHeight
+   1165  f78c		       a9 03		      lda	#$03
+   1166  f78e		       85 04		      sta	NUSIZ0
+   1167  f790		       85 05		      sta	NUSIZ1
+   1168  f792		       85 25		      sta	VDELP0
+   1169  f794		       85 26		      sta	VDELP1
+   1170  f796		       a9 f0		      lda	#$F0
+   1171  f798		       85 20		      sta	HMP0
+   1172  f79a		       a9 00		      lda	#0
+   1173  f79c		       ea		      nop
+   1174  f79d		       85 10		      sta	RESP0
+   1175  f79f		       85 11		      sta	RESP1
+   1176  f7a1		       85 02		      sta	WSYNC
+   1177  f7a3		       85 2a		      sta	HMOVE
+   1178  f7a5		       85 02		      sta	WSYNC
+   1179  f7a7
+   1180  f7a7				   .scoreLoop
+   1181  f7a7		       a4 98		      ldy	scoreHeight
+   1182  f7a9		       b1 8a		      lda	(scorepointers),y
+   1183  f7ab		       85 1b		      sta	GRP0
+   1184  f7ad		       85 02		      sta	WSYNC
+   1185  f7af		       b1 8c		      lda	(scorepointers+2),y
+   1186  f7b1		       85 1c		      sta	GRP1
+   1187  f7b3		       b1 8e		      lda	(scorepointers+4),y
+   1188  f7b5		       85 1b		      sta	GRP0
+   1189  f7b7		       b1 90		      lda	(scorepointers+6),y
+   1190  f7b9		       85 99		      sta	temp
+   1191  f7bb		       b1 92		      lda	(scorepointers+8),y
+   1192  f7bd		       aa		      tax
+   1193  f7be		       b1 94		      lda	(scorepointers+10),y
+   1194  f7c0		       a8		      tay
+   1195  f7c1		       a5 99		      lda	temp
+   1196  f7c3		       85 1c		      sta	GRP1
+   1197  f7c5		       86 1b		      stx	GRP0
+   1198  f7c7		       84 1c		      sty	GRP1
+   1199  f7c9		       85 1b		      sta	GRP0
+   1200  f7cb		       c6 98		      dec	scoreHeight
+   1201  f7cd		       10 d8		      bpl	.scoreLoop
+   1202  f7cf
+   1203  f7cf		       85 02		      sta	WSYNC
+   1204  f7d1		       a9 00		      lda	#0
+   1205  f7d3		       85 06		      sta	COLUP0
+   1206  f7d5		       85 07		      sta	COLUP1
+   1207  f7d7		       85 25		      sta	VDELP0
+   1208  f7d9		       85 26		      sta	VDELP1
+   1209  f7db		       85 1b		      sta	GRP0
+   1210  f7dd		       85 1c		      sta	GRP1
+   1211  f7df		       85 1b		      sta	GRP0
+   1212  f7e1		       85 04		      sta	NUSIZ0
+   1213  f7e3		       85 05		      sta	NUSIZ1
+   1214  f7e5
+   1215  f7e5		       4c 00 f8 	      jmp	.skipAlignPadding
+   1216  f800		       00 00 00 00*	      align	256
+   1217  f800				   .skipAlignPadding
+   1218  f800
+   1219  f800		       a5 82		      lda	p0x
+   1220  f802		       a2 00		      ldx	#0
+   1221  f804		       85 02		      sta	WSYNC
+   1222  f806		       38		      sec
+   1223  f807				   .divLoop
+   1224  f807		       e9 0f		      sbc	#15
+   1225  f809		       b0 fc		      bcs	.divLoop
+   1226  f80b		       49 07		      eor	#7
+   1227  f80d		       0a		      asl
+   1228  f80e		       0a		      asl
+   1229  f80f		       0a		      asl
+   1230  f810		       0a		      asl
+   1231  f811		       95 20		      sta	HMP0,x
+   1232  f813		       95 10		      sta	RESP0,x
+   1233  f815
+   1234  f815		       85 02		      sta	WSYNC
+   1235  f817
+   1236  f817		       a5 84		      lda	p1x
+   1237  f819		       a2 01		      ldx	#1
+   1238  f81b		       85 02		      sta	WSYNC
+   1239  f81d		       38		      sec
+   1240  f81e				   .divLoopM
+   1241  f81e		       e9 0f		      sbc	#15
+   1242  f820		       b0 fc		      bcs	.divLoopM
+   1243  f822		       49 07		      eor	#7
+   1244  f824		       0a		      asl
+   1245  f825		       0a		      asl
+   1246  f826		       0a		      asl
+   1247  f827		       0a		      asl
+   1248  f828		       95 20		      sta	HMP0,x
+   1249  f82a		       95 10		      sta	RESP0,x
+   1250  f82c		       85 02		      sta	WSYNC
+   1251  f82e
+   1252  f82e		       a5 aa		      lda	collectActive
+   1253  f830		       f0 18		      beq	.skipMissilePos
+   1254  f832		       a5 a8		      lda	collectX
+   1255  f834		       85 02		      sta	WSYNC
+   1256  f836		       38		      sec
+   1257  f837				   .divLoopC
+   1258  f837		       e9 0f		      sbc	#15
+   1259  f839		       b0 fc		      bcs	.divLoopC
+   1260  f83b		       49 07		      eor	#7
+   1261  f83d		       0a		      asl
+   1262  f83e		       0a		      asl
+   1263  f83f		       0a		      asl
+   1264  f840		       0a		      asl
+   1265  f841		       85 23		      sta	HMM1
+   1266  f843		       85 13		      sta	RESM1
+   1267  f845		       85 02		      sta	WSYNC
+   1268  f847		       4c 4e f8 	      jmp	.doneM0Pos
+   1269  f84a				   .skipMissilePos
+   1270  f84a		       85 02		      sta	WSYNC
+   1271  f84c		       85 02		      sta	WSYNC
+   1272  f84e				   .doneM0Pos
+   1273  f84e
+   1274  f84e		       a5 a5		      lda	ballneedpos
+   1275  f850		       c9 02		      cmp	#2
+   1276  f852		       d0 07		      bne	.checkSettle
+   1277  f854		       85 14		      sta	RESBL
+   1278  f856		       c6 a5		      dec	ballneedpos
+   1279  f858		       4c 61 f8 	      jmp	.donePos
+   1280  f85b
+   1281  f85b				   .checkSettle
+   1282  f85b		       c9 01		      cmp	#1
+   1283  f85d		       d0 02		      bne	.donePos
+   1284  f85f		       c6 a5		      dec	ballneedpos
+   1285  f861
+   1286  f861				   .donePos
+   1287  f861		       a5 a3		      lda	ballactive
+   1288  f863		       f0 0b		      beq	.noMotion
+   1289  f865		       a5 a5		      lda	ballneedpos
+   1290  f867		       d0 07		      bne	.noMotion
+   1291  f869		       a9 e0		      lda	#$E0
+   1292  f86b		       85 24		      sta	HMBL
+   1293  f86d		       4c 70 f8 	      jmp	.motionSet
+   1294  f870
+   1295  f870				   .noMotion
+   1296  f870				   .motionSet
+   1297  f870		       85 02		      sta	WSYNC
+   1298  f872		       85 2a		      sta	HMOVE
+   1299  f874		       85 02		      sta	WSYNC
+   1300  f876
+   1301  f876		       a9 00		      lda	#0
+   1302  f878		       85 1b		      sta	GRP0
+   1303  f87a		       85 04		      sta	NUSIZ0
+   1304  f87c		       85 9e		      sta	p0gfx
+   1305  f87e
+   1306  f87e		       a5 af		      lda	invincible
+   1307  f880		       f0 06		      beq	.normalColor
+   1308  f882		       a5 81		      lda	frame
+   1309  f884		       29 04		      and	#%00000100
+   1310  f886		       f0 05		      beq	.flashOff
+   1311  f888				   .normalColor
+   1312  f888		       a9 0e		      lda	#$0E
+   1313  f88a		       4c 8f f8 	      jmp	.setP0Color
+   1314  f88d				   .flashOff
+   1315  f88d		       a9 00		      lda	#$00
+   1316  f88f				   .setP0Color
+   1317  f88f		       85 06		      sta	COLUP0
+   1318  f891
+   1319  f891		       a9 27		      lda	#$27
+   1320  f893		       85 05		      sta	NUSIZ1
+   1321  f895		       a9 c4		      lda	#$C4
+   1322  f897		       85 07		      sta	COLUP1
+   1323  f899
+   1324  f899		       a9 36		      lda	#$36
+   1325  f89b		       85 08		      sta	COLUPF
+   1326  f89d		       a9 24		      lda	#%00100100
+   1327  f89f		       85 0a		      sta	CTRLPF
+   1328  f8a1
+   1329  f8a1		       a5 81		      lda	frame
+   1330  f8a3		       4a		      lsr
+   1331  f8a4		       4a		      lsr
+   1332  f8a5		       4a		      lsr
+   1333  f8a6		       4a		      lsr
+   1334  f8a7		       4a		      lsr
+   1335  f8a8		       29 01		      and	#%00000001
+   1336  f8aa		       0a		      asl
+   1337  f8ab		       09 80		      ora	#%10000000
+   1338  f8ad		       85 80		      sta	bgcolor
+   1339  f8af
+   1340  f8af		       85 02		      sta	WSYNC
+   1341  f8b1
+   1342  f8b1		       a5 a3		      lda	ballactive
+   1343  f8b3		       f0 0b		      beq	.disableBall
+   1344  f8b5		       a5 a5		      lda	ballneedpos
+   1345  f8b7		       d0 07		      bne	.disableBall
+   1346  f8b9		       a5 a1		      lda	bally
+   1347  f8bb		       85 a2		      sta	temp_bally
+   1348  f8bd		       4c c8 f8 	      jmp	.ballSetupDone
+   1349  f8c0				   .disableBall
+   1350  f8c0		       a9 c8		      lda	#200
+   1351  f8c2		       85 a2		      sta	temp_bally
+   1352  f8c4		       a9 00		      lda	#0
+   1353  f8c6		       85 1f		      sta	ENABL
+   1354  f8c8				   .ballSetupDone
+   1355  f8c8
+   1356  f8c8		       a5 aa		      lda	collectActive
+   1357  f8ca		       f0 07		      beq	.disableCollect
+   1358  f8cc		       a5 a9		      lda	collectY
+   1359  f8ce		       85 ac		      sta	temp_collecty
+   1360  f8d0		       4c d7 f8 	      jmp	.collectSetupDone
+   1361  f8d3				   .disableCollect
+   1362  f8d3		       a9 c8		      lda	#200
+   1363  f8d5		       85 ac		      sta	temp_collecty
+   1364  f8d7				   .collectSetupDone
+   1365  f8d7
+   1366  f8d7		       85 02		      sta	WSYNC
+   1367  f8d9
+   1368  f8d9		       a2 a0		      ldx	#PLAY_HEIGHT
+   1369  f8db				   .playArea
+   1370  f8db		       a5 9e		      lda	p0gfx
+   1371  f8dd		       85 1b		      sta	GRP0
+   1372  f8df		       bd ff fd 	      lda	MonsterGfx-1,x
+   1373  f8e2		       85 1c		      sta	GRP1
+   1374  f8e4
+   1375  f8e4		       8a		      txa
+   1376  f8e5		       38		      sec
+   1377  f8e6		       e5 83		      sbc	p0y
+   1378  f8e8		       c9 07		      cmp	#BIKE_HEIGHT+1
+   1379  f8ea		       b0 07		      bcs	.hideP0_1
+   1380  f8ec		       a8		      tay
+   1381  f8ed		       b9 00 fd 	      lda	PlayerGfx,y
+   1382  f8f0		       4c f5 f8 	      jmp	.storeP0_1
+   1383  f8f3				   .hideP0_1
+   1384  f8f3		       a9 00		      lda	#0
+   1385  f8f5				   .storeP0_1
+   1386  f8f5		       85 9e		      sta	p0gfx
+   1387  f8f7
+   1388  f8f7		       8a		      txa
+   1389  f8f8		       38		      sec
+   1390  f8f9		       e5 a2		      sbc	temp_bally
+   1391  f8fb		       c9 04		      cmp	#BALL_HEIGHT
+   1392  f8fd		       b0 05		      bcs	.hideBall
+   1393  f8ff		       a9 02		      lda	#2
+   1394  f901		       4c 06 f9 	      jmp	.storeBall
+   1395  f904				   .hideBall
+   1396  f904		       a9 00		      lda	#0
+   1397  f906				   .storeBall
+   1398  f906		       85 02		      sta	WSYNC
+   1399  f908		       85 1f		      sta	ENABL
+   1400  f90a		       a5 80		      lda	bgcolor
+   1401  f90c		       85 09		      sta	COLUBK
+   1402  f90e
+   1403  f90e		       ca		      dex
+   1404  f90f
+   1405  f90f		       a5 9e		      lda	p0gfx
+   1406  f911		       85 1b		      sta	GRP0
+   1407  f913		       bd ff fd 	      lda	MonsterGfx-1,x
+   1408  f916		       85 1c		      sta	GRP1
+   1409  f918
+   1410  f918		       8a		      txa
+   1411  f919		       38		      sec
+   1412  f91a		       e5 83		      sbc	p0y
+   1413  f91c		       c9 07		      cmp	#BIKE_HEIGHT+1
+   1414  f91e		       b0 0c		      bcs	.hideP0_2
+   1415  f920		       49 ff		      eor	#$FF
+   1416  f922		       18		      clc
+   1417  f923		       69 07		      adc	#BIKE_HEIGHT+1
+   1418  f925		       a8		      tay
+   1419  f926		       b9 00 fd 	      lda	PlayerGfx,y
+   1420  f929		       4c 2e f9 	      jmp	.storeP0_2
+   1421  f92c				   .hideP0_2
+   1422  f92c		       a9 00		      lda	#0
+   1423  f92e				   .storeP0_2
+   1424  f92e		       85 9e		      sta	p0gfx
+   1425  f930
+   1426  f930		       8a		      txa
+   1427  f931		       38		      sec
+   1428  f932		       e5 ac		      sbc	temp_collecty
+   1429  f934		       c9 04		      cmp	#COLLECT_HEIGHT
+   1430  f936		       b0 05		      bcs	.hideCollect
+   1431  f938		       a9 02		      lda	#2
+   1432  f93a		       4c 3f f9 	      jmp	.storeCollect
+   1433  f93d				   .hideCollect
+   1434  f93d		       a9 00		      lda	#0
+   1435  f93f				   .storeCollect
+   1436  f93f		       85 02		      sta	WSYNC
+   1437  f941		       85 1e		      sta	ENAM1
+   1438  f943		       a5 80		      lda	bgcolor
+   1439  f945		       85 09		      sta	COLUBK
+   1440  f947
+   1441  f947		       ca		      dex
+   1442  f948		       d0 91		      bne	.playArea
+   1443  f94a
+   1444  f94a		       a9 00		      lda	#0
+   1445  f94c		       85 09		      sta	COLUBK
+   1446  f94e		       85 1b		      sta	GRP0
+   1447  f950		       85 1c		      sta	GRP1
+   1448  f952		       85 1f		      sta	ENABL
+   1449  f954		       85 1e		      sta	ENAM1
+   1450  f956
+   1451  f956		       a2 01		      ldx	#1
+   1452  f958				   .padLoop
+   1453  f958		       85 02		      sta	WSYNC
+   1454  f95a		       ca		      dex
+   1455  f95b		       d0 fb		      bne	.padLoop
+   1456  f95d
+   1457  f95d							;------------------------------------------------
+   1458  f95d							; Overscan (shared)
+   1459  f95d							;------------------------------------------------
+   1460  f95d				   DoOverscan
+   1461  f95d		       a9 42		      lda	#%01000010
+   1462  f95f		       85 02		      sta	WSYNC
+   1463  f961		       85 01		      sta	VBLANK
+   1464  f963		       a9 24		      lda	#36
+   1465  f965		       8d 96 02 	      sta	TIM64T
+   1466  f968
+   1467  f968		       a9 00		      lda	#0
+   1468  f96a		       85 1b		      sta	GRP0
+   1469  f96c		       85 1c		      sta	GRP1
+   1470  f96e		       85 1f		      sta	ENABL
+   1471  f970		       85 0d		      sta	PF0
+   1472  f972		       85 0e		      sta	PF1
+   1473  f974		       85 0f		      sta	PF2
+   1474  f976
+   1475  f976		       a5 b0		      lda	gameState
+   1476  f978		       c9 01		      cmp	#STATE_PLAYING
+   1477  f97a		       d0 69		      bne	.skipAllCollision
+   1478  f97c
+   1479  f97c		       a5 af		      lda	invincible
+   1480  f97e		       d0 2c		      bne	.noCollision
+   1481  f980
+   1482  f980		       a5 02		      lda	CXP0FB
+   1483  f982		       29 40		      and	#%01000000
+   1484  f984		       d0 09		      bne	.playerHit
+   1485  f986
+   1486  f986		       a5 07		      lda	CXPPMM
+   1487  f988		       29 80		      and	#%10000000
+   1488  f98a		       d0 03		      bne	.playerHit
+   1489  f98c
+   1490  f98c		       4c ac f9 	      jmp	.noCollision
+   1491  f98f
+   1492  f98f				   .playerHit
+   1493  f98f		       c6 ae		      dec	lives
+   1494  f991		       a5 ae		      lda	lives
+   1495  f993		       d0 03		      bne	.stillAlive
+   1496  f995		       4c ed f9 	      jmp	TriggerGameOver
+   1497  f998
+   1498  f998				   .stillAlive
+   1499  f998		       a9 78		      lda	#120
+   1500  f99a		       85 af		      sta	invincible
+   1501  f99c		       a9 0f		      lda	#15
+   1502  f99e		       85 b5		      sta	soundTimer
+   1503  f9a0		       a9 01		      lda	#SND_HIT
+   1504  f9a2		       85 b6		      sta	soundType
+   1505  f9a4
+   1506  f9a4		       a9 00		      lda	#0
+   1507  f9a6		       85 84		      sta	p1x
+   1508  f9a8		       a9 42		      lda	#$42
+   1509  f9aa		       85 80		      sta	bgcolor
+   1510  f9ac
+   1511  f9ac				   .noCollision
+   1512  f9ac		       a5 01		      lda	CXM1P
+   1513  f9ae		       29 80		      and	#%10000000
+   1514  f9b0		       f0 33		      beq	.noCollectHit
+   1515  f9b2		       a5 aa		      lda	collectActive
+   1516  f9b4		       f0 2f		      beq	.noCollectHit
+   1517  f9b6
+   1518  f9b6		       a9 0a		      lda	#10
+   1519  f9b8		       85 b5		      sta	soundTimer
+   1520  f9ba		       a9 02		      lda	#SND_COLLECT
+   1521  f9bc		       85 b6		      sta	soundType
+   1522  f9be
+   1523  f9be		       a9 50		      lda	#$50
+   1524  f9c0		       a2 00		      ldx	#0
+   1525  f9c2		       a0 00		      ldy	#0
+   1526  f9c4		       20 64 fa 	      jsr	AddScore
+   1527  f9c7		       20 dc fa 	      jsr	LoadScorePointers
+   1528  f9ca
+   1529  f9ca		       a5 84		      lda	p1x
+   1530  f9cc		       38		      sec
+   1531  f9cd		       e9 0f		      sbc	#15
+   1532  f9cf		       b0 02		      bcs	.storeMonsterX
+   1533  f9d1		       a9 00		      lda	#0
+   1534  f9d3				   .storeMonsterX
+   1535  f9d3		       85 84		      sta	p1x
+   1536  f9d5		       a9 00		      lda	#0
+   1537  f9d7		       85 aa		      sta	collectActive
+   1538  f9d9		       a5 86		      lda	monsterSpeed
+   1539  f9db		       4a		      lsr
+   1540  f9dc		       4a		      lsr
+   1541  f9dd		       c9 08		      cmp	#8
+   1542  f9df		       b0 02		      bcs	.collectDelayOk
+   1543  f9e1		       a9 08		      lda	#8
+   1544  f9e3				   .collectDelayOk
+   1545  f9e3		       85 ab		      sta	collectDelay
+   1546  f9e5
+   1547  f9e5				   .noCollectHit
+   1548  f9e5				   .skipAllCollision
+   1549  f9e5
+   1550  f9e5				   .waitForOverscan
+   1551  f9e5		       ad 84 02 	      lda	INTIM
+   1552  f9e8		       d0 fb		      bne	.waitForOverscan
+   1553  f9ea		       4c 91 f0 	      jmp	MainLoop
+   1554  f9ed
+   1555  f9ed							;------------------------------------------------
+   1556  f9ed							; Trigger Game Over
+   1557  f9ed							;------------------------------------------------
+   1558  f9ed				   TriggerGameOver
+   1559  f9ed		       a5 87		      lda	score
+   1560  f9ef		       85 b8		      sta	finalScore
+   1561  f9f1		       a5 88		      lda	score+1
+   1562  f9f3		       85 b9		      sta	finalScore+1
+   1563  f9f5		       a5 89		      lda	score+2
+   1564  f9f7		       85 ba		      sta	finalScore+2
+   1565  f9f9		       a9 02		      lda	#STATE_GAMEOVER
+   1566  f9fb		       85 b0		      sta	gameState
+   1567  f9fd		       a9 00		      lda	#0
+   1568  f9ff		       85 b7		      sta	goTimer
+   1569  fa01		       85 1a		      sta	AUDV1
+   1570  fa03		       a9 1e		      lda	#30
+   1571  fa05		       85 b5		      sta	soundTimer
+   1572  fa07		       a9 03		      lda	#SND_GAMEOVER
+   1573  fa09		       85 b6		      sta	soundType
+   1574  fa0b		       4c 91 f0 	      jmp	MainLoop
+   1575  fa0e
+   1576  fa0e							;------------------------------------------------
+   1577  fa0e							; Subroutines
+   1578  fa0e							;------------------------------------------------
+   1579  fa0e				   UpdateSound
+   1580  fa0e		       a5 b5		      lda	soundTimer
+   1581  fa10		       f0 4b		      beq	.soundOff
+   1582  fa12		       c6 b5		      dec	soundTimer
+   1583  fa14		       a5 b6		      lda	soundType
+   1584  fa16		       c9 01		      cmp	#SND_HIT
+   1585  fa18		       f0 0f		      beq	.hitSound
+   1586  fa1a		       c9 02		      cmp	#SND_COLLECT
+   1587  fa1c		       f0 18		      beq	.collectSound
+   1588  fa1e		       c9 03		      cmp	#SND_GAMEOVER
+   1589  fa20		       f0 21		      beq	.gameOverSound
+   1590  fa22		       c9 04		      cmp	#SND_STEP
+   1591  fa24		       f0 2a		      beq	.stepSound
+   1592  fa26		       4c 5d fa 	      jmp	.soundOff
+   1593  fa29				   .hitSound
+   1594  fa29		       a9 08		      lda	#8
+   1595  fa2b		       85 15		      sta	AUDC0
+   1596  fa2d		       a9 06		      lda	#6
+   1597  fa2f		       85 17		      sta	AUDF0
+   1598  fa31		       a9 08		      lda	#8
+   1599  fa33		       85 19		      sta	AUDV0
+   1600  fa35		       60		      rts
+   1601  fa36				   .collectSound
+   1602  fa36		       a9 04		      lda	#4
+   1603  fa38		       85 15		      sta	AUDC0
+   1604  fa3a		       a9 0f		      lda	#15
+   1605  fa3c		       85 17		      sta	AUDF0
+   1606  fa3e		       a9 08		      lda	#8
+   1607  fa40		       85 19		      sta	AUDV0
+   1608  fa42		       60		      rts
+   1609  fa43				   .gameOverSound
+   1610  fa43		       a5 b5		      lda	soundTimer
+   1611  fa45		       85 17		      sta	AUDF0
+   1612  fa47		       a9 04		      lda	#4
+   1613  fa49		       85 15		      sta	AUDC0
+   1614  fa4b		       a9 0a		      lda	#10
+   1615  fa4d		       85 19		      sta	AUDV0
+   1616  fa4f		       60		      rts
+   1617  fa50				   .stepSound
+   1618  fa50		       a9 06		      lda	#6
+   1619  fa52		       85 15		      sta	AUDC0
+   1620  fa54		       a9 14		      lda	#20
+   1621  fa56		       85 17		      sta	AUDF0
+   1622  fa58		       a9 04		      lda	#4
+   1623  fa5a		       85 19		      sta	AUDV0
+   1624  fa5c		       60		      rts
+   1625  fa5d				   .soundOff
+   1626  fa5d		       a9 00		      lda	#0
+   1627  fa5f		       85 19		      sta	AUDV0
+   1628  fa61		       85 b6		      sta	soundType
+   1629  fa63		       60		      rts
+   1630  fa64
+   1631  fa64				   AddScore
+   1632  fa64		       85 9a		      sta	temp2
+   1633  fa66		       f8		      sed
+   1634  fa67		       18		      clc
+   1635  fa68		       65 88		      adc	score+1
+   1636  fa6a		       85 88		      sta	score+1
+   1637  fa6c		       8a		      txa
+   1638  fa6d		       65 87		      adc	score
+   1639  fa6f		       85 87		      sta	score
+   1640  fa71		       90 06		      bcc	.noCarryHigh
+   1641  fa73		       a5 89		      lda	score+2
+   1642  fa75		       69 00		      adc	#0
+   1643  fa77		       85 89		      sta	score+2
+   1644  fa79				   .noCarryHigh
+   1645  fa79		       d8		      cld
+   1646  fa7a		       a5 9a		      lda	temp2
+   1647  fa7c		       c9 50		      cmp	#$50
+   1648  fa7e		       f0 19		      beq	.speedSub50
+   1649  fa80		       c9 01		      cmp	#$01
+   1650  fa82		       f0 01		      beq	.speedSub1
+   1651  fa84		       60		      rts
+   1652  fa85
+   1653  fa85				   .speedSub1
+   1654  fa85		       a5 86		      lda	monsterSpeed
+   1655  fa87		       c9 06		      cmp	#6
+   1656  fa89		       f0 0d		      beq	.skipSpeedSub
+   1657  fa8b		       90 0b		      bcc	.skipSpeedSub
+   1658  fa8d		       38		      sec
+   1659  fa8e		       e9 01		      sbc	#1
+   1660  fa90		       c9 06		      cmp	#6
+   1661  fa92		       b0 02		      bcs	.storeSpeed
+   1662  fa94		       a9 06		      lda	#6
+   1663  fa96				   .storeSpeed
+   1664  fa96		       85 86		      sta	monsterSpeed
+   1665  fa98				   .skipSpeedSub
+   1666  fa98		       60		      rts
+   1667  fa99
+   1668  fa99				   .speedSub50
+   1669  fa99		       a5 86		      lda	monsterSpeed
+   1670  fa9b		       c9 06		      cmp	#6
+   1671  fa9d		       90 25		      bcc	.checkStage5
+   1672  fa9f		       f0 12		      beq	.checkStage6
+   1673  faa1		       a9 00		      lda	#0
+   1674  faa3		       85 9b		      sta	collectCount
+   1675  faa5		       a5 86		      lda	monsterSpeed
+   1676  faa7		       38		      sec
+   1677  faa8		       e9 02		      sbc	#2
+   1678  faaa		       c9 06		      cmp	#6
+   1679  faac		       b0 02		      bcs	.storeCollSpeed
+   1680  faae		       a9 06		      lda	#6
+   1681  fab0				   .storeCollSpeed
+   1682  fab0		       85 86		      sta	monsterSpeed
+   1683  fab2		       60		      rts
+   1684  fab3
+   1685  fab3				   .checkStage6
+   1686  fab3		       e6 9b		      inc	collectCount
+   1687  fab5		       a5 9b		      lda	collectCount
+   1688  fab7		       c9 19		      cmp	#25
+   1689  fab9		       90 08		      bcc	.noChange
+   1690  fabb		       a9 05		      lda	#5
+   1691  fabd		       85 86		      sta	monsterSpeed
+   1692  fabf		       a9 00		      lda	#0
+   1693  fac1		       85 9b		      sta	collectCount
+   1694  fac3				   .noChange
+   1695  fac3		       60		      rts
+   1696  fac4
+   1697  fac4				   .checkStage5
+   1698  fac4		       a5 86		      lda	monsterSpeed
+   1699  fac6		       c9 05		      cmp	#5
+   1700  fac8		       d0 11		      bne	.atFloor
+   1701  faca		       e6 9b		      inc	collectCount
+   1702  facc		       a5 9b		      lda	collectCount
+   1703  face		       c9 19		      cmp	#25
+   1704  fad0		       90 08		      bcc	.noChange2
+   1705  fad2		       a9 04		      lda	#4
+   1706  fad4		       85 86		      sta	monsterSpeed
+   1707  fad6		       a9 00		      lda	#0
+   1708  fad8		       85 9b		      sta	collectCount
+   1709  fada				   .noChange2
+   1710  fada		       60		      rts
+   1711  fadb				   .atFloor
+   1712  fadb		       60		      rts
+   1713  fadc
+   1714  fadc				   LoadScorePointers
+   1715  fadc		       a5 89		      lda	score+2
+   1716  fade		       29 0f		      and	#$0F
+   1717  fae0		       aa		      tax
+   1718  fae1		       bd 31 fb 	      lda	scoretableIndex,x
+   1719  fae4		       85 8a		      sta	scorepointers
+   1720  fae6		       a9 fc		      lda	#>scoretable
+   1721  fae8		       85 8b		      sta	scorepointers+1
+   1722  faea
+   1723  faea		       a5 87		      lda	score
+   1724  faec		       29 f0		      and	#$F0
+   1725  faee		       4a		      lsr
+   1726  faef		       4a		      lsr
+   1727  faf0		       4a		      lsr
+   1728  faf1		       4a		      lsr
+   1729  faf2		       aa		      tax
+   1730  faf3		       bd 31 fb 	      lda	scoretableIndex,x
+   1731  faf6		       85 8c		      sta	scorepointers+2
+   1732  faf8
+   1733  faf8		       a5 87		      lda	score
+   1734  fafa		       29 0f		      and	#$0F
+   1735  fafc		       aa		      tax
+   1736  fafd		       bd 31 fb 	      lda	scoretableIndex,x
+   1737  fb00		       85 8e		      sta	scorepointers+4
+   1738  fb02
+   1739  fb02		       a5 88		      lda	score+1
+   1740  fb04		       29 f0		      and	#$F0
+   1741  fb06		       4a		      lsr
+   1742  fb07		       4a		      lsr
+   1743  fb08		       4a		      lsr
+   1744  fb09		       4a		      lsr
+   1745  fb0a		       aa		      tax
+   1746  fb0b		       bd 31 fb 	      lda	scoretableIndex,x
+   1747  fb0e		       85 90		      sta	scorepointers+6
+   1748  fb10
+   1749  fb10		       a5 88		      lda	score+1
+   1750  fb12		       29 0f		      and	#$0F
+   1751  fb14		       aa		      tax
+   1752  fb15		       bd 31 fb 	      lda	scoretableIndex,x
+   1753  fb18		       85 92		      sta	scorepointers+8
+   1754  fb1a
+   1755  fb1a		       a9 50		      lda	#<blank
+   1756  fb1c		       85 94		      sta	scorepointers+10
+   1757  fb1e		       85 96		      sta	scorepointers+12
+   1758  fb20
+   1759  fb20		       a9 fc		      lda	#>scoretable
+   1760  fb22		       85 8d		      sta	scorepointers+3
+   1761  fb24		       85 8f		      sta	scorepointers+5
+   1762  fb26		       85 91		      sta	scorepointers+7
+   1763  fb28		       85 93		      sta	scorepointers+9
+   1764  fb2a		       a9 fc		      lda	#>blank
+   1765  fb2c		       85 95		      sta	scorepointers+11
+   1766  fb2e		       85 97		      sta	scorepointers+13
+   1767  fb30		       60		      rts
+   1768  fb31
+   1769  fb31							;------------------------------------------------
+   1770  fb31							; ROM Tables
+   1771  fb31							;------------------------------------------------
+   1772  fb31				   scoretableIndex
+   1773  fb31		       00 08 10 18*	      .byte.b	<zero,<one,<two,<three,<four,<five,<six,<seven,<eight,<nine
+   1774  fb3b
+   1775  fc00		       00 00 00 00*	      align	256
+   1776  fc00				   scoretable
+   1777  fc00				   zero
+   1778  fc00		       3c		      .byte.b	%00111100
+   1779  fc01		       66		      .byte.b	%01100110
+   1780  fc02		       66		      .byte.b	%01100110
+   1781  fc03		       66		      .byte.b	%01100110
+   1782  fc04		       66		      .byte.b	%01100110
+   1783  fc05		       66		      .byte.b	%01100110
+   1784  fc06		       66		      .byte.b	%01100110
+   1785  fc07		       3c		      .byte.b	%00111100
+   1786  fc08				   one
+   1787  fc08		       3c		      .byte.b	%00111100
+   1788  fc09		       18		      .byte.b	%00011000
+   1789  fc0a		       18		      .byte.b	%00011000
+   1790  fc0b		       18		      .byte.b	%00011000
+   1791  fc0c		       18		      .byte.b	%00011000
+   1792  fc0d		       18		      .byte.b	%00011000
+   1793  fc0e		       38		      .byte.b	%00111000
+   1794  fc0f		       18		      .byte.b	%00011000
+   1795  fc10				   two
+   1796  fc10		       7e		      .byte.b	%01111110
+   1797  fc11		       60		      .byte.b	%01100000
+   1798  fc12		       60		      .byte.b	%01100000
+   1799  fc13		       3c		      .byte.b	%00111100
+   1800  fc14		       06		      .byte.b	%00000110
+   1801  fc15		       06		      .byte.b	%00000110
+   1802  fc16		       46		      .byte.b	%01000110
+   1803  fc17		       3c		      .byte.b	%00111100
+   1804  fc18				   three
+   1805  fc18		       3c		      .byte.b	%00111100
+   1806  fc19		       46		      .byte.b	%01000110
+   1807  fc1a		       06		      .byte.b	%00000110
+   1808  fc1b		       0c		      .byte.b	%00001100
+   1809  fc1c		       0c		      .byte.b	%00001100
+   1810  fc1d		       06		      .byte.b	%00000110
+   1811  fc1e		       46		      .byte.b	%01000110
+   1812  fc1f		       3c		      .byte.b	%00111100
+   1813  fc20				   four
+   1814  fc20		       0c		      .byte.b	%00001100
+   1815  fc21		       0c		      .byte.b	%00001100
+   1816  fc22		       0c		      .byte.b	%00001100
+   1817  fc23		       7e		      .byte.b	%01111110
+   1818  fc24		       4c		      .byte.b	%01001100
+   1819  fc25		       2c		      .byte.b	%00101100
+   1820  fc26		       1c		      .byte.b	%00011100
+   1821  fc27		       0c		      .byte.b	%00001100
+   1822  fc28				   five
+   1823  fc28		       7c		      .byte.b	%01111100
+   1824  fc29		       46		      .byte.b	%01000110
+   1825  fc2a		       06		      .byte.b	%00000110
+   1826  fc2b		       06		      .byte.b	%00000110
+   1827  fc2c		       7c		      .byte.b	%01111100
+   1828  fc2d		       60		      .byte.b	%01100000
+   1829  fc2e		       60		      .byte.b	%01100000
+   1830  fc2f		       7e		      .byte.b	%01111110
+   1831  fc30				   six
+   1832  fc30		       3c		      .byte.b	%00111100
+   1833  fc31		       66		      .byte.b	%01100110
+   1834  fc32		       66		      .byte.b	%01100110
+   1835  fc33		       66		      .byte.b	%01100110
+   1836  fc34		       7c		      .byte.b	%01111100
+   1837  fc35		       60		      .byte.b	%01100000
+   1838  fc36		       62		      .byte.b	%01100010
+   1839  fc37		       3c		      .byte.b	%00111100
+   1840  fc38				   seven
+   1841  fc38		       18		      .byte.b	%00011000
+   1842  fc39		       18		      .byte.b	%00011000
+   1843  fc3a		       18		      .byte.b	%00011000
+   1844  fc3b		       18		      .byte.b	%00011000
+   1845  fc3c		       0c		      .byte.b	%00001100
+   1846  fc3d		       06		      .byte.b	%00000110
+   1847  fc3e		       42		      .byte.b	%01000010
+   1848  fc3f		       7e		      .byte.b	%01111110
+   1849  fc40				   eight
+   1850  fc40		       3c		      .byte.b	%00111100
+   1851  fc41		       66		      .byte.b	%01100110
+   1852  fc42		       66		      .byte.b	%01100110
+   1853  fc43		       3c		      .byte.b	%00111100
+   1854  fc44		       3c		      .byte.b	%00111100
+   1855  fc45		       66		      .byte.b	%01100110
+   1856  fc46		       66		      .byte.b	%01100110
+   1857  fc47		       3c		      .byte.b	%00111100
+   1858  fc48				   nine
+   1859  fc48		       3c		      .byte.b	%00111100
+   1860  fc49		       46		      .byte.b	%01000110
+   1861  fc4a		       06		      .byte.b	%00000110
+   1862  fc4b		       3e		      .byte.b	%00111110
+   1863  fc4c		       66		      .byte.b	%01100110
+   1864  fc4d		       66		      .byte.b	%01100110
+   1865  fc4e		       66		      .byte.b	%01100110
+   1866  fc4f		       3c		      .byte.b	%00111100
+   1867  fc50				   blank
+   1868  fc50		       00		      .byte.b	%00000000
+   1869  fc51		       00		      .byte.b	%00000000
+   1870  fc52		       00		      .byte.b	%00000000
+   1871  fc53		       00		      .byte.b	%00000000
+   1872  fc54		       00		      .byte.b	%00000000
+   1873  fc55		       00		      .byte.b	%00000000
+   1874  fc56		       00		      .byte.b	%00000000
+   1875  fc57		       00		      .byte.b	%00000000
+   1876  fc58
+   1877  fc58							;------------------------------------------------
+   1878  fc58							; Text Graphic Data
+   1879  fc58							;------------------------------------------------
+   1880  fc58				   LetterG
+   1881  fc58		       3c		      .byte.b	%00111100
+   1882  fc59		       66		      .byte.b	%01100110
+   1883  fc5a		       6e		      .byte.b	%01101110
+   1884  fc5b		       60		      .byte.b	%01100000
+   1885  fc5c		       60		      .byte.b	%01100000
+   1886  fc5d		       66		      .byte.b	%01100110
+   1887  fc5e		       66		      .byte.b	%01100110
+   1888  fc5f		       3c		      .byte.b	%00111100
+   1889  fc60
+   1890  fc60				   LetterA
+   1891  fc60		       66		      .byte.b	%01100110
+   1892  fc61		       66		      .byte.b	%01100110
+   1893  fc62		       7e		      .byte.b	%01111110
+   1894  fc63		       66		      .byte.b	%01100110
+   1895  fc64		       24		      .byte.b	%00100100
+   1896  fc65		       24		      .byte.b	%00100100
+   1897  fc66		       18		      .byte.b	%00011000
+   1898  fc67		       18		      .byte.b	%00011000
+   1899  fc68
+   1900  fc68				   LetterM
+   1901  fc68		       66		      .byte.b	%01100110
+   1902  fc69		       66		      .byte.b	%01100110
+   1903  fc6a		       66		      .byte.b	%01100110
+   1904  fc6b		       66		      .byte.b	%01100110
+   1905  fc6c		       7e		      .byte.b	%01111110
+   1906  fc6d		       7e		      .byte.b	%01111110
+   1907  fc6e		       66		      .byte.b	%01100110
+   1908  fc6f		       66		      .byte.b	%01100110
+   1909  fc70
+   1910  fc70				   LetterE
+   1911  fc70		       7e		      .byte.b	%01111110
+   1912  fc71		       60		      .byte.b	%01100000
+   1913  fc72		       60		      .byte.b	%01100000
+   1914  fc73		       7c		      .byte.b	%01111100
+   1915  fc74		       60		      .byte.b	%01100000
+   1916  fc75		       60		      .byte.b	%01100000
+   1917  fc76		       60		      .byte.b	%01100000
+   1918  fc77		       7e		      .byte.b	%01111110
+   1919  fc78
+   1920  fc78				   LetterO
+   1921  fc78		       3c		      .byte.b	%00111100
+   1922  fc79		       66		      .byte.b	%01100110
+   1923  fc7a		       66		      .byte.b	%01100110
+   1924  fc7b		       66		      .byte.b	%01100110
+   1925  fc7c		       66		      .byte.b	%01100110
+   1926  fc7d		       66		      .byte.b	%01100110
+   1927  fc7e		       66		      .byte.b	%01100110
+   1928  fc7f		       3c		      .byte.b	%00111100
+   1929  fc80
+   1930  fc80				   LetterV
+   1931  fc80		       18		      .byte.b	%00011000
+   1932  fc81		       18		      .byte.b	%00011000
+   1933  fc82		       3c		      .byte.b	%00111100
+   1934  fc83		       24		      .byte.b	%00100100
+   1935  fc84		       66		      .byte.b	%01100110
+   1936  fc85		       66		      .byte.b	%01100110
+   1937  fc86		       66		      .byte.b	%01100110
+   1938  fc87		       66		      .byte.b	%01100110
+   1939  fc88
+   1940  fc88				   LetterR
+   1941  fc88		       66		      .byte.b	%01100110
+   1942  fc89		       66		      .byte.b	%01100110
+   1943  fc8a		       66		      .byte.b	%01100110
+   1944  fc8b		       7c		      .byte.b	%01111100
+   1945  fc8c		       66		      .byte.b	%01100110
+   1946  fc8d		       66		      .byte.b	%01100110
+   1947  fc8e		       66		      .byte.b	%01100110
+   1948  fc8f		       7c		      .byte.b	%01111100
+   1949  fc90
+   1950  fc90				   LetterP
+   1951  fc90		       60		      .byte.b	%01100000
+   1952  fc91		       60		      .byte.b	%01100000
+   1953  fc92		       60		      .byte.b	%01100000
+   1954  fc93		       7c		      .byte.b	%01111100
+   1955  fc94		       66		      .byte.b	%01100110
+   1956  fc95		       66		      .byte.b	%01100110
+   1957  fc96		       7c		      .byte.b	%01111100
+   1958  fc97		       00		      .byte.b	%00000000
+   1959  fc98
+   1960  fc98				   LetterS
+   1961  fc98		       7c		      .byte.b	%01111100
+   1962  fc99		       66		      .byte.b	%01100110
+   1963  fc9a		       06		      .byte.b	%00000110
+   1964  fc9b		       3c		      .byte.b	%00111100
+   1965  fc9c		       60		      .byte.b	%01100000
+   1966  fc9d		       66		      .byte.b	%01100110
+   1967  fc9e		       7c		      .byte.b	%01111100
+   1968  fc9f		       00		      .byte.b	%00000000
+   1969  fca0
+   1970  fca0				   LetterF
+   1971  fca0		       60		      .byte.b	%01100000
+   1972  fca1		       60		      .byte.b	%01100000
+   1973  fca2		       60		      .byte.b	%01100000
+   1974  fca3		       7c		      .byte.b	%01111100
+   1975  fca4		       60		      .byte.b	%01100000
+   1976  fca5		       60		      .byte.b	%01100000
+   1977  fca6		       7e		      .byte.b	%01111110
+   1978  fca7		       00		      .byte.b	%00000000
+   1979  fca8
+   1980  fca8				   LetterI
+   1981  fca8		       3c		      .byte.b	%00111100
+   1982  fca9		       18		      .byte.b	%00011000
+   1983  fcaa		       18		      .byte.b	%00011000
+   1984  fcab		       18		      .byte.b	%00011000
+   1985  fcac		       18		      .byte.b	%00011000
+   1986  fcad		       18		      .byte.b	%00011000
+   1987  fcae		       3c		      .byte.b	%00111100
+   1988  fcaf		       00		      .byte.b	%00000000
+   1989  fcb0
+   1990  fcb0				   LetterL
+   1991  fcb0		       7e		      .byte.b	%01111110
+   1992  fcb1		       60		      .byte.b	%01100000
+   1993  fcb2		       60		      .byte.b	%01100000
+   1994  fcb3		       60		      .byte.b	%01100000
+   1995  fcb4		       60		      .byte.b	%01100000
+   1996  fcb5		       60		      .byte.b	%01100000
+   1997  fcb6		       60		      .byte.b	%01100000
+   1998  fcb7		       00		      .byte.b	%00000000
+   1999  fcb8
+   2000  fd00		       00 00 00 00*	      align	256
+   2001  fd00				   PlayerGfx
+   2002  fd00		       00		      .byte.b	%00000000
+   2003  fd01		       66		      .byte.b	%01100110
+   2004  fd02		       ff		      .byte.b	%11111111
+   2005  fd03		       7e		      .byte.b	%01111110
+   2006  fd04		       3c		      .byte.b	%00111100
+   2007  fd05		       3c		      .byte.b	%00111100
+   2008  fd06		       18		      .byte.b	%00011000
+   2009  fd07		       00		      .byte.b	%00000000
+   2010  fe00		       00 00 00 00*	      align	256
+   2011  fe00				   MonsterGfx
+   2012  fe00		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   2013  fe04		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2014  fe08		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2015  fe0c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2016  fe10		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   2017  fe14		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2018  fe18		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2019  fe1c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2020  fe20
+   2021  fe20		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   2022  fe24		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2023  fe28		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2024  fe2c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2025  fe30		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   2026  fe34		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2027  fe38		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2028  fe3c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2029  fe40
+   2030  fe40		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   2031  fe44		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2032  fe48		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2033  fe4c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2034  fe50		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   2035  fe54		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2036  fe58		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2037  fe5c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2038  fe60
+   2039  fe60		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   2040  fe64		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2041  fe68		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2042  fe6c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2043  fe70		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   2044  fe74		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2045  fe78		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2046  fe7c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2047  fe80
+   2048  fe80		       ff ff ff ff	      .byte.b	%11111111, %11111111, %11111111, %11111111
+   2049  fe84		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2050  fe88		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2051  fe8c		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2052  fe90		       f0 f0 f0 f0	      .byte.b	%11110000, %11110000, %11110000, %11110000
+   2053  fe94		       f8 f8 f8 f8	      .byte.b	%11111000, %11111000, %11111000, %11111000
+   2054  fe98		       fc fc fc fc	      .byte.b	%11111100, %11111100, %11111100, %11111100
+   2055  fe9c		       fe fe fe fe	      .byte.b	%11111110, %11111110, %11111110, %11111110
+   2056  fea0
+   2057  fea0				   collectSpawnTable
+   2058  fea0		       5f 1e		      .byte.b	95, 30
+   2059  fea2		       7d 32		      .byte.b	125, 50
+   2060  fea4		       6e 46		      .byte.b	110, 70
+   2061  fea6		       87 5a		      .byte.b	135, 90
+   2062  fea8		       91 6e		      .byte.b	145, 110
+   2063  feaa		       78 7d		      .byte.b	120, 125
+   2064  feac		       8c 8c		      .byte.b	140, 140
+   2065  feae		       82 28		      .byte.b	130, 40
+   2066  feb0
+ 3760  ROM bytes used
+   2067  feb0					      echo	[*-$F000]d, " ROM bytes used"
+   2068  fffa					      ORG	$FFFA
+   2069  fffa		       00 f0		      .word.w	Start
+   2070  fffc		       00 f0		      .word.w	Start
+   2071  fffe		       00 f0		      .word.w	Start
+   2072  10000
+   2073  10000					       END

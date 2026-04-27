@@ -1,12 +1,11 @@
-; notes
 ;------------------------------------------------
-; Atari VCS Game
+; Cosmic Devourer
+; By: Larry Qian
 ;------------------------------------------------
 ; Console Switches:
 ; GAME SELECT:   Cycles starting lives (3, 2, or 1)
-; GAME RESET:    Starts the game (same as Fire button)
 ;
-; DONE: Monster resets ALL the way back to x=0 when player loses a life
+; GAME RESET:    Starts the game (from title) / returns to title (in-game)
 ;------------------------------------------------
     processor   6502
     include     vcs.h
@@ -25,6 +24,13 @@ COLLECT_HEIGHT = #4
 STATE_TITLE = 0
 STATE_PLAYING = 1
 STATE_GAMEOVER = 2
+
+SND_HIT      = 1
+SND_COLLECT  = 2
+SND_GAMEOVER = 3
+SND_STEP     = 4
+
+STEP_SPEED_MIN = 20
 
 ;------------------------------------------------
 ; RAM
@@ -47,7 +53,7 @@ scoreHeight     .byte
 temp            .byte
 temp2           .byte
 
-collectCount    .byte       
+collectCount    .byte
 
 sprite0gfx      ds 2
 p0gfx           .byte
@@ -77,6 +83,7 @@ gameState       .byte
 fireDebounce    .byte
 gameVariation   .byte
 selectDebounce  .byte
+resetDebounce   .byte
 
 soundTimer      .byte
 soundType       .byte
@@ -90,7 +97,7 @@ finalScore      ds 3
     SEG   Bank0
     ORG   $F000
 
-Start 
+Start
     CLEAN_START
 
     lda     #STATE_TITLE
@@ -98,6 +105,7 @@ Start
     lda     #0
     sta     fireDebounce
     sta     selectDebounce
+    sta     resetDebounce
     sta     gameVariation
     sta     soundTimer
     sta     soundType
@@ -108,7 +116,7 @@ InitGame
     lda     #60
     sta     p0y
 
-    lda     #0              
+    lda     #0
     sta     p1x
     sta     monsterTimer
     lda     #80
@@ -122,10 +130,10 @@ InitGame
     ldx     #11
 .initScore
     lda     #>scoretable
-    sta     scorepointers,x 
+    sta     scorepointers,x
     dex
     lda     #<scoretable
-    sta     scorepointers,x 
+    sta     scorepointers,x
     dex
     bpl     .initScore
 
@@ -138,8 +146,8 @@ InitGame
     sta     ballactive
     sta     ballneedpos
     lda     #20
-    sta     bally           
-    lda     #90            
+    sta     bally
+    lda     #90
     sta     balldelay
 
     lda     #0
@@ -192,7 +200,7 @@ MainLoop
     sta     bgcolor
 
     sta     CXCLR
-    sta     HMCLR           
+    sta     HMCLR
 
     inc     frame
 
@@ -208,9 +216,9 @@ MainLoop
 .doGameOver
     jmp     DoGameOver
 
-; ===================
+;------------------------------------------------
 ; TITLE SCREEN LOGIC
-; ===================
+;------------------------------------------------
 DoTitle
     lda     SWCHB
     and     #%00000010
@@ -228,7 +236,7 @@ DoTitle
 .varOk
     lda     #4
     sta     soundTimer
-    lda     #2
+    lda     #SND_COLLECT
     sta     soundType
     jmp     .selectDone
 .selectNotPressed
@@ -239,7 +247,7 @@ DoTitle
 
     lda     SWCHB
     and     #%00000001
-    beq     .startGame
+    beq     .checkResetStart
 
     lda     INPT4
     bmi     .noFireTitle
@@ -251,7 +259,22 @@ DoTitle
     lda     #STATE_PLAYING
     sta     gameState
     jmp     InitGame
+
+.checkResetStart
+    lda     resetDebounce
+    bne     .noFireTitle
+    lda     #1
+    sta     resetDebounce
+    lda     #STATE_PLAYING
+    sta     gameState
+    jmp     InitGame
+
 .noFireTitle
+    lda     SWCHB
+    and     #%00000001
+    beq     .skipResetDebounce
+    lda     #0
+    sta     resetDebounce
     lda     INPT4
     bmi     .resetDebounce
     jmp     .skipResetDebounce
@@ -263,20 +286,28 @@ DoTitle
     jsr     UpdateSound
     jmp     WaitVBlankEnd
 
-; ===================
+;------------------------------------------------
 ; GAME OVER LOGIC
-; ===================
+;------------------------------------------------
 DoGameOver
     inc     goTimer
 
     lda     SWCHB
     and     #%00000001
-    beq     .goToTitle
+    beq     .checkResetGO
 
     lda     INPT4
     bmi     .noFireGO
     lda     fireDebounce
     bne     .noFireGO
+    jmp     .goToTitle
+
+.checkResetGO
+    lda     resetDebounce
+    bne     .noFireGO
+    lda     #1
+    sta     resetDebounce
+
 .goToTitle
     lda     goTimer
     cmp     #60
@@ -286,7 +317,13 @@ DoGameOver
     lda     #0
     sta     fireDebounce
     jmp     MainLoop
+
 .noFireGO
+    lda     SWCHB
+    and     #%00000001
+    beq     .skipResetGO
+    lda     #0
+    sta     resetDebounce
     lda     INPT4
     bmi     .resetDebounceGO
     jmp     .skipResetGO
@@ -298,10 +335,34 @@ DoGameOver
     jsr     UpdateSound
     jmp     WaitVBlankEnd
 
-; ===================
+;------------------------------------------------
 ; PLAYING LOGIC
-; ===================
+;------------------------------------------------
 DoPlaying
+    lda     SWCHB
+    and     #%00000001
+    bne     .resetNotPressed
+    
+    lda     resetDebounce
+    bne     .skipResetAction
+    
+    lda     #1
+    sta     resetDebounce
+    lda     #STATE_TITLE
+    sta     gameState
+    lda     #1
+    sta     fireDebounce
+    sta     soundTimer
+    lda     #0
+    sta     soundType
+    sta     AUDV1
+    jmp     InitGame
+    
+.resetNotPressed
+    lda     #0
+    sta     resetDebounce
+.skipResetAction
+
     inc     scoreTimer
     lda     scoreTimer
     cmp     #60
@@ -326,7 +387,19 @@ DoPlaying
     bcc     .moveMonster
     jmp     TriggerGameOver
 .moveMonster
-    inc     p1x              
+    inc     p1x
+
+    lda     monsterSpeed
+    cmp     #STEP_SPEED_MIN
+    bcc     .skipStepSound
+    lda     soundTimer
+    bne     .skipStepSound
+    lda     #3
+    sta     soundTimer
+    lda     #SND_STEP
+    sta     soundType
+.skipStepSound
+
 .skipMonster
 
     lda     invincible
@@ -347,11 +420,16 @@ MoveBall
     lda     #0
     sta     ballactive
     lda     monsterSpeed
+    lsr
+    cmp     #15
+    bcs     .ballDelayOk
+    lda     #15
+.ballDelayOk
     sta     balldelay
     jmp     .ballLogicDone
 
 .driftBall
-    lda     ballneedpos     
+    lda     ballneedpos
     bne     .ballLogicDone
     lda     ballDriftDir
     beq     .driftDown
@@ -360,7 +438,7 @@ MoveBall
     lda     bally
     cmp     #4
     bcs     .ballLogicDone
-    lda     #4              
+    lda     #4
     sta     bally
     jmp     .ballLogicDone
 .driftDown
@@ -368,18 +446,18 @@ MoveBall
     lda     bally
     cmp     #PLAY_HEIGHT-BALL_HEIGHT-2
     bcc     .ballLogicDone
-    lda     #PLAY_HEIGHT-BALL_HEIGHT-2  
+    lda     #PLAY_HEIGHT-BALL_HEIGHT-2
     sta     bally
     jmp     .ballLogicDone
 
 .spawnBall
     lda     #1
     sta     ballactive
-    lda     ballDriftDir    
+    lda     ballDriftDir
     eor     #1
     sta     ballDriftDir
     lda     #2
-    sta     ballneedpos     
+    sta     ballneedpos
     lda     #77
     sta     balltimer
     lda     bally
@@ -401,10 +479,6 @@ MoveBall
     bne     .collectLogicDone
     lda     frame
     and     #%00000111
-    cmp     #6
-    bcc     .indexOk
-    sbc     #6
-.indexOk
     asl
     tax
     lda     collectSpawnTable,x
@@ -442,7 +516,7 @@ CheckRight
     lda     #0
     sta     REFP0
     lda     p0x
-    cmp     #148        
+    cmp     #148
     bcs     .endRight
     inc     p0x
     inc     p0x
@@ -460,10 +534,40 @@ CheckLeft
     dec     p0x
 EndInput
 
+    lda     monsterSpeed
+    cmp     #STEP_SPEED_MIN
+    bcs     .silenceRumble
+    cmp     #10
+    bcc     .fastBeat
+.slowBeat
+    lda     frame
+    and     #%00100000
+    jmp     .selectNote
+.fastBeat
+    lda     frame
+    and     #%00010000
+.selectNote
+    beq     .noteA
+    lda     #10
+    jmp     .playNote
+.noteA
+    lda     #12
+.playNote
+    sta     AUDF1
+    lda     #6
+    sta     AUDC1
+    lda     #4
+    sta     AUDV1
+    jmp     .rumbleDone
+.silenceRumble
+    lda     #0
+    sta     AUDV1
+.rumbleDone
+
     jsr     UpdateSound
 
 WaitVBlankEnd
-    sta     WSYNC           
+    sta     WSYNC
 .waitForVBlank
     lda     INTIM
     bne     .waitForVBlank
@@ -481,9 +585,9 @@ WaitVBlankEnd
 .kernelGO
     jmp     GameOverKernel
 
-; ===================
+;------------------------------------------------
 ; TITLE SCREEN KERNEL
-; ===================
+;------------------------------------------------
 TitleKernel
     lda     #0
     sta     GRP0
@@ -544,27 +648,27 @@ TitleKernel
 
     jsr     Setup48Pixel
 .pressLoop
-    ldy     scoreHeight                                                          
-    lda     (scorepointers),y                             
-    sta     GRP0                                                          
-    sta     WSYNC               
-    lda     (scorepointers+2),y                                                  
-    sta     GRP1           
-    lda     (scorepointers+4),y              
-    sta     GRP0                                                          
-    lda     (scorepointers+6),y    
-    sta     temp                                             
-    lda     (scorepointers+8),y                 
-    tax                 
-    lda     (scorepointers+10),y                                  
-    tay         
-    lda     temp    
-    sta     GRP1                        
-    stx     GRP0                   
-    sty     GRP1        
-    sta     GRP0  
-    dec     scoreHeight                            
-    bpl     .pressLoop                                      
+    ldy     scoreHeight
+    lda     (scorepointers),y
+    sta     GRP0
+    sta     WSYNC
+    lda     (scorepointers+2),y
+    sta     GRP1
+    lda     (scorepointers+4),y
+    sta     GRP0
+    lda     (scorepointers+6),y
+    sta     temp
+    lda     (scorepointers+8),y
+    tax
+    lda     (scorepointers+10),y
+    tay
+    lda     temp
+    sta     GRP1
+    stx     GRP0
+    sty     GRP1
+    sta     GRP0
+    dec     scoreHeight
+    bpl     .pressLoop
     jsr     End48Pixel
 
     ldx     #6
@@ -587,27 +691,27 @@ TitleKernel
 
     jsr     Setup48Pixel
 .fireLoop
-    ldy     scoreHeight                                                          
-    lda     (scorepointers),y                             
-    sta     GRP0                                                          
-    sta     WSYNC               
-    lda     (scorepointers+2),y                                                  
-    sta     GRP1           
-    lda     (scorepointers+4),y              
-    sta     GRP0                                                          
-    lda     (scorepointers+6),y    
-    sta     temp                                             
-    lda     (scorepointers+8),y                 
-    tax                 
-    lda     (scorepointers+10),y                                  
-    tay         
-    lda     temp    
-    sta     GRP1                        
-    stx     GRP0                   
-    sty     GRP1        
-    sta     GRP0  
-    dec     scoreHeight                            
-    bpl     .fireLoop                                      
+    ldy     scoreHeight
+    lda     (scorepointers),y
+    sta     GRP0
+    sta     WSYNC
+    lda     (scorepointers+2),y
+    sta     GRP1
+    lda     (scorepointers+4),y
+    sta     GRP0
+    lda     (scorepointers+6),y
+    sta     temp
+    lda     (scorepointers+8),y
+    tax
+    lda     (scorepointers+10),y
+    tay
+    lda     temp
+    sta     GRP1
+    stx     GRP0
+    sty     GRP1
+    sta     GRP0
+    dec     scoreHeight
+    bpl     .fireLoop
     jsr     End48Pixel
 
 .afterPressFire
@@ -636,27 +740,27 @@ TitleKernel
 
     jsr     Setup48Pixel
 .livesLoop
-    ldy     scoreHeight                                                          
-    lda     (scorepointers),y                             
-    sta     GRP0                                                          
-    sta     WSYNC               
-    lda     (scorepointers+2),y                                                  
-    sta     GRP1           
-    lda     (scorepointers+4),y              
-    sta     GRP0                                                          
-    lda     (scorepointers+6),y    
-    sta     temp                                             
-    lda     (scorepointers+8),y                 
-    tax                 
-    lda     (scorepointers+10),y                                  
-    tay         
-    lda     temp    
-    sta     GRP1                        
-    stx     GRP0                   
-    sty     GRP1        
-    sta     GRP0  
-    dec     scoreHeight                            
-    bpl     .livesLoop                                      
+    ldy     scoreHeight
+    lda     (scorepointers),y
+    sta     GRP0
+    sta     WSYNC
+    lda     (scorepointers+2),y
+    sta     GRP1
+    lda     (scorepointers+4),y
+    sta     GRP0
+    lda     (scorepointers+6),y
+    sta     temp
+    lda     (scorepointers+8),y
+    tax
+    lda     (scorepointers+10),y
+    tay
+    lda     temp
+    sta     GRP1
+    stx     GRP0
+    sty     GRP1
+    sta     GRP0
+    dec     scoreHeight
+    bpl     .livesLoop
     jsr     End48Pixel
 
     ldx     #6
@@ -690,27 +794,27 @@ TitleKernel
 
     jsr     Setup48Pixel
 .numLoop
-    ldy     scoreHeight                                                          
-    lda     (scorepointers),y                             
-    sta     GRP0                                                          
-    sta     WSYNC               
-    lda     (scorepointers+2),y                                                  
-    sta     GRP1           
-    lda     (scorepointers+4),y              
-    sta     GRP0                                                          
-    lda     (scorepointers+6),y    
-    sta     temp                                             
-    lda     (scorepointers+8),y                 
-    tax                 
-    lda     (scorepointers+10),y                                  
-    tay         
-    lda     temp    
-    sta     GRP1                        
-    stx     GRP0                   
-    sty     GRP1        
-    sta     GRP0  
-    dec     scoreHeight                            
-    bpl     .numLoop                                      
+    ldy     scoreHeight
+    lda     (scorepointers),y
+    sta     GRP0
+    sta     WSYNC
+    lda     (scorepointers+2),y
+    sta     GRP1
+    lda     (scorepointers+4),y
+    sta     GRP0
+    lda     (scorepointers+6),y
+    sta     temp
+    lda     (scorepointers+8),y
+    tax
+    lda     (scorepointers+10),y
+    tay
+    lda     temp
+    sta     GRP1
+    stx     GRP0
+    sty     GRP1
+    sta     GRP0
+    dec     scoreHeight
+    bpl     .numLoop
     jsr     End48Pixel
 
     ldx     #88
@@ -721,9 +825,9 @@ TitleKernel
 
     jmp     DoOverscan
 
-; ===================
+;------------------------------------------------
 ; GAME OVER KERNEL
-; ===================
+;------------------------------------------------
 GameOverKernel
     lda     #0
     sta     GRP0
@@ -737,7 +841,7 @@ GameOverKernel
     sta     HMCLR
     sta     RESMP0
     sta     RESMP1
-    
+
     lda     finalScore
     sta     score
     lda     finalScore+1
@@ -772,27 +876,27 @@ GameOverKernel
     jsr     Setup48Pixel
 
 .goScoreLoop
-    ldy     scoreHeight                                                          
-    lda     (scorepointers),y            
-    sta     GRP0                                                                 
-    sta     WSYNC               
-    lda     (scorepointers+2),y                                                  
-    sta     GRP1           
-    lda     (scorepointers+4),y              
-    sta     GRP0                                                                 
-    lda     (scorepointers+6),y    
-    sta     temp                                             
-    lda     (scorepointers+8),y                           
-    tax  
-    lda     (scorepointers+10),y                                  
-    tay         
-    lda     temp                    
-    sta     GRP1                        
-    stx     GRP0                   
-    sty     GRP1                        
-    sta     GRP0  
-    dec     scoreHeight                            
-    bpl     .goScoreLoop       
+    ldy     scoreHeight
+    lda     (scorepointers),y
+    sta     GRP0
+    sta     WSYNC
+    lda     (scorepointers+2),y
+    sta     GRP1
+    lda     (scorepointers+4),y
+    sta     GRP0
+    lda     (scorepointers+6),y
+    sta     temp
+    lda     (scorepointers+8),y
+    tax
+    lda     (scorepointers+10),y
+    tay
+    lda     temp
+    sta     GRP1
+    stx     GRP0
+    sty     GRP1
+    sta     GRP0
+    dec     scoreHeight
+    bpl     .goScoreLoop
 
     jsr     End48Pixel
 
@@ -830,27 +934,27 @@ GameOverKernel
     jsr     Setup48Pixel
 
 .goGameLoop
-    ldy     scoreHeight                                                          
-    lda     (scorepointers),y                             
-    sta     GRP0                                                          
-    sta     WSYNC               
-    lda     (scorepointers+2),y                                                  
-    sta     GRP1           
-    lda     (scorepointers+4),y              
-    sta     GRP0                                                          
-    lda     (scorepointers+6),y    
-    sta     temp                                             
-    lda     (scorepointers+8),y                 
-    tax                 
-    lda     (scorepointers+10),y                                  
-    tay         
-    lda     temp    
-    sta     GRP1                        
-    stx     GRP0                   
-    sty     GRP1        
-    sta     GRP0  
-    dec     scoreHeight                            
-    bpl     .goGameLoop                                      
+    ldy     scoreHeight
+    lda     (scorepointers),y
+    sta     GRP0
+    sta     WSYNC
+    lda     (scorepointers+2),y
+    sta     GRP1
+    lda     (scorepointers+4),y
+    sta     GRP0
+    lda     (scorepointers+6),y
+    sta     temp
+    lda     (scorepointers+8),y
+    tax
+    lda     (scorepointers+10),y
+    tay
+    lda     temp
+    sta     GRP1
+    stx     GRP0
+    sty     GRP1
+    sta     GRP0
+    dec     scoreHeight
+    bpl     .goGameLoop
 
     jsr     End48Pixel
 
@@ -888,27 +992,27 @@ GameOverKernel
     jsr     Setup48Pixel
 
 .goOverLoop
-    ldy     scoreHeight                                                          
-    lda     (scorepointers),y                             
-    sta     GRP0                                                          
-    sta     WSYNC               
-    lda     (scorepointers+2),y                                                  
-    sta     GRP1           
-    lda     (scorepointers+4),y              
-    sta     GRP0                                                          
-    lda     (scorepointers+6),y    
-    sta     temp                                             
-    lda     (scorepointers+8),y                 
-    tax                 
-    lda     (scorepointers+10),y                                  
-    tay         
-    lda     temp    
-    sta     GRP1                        
-    stx     GRP0                   
-    sty     GRP1        
-    sta     GRP0  
-    dec     scoreHeight                            
-    bpl     .goOverLoop                                      
+    ldy     scoreHeight
+    lda     (scorepointers),y
+    sta     GRP0
+    sta     WSYNC
+    lda     (scorepointers+2),y
+    sta     GRP1
+    lda     (scorepointers+4),y
+    sta     GRP0
+    lda     (scorepointers+6),y
+    sta     temp
+    lda     (scorepointers+8),y
+    tax
+    lda     (scorepointers+10),y
+    tay
+    lda     temp
+    sta     GRP1
+    stx     GRP0
+    sty     GRP1
+    sta     GRP0
+    dec     scoreHeight
+    bpl     .goOverLoop
 
     jsr     End48Pixel
 
@@ -926,9 +1030,9 @@ GameOverKernel
 
     jmp     DoOverscan
 
-; ===================
+;------------------------------------------------
 ; 48-pixel setup/teardown subroutines
-; ===================
+;------------------------------------------------
 Setup48Pixel
     lda     #0
     sta     WSYNC
@@ -946,7 +1050,7 @@ Setup48Pixel
     sta     NUSIZ0
     sta     NUSIZ1
     sta     VDELP0
-    sta     VDELP1  
+    sta     VDELP1
     lda     #$F0
     sta     HMP0
     lda     #0
@@ -965,7 +1069,7 @@ End48Pixel
     sta     VDELP1
     sta     GRP0
     sta     GRP1
-    sta     GRP0   
+    sta     GRP0
     sta     NUSIZ0
     sta     NUSIZ1
     rts
@@ -1062,7 +1166,7 @@ DrawScreen
     sta     NUSIZ0
     sta     NUSIZ1
     sta     VDELP0
-    sta     VDELP1  
+    sta     VDELP1
     lda     #$F0
     sta     HMP0
     lda     #0
@@ -1074,28 +1178,28 @@ DrawScreen
     sta     WSYNC
 
 .scoreLoop
-    ldy     scoreHeight                                                          
-    lda     (scorepointers),y                             
-    sta     GRP0                                                     
-    sta     WSYNC               
-    lda     (scorepointers+2),y                                                  
-    sta     GRP1           
-    lda     (scorepointers+4),y              
-    sta     GRP0                                                     
-    lda     (scorepointers+6),y    
-    sta     temp                                             
-    lda     (scorepointers+8),y            
-    tax                 
-    lda     (scorepointers+10),y                                  
-    tay         
-    lda     temp                          
-    sta     GRP1                        
-    stx     GRP0                   
-    sty     GRP1   
-    sta     GRP0  
-    dec     scoreHeight                       
-    bpl     .scoreLoop                                      
- 
+    ldy     scoreHeight
+    lda     (scorepointers),y
+    sta     GRP0
+    sta     WSYNC
+    lda     (scorepointers+2),y
+    sta     GRP1
+    lda     (scorepointers+4),y
+    sta     GRP0
+    lda     (scorepointers+6),y
+    sta     temp
+    lda     (scorepointers+8),y
+    tax
+    lda     (scorepointers+10),y
+    tay
+    lda     temp
+    sta     GRP1
+    stx     GRP0
+    sty     GRP1
+    sta     GRP0
+    dec     scoreHeight
+    bpl     .scoreLoop
+
     sta     WSYNC
     lda     #0
     sta     COLUP0
@@ -1104,17 +1208,17 @@ DrawScreen
     sta     VDELP1
     sta     GRP0
     sta     GRP1
-    sta     GRP0        
+    sta     GRP0
     sta     NUSIZ0
     sta     NUSIZ1
 
-    jmp     .skipAlignPadding   
-    align 256                   
+    jmp     .skipAlignPadding
+    align 256
 .skipAlignPadding
 
     lda     p0x
     ldx     #0
-    sta     WSYNC       
+    sta     WSYNC
     sec
 .divLoop
     sbc     #15
@@ -1127,10 +1231,10 @@ DrawScreen
     sta     HMP0,x
     sta     RESP0,x
 
-    sta     WSYNC       
+    sta     WSYNC
 
     lda     p1x
-    ldx     #1          
+    ldx     #1
     sta     WSYNC
     sec
 .divLoopM
@@ -1141,9 +1245,9 @@ DrawScreen
     asl
     asl
     asl
-    sta     HMP0,x      
-    sta     RESP0,x     
-    sta     WSYNC       
+    sta     HMP0,x
+    sta     RESP0,x
+    sta     WSYNC
 
     lda     collectActive
     beq     .skipMissilePos
@@ -1170,29 +1274,29 @@ DrawScreen
     lda     ballneedpos
     cmp     #2
     bne     .checkSettle
-    sta     RESBL           
-    dec     ballneedpos     
+    sta     RESBL
+    dec     ballneedpos
     jmp     .donePos
 
 .checkSettle
     cmp     #1
     bne     .donePos
-    dec     ballneedpos     
+    dec     ballneedpos
 
 .donePos
     lda     ballactive
     beq     .noMotion
     lda     ballneedpos
-    bne     .noMotion       
-    lda     #$E0        
+    bne     .noMotion
+    lda     #$E0
     sta     HMBL
     jmp     .motionSet
 
 .noMotion
 .motionSet
     sta     WSYNC
-    sta     HMOVE       
-    sta     WSYNC 
+    sta     HMOVE
+    sta     WSYNC
 
     lda     #0
     sta     GRP0
@@ -1214,12 +1318,12 @@ DrawScreen
 
     lda     #$27
     sta     NUSIZ1
-    lda     #$C4            
+    lda     #$C4
     sta     COLUP1
 
     lda     #$36
     sta     COLUPF
-    lda     #%00100100      
+    lda     #%00100100
     sta     CTRLPF
 
     lda     frame
@@ -1230,7 +1334,7 @@ DrawScreen
     lsr
     and     #%00000001
     asl
-    ora     #%10000000      
+    ora     #%10000000
     sta     bgcolor
 
     sta     WSYNC
@@ -1243,7 +1347,7 @@ DrawScreen
     sta     temp_bally
     jmp     .ballSetupDone
 .disableBall
-    lda     #200        
+    lda     #200
     sta     temp_bally
     lda     #0
     sta     ENABL
@@ -1259,88 +1363,88 @@ DrawScreen
     sta     temp_collecty
 .collectSetupDone
 
-    sta     WSYNC       
+    sta     WSYNC
 
     ldx     #PLAY_HEIGHT
 .playArea
     lda     p0gfx
     sta     GRP0
-    lda     MonsterGfx-1,x  
+    lda     MonsterGfx-1,x
     sta     GRP1
 
-    txa                     
-    sec                     
-    sbc     p0y             
-    cmp     #BIKE_HEIGHT+1  
-    bcs     .hideP0_1       
-    tay                     
-    lda     PlayerGfx,y     
-    jmp     .storeP0_1   
+    txa
+    sec
+    sbc     p0y
+    cmp     #BIKE_HEIGHT+1
+    bcs     .hideP0_1
+    tay
+    lda     PlayerGfx,y
+    jmp     .storeP0_1
 .hideP0_1
-    lda     #0              
+    lda     #0
 .storeP0_1
-    sta     p0gfx           
+    sta     p0gfx
 
-    txa                     
-    sec                     
-    sbc     temp_bally   
-    cmp     #BALL_HEIGHT    
-    bcs     .hideBall       
-    lda     #2              
-    jmp     .storeBall      
+    txa
+    sec
+    sbc     temp_bally
+    cmp     #BALL_HEIGHT
+    bcs     .hideBall
+    lda     #2
+    jmp     .storeBall
 .hideBall
-    lda     #0             
+    lda     #0
 .storeBall
     sta     WSYNC
     sta     ENABL
     lda     bgcolor
     sta     COLUBK
 
-    dex                     
+    dex
 
     lda     p0gfx
     sta     GRP0
-    lda     MonsterGfx-1,x  
+    lda     MonsterGfx-1,x
     sta     GRP1
 
-    txa                     
-    sec                     
-    sbc     p0y             
-    cmp     #BIKE_HEIGHT+1  
-    bcs     .hideP0_2    
-    eor     #$FF            
-    clc      
-    adc     #BIKE_HEIGHT+1  
-    tay                     
-    lda     PlayerGfx,y     
-    jmp     .storeP0_2      
+    txa
+    sec
+    sbc     p0y
+    cmp     #BIKE_HEIGHT+1
+    bcs     .hideP0_2
+    eor     #$FF
+    clc
+    adc     #BIKE_HEIGHT+1
+    tay
+    lda     PlayerGfx,y
+    jmp     .storeP0_2
 .hideP0_2
-    lda     #0           
+    lda     #0
 .storeP0_2
-    sta     p0gfx           
+    sta     p0gfx
 
-    txa                     
-    sec              
-    sbc     temp_collecty   
-    cmp     #COLLECT_HEIGHT 
-    bcs     .hideCollect   
-    lda     #2              
-    jmp     .storeCollect   
+    txa
+    sec
+    sbc     temp_collecty
+    cmp     #COLLECT_HEIGHT
+    bcs     .hideCollect
+    lda     #2
+    jmp     .storeCollect
 .hideCollect
-    lda     #0              
+    lda     #0
 .storeCollect
     sta     WSYNC
     sta     ENAM1
     lda     bgcolor
     sta     COLUBK
 
-    dex                   
+    dex
     bne     .playArea
 
     lda     #0
     sta     COLUBK
     sta     GRP0
-    sta     GRP1        
+    sta     GRP1
     sta     ENABL
     sta     ENAM1
 
@@ -1362,7 +1466,7 @@ DoOverscan
 
     lda     #0
     sta     GRP0
-    sta     GRP1        
+    sta     GRP1
     sta     ENABL
     sta     PF0
     sta     PF1
@@ -1396,10 +1500,10 @@ DoOverscan
     sta     invincible
     lda     #15
     sta     soundTimer
-    lda     #1
+    lda     #SND_HIT
     sta     soundType
 
-    lda     #0              ; Reset monster all the way back to start
+    lda     #0
     sta     p1x
     lda     #$42
     sta     bgcolor
@@ -1413,7 +1517,7 @@ DoOverscan
 
     lda     #10
     sta     soundTimer
-    lda     #2
+    lda     #SND_COLLECT
     sta     soundType
 
     lda     #$50
@@ -1431,7 +1535,13 @@ DoOverscan
     sta     p1x
     lda     #0
     sta     collectActive
-    lda     #20
+    lda     monsterSpeed
+    lsr
+    lsr
+    cmp     #8
+    bcs     .collectDelayOk
+    lda     #8
+.collectDelayOk
     sta     collectDelay
 
 .noCollectHit
@@ -1442,9 +1552,9 @@ DoOverscan
     bne     .waitForOverscan
     jmp     MainLoop
 
-; ===================
+;------------------------------------------------
 ; Trigger Game Over
-; ===================
+;------------------------------------------------
 TriggerGameOver
     lda     score
     sta     finalScore
@@ -1456,9 +1566,10 @@ TriggerGameOver
     sta     gameState
     lda     #0
     sta     goTimer
+    sta     AUDV1
     lda     #30
     sta     soundTimer
-    lda     #3
+    lda     #SND_GAMEOVER
     sta     soundType
     jmp     MainLoop
 
@@ -1470,12 +1581,14 @@ UpdateSound
     beq     .soundOff
     dec     soundTimer
     lda     soundType
-    cmp     #1
+    cmp     #SND_HIT
     beq     .hitSound
-    cmp     #2
+    cmp     #SND_COLLECT
     beq     .collectSound
-    cmp     #3
+    cmp     #SND_GAMEOVER
     beq     .gameOverSound
+    cmp     #SND_STEP
+    beq     .stepSound
     jmp     .soundOff
 .hitSound
     lda     #8
@@ -1501,6 +1614,14 @@ UpdateSound
     lda     #10
     sta     AUDV0
     rts
+.stepSound
+    lda     #6
+    sta     AUDC0
+    lda     #20
+    sta     AUDF0
+    lda     #4
+    sta     AUDV0
+    rts
 .soundOff
     lda     #0
     sta     AUDV0
@@ -1518,7 +1639,7 @@ AddScore
     sta     score
     bcc     .noCarryHigh
     lda     score+2
-    adc     #0          
+    adc     #0
     sta     score+2
 .noCarryHigh
     cld
@@ -1529,29 +1650,26 @@ AddScore
     beq     .speedSub1
     rts
 
-; Time-based tick: reduce speed toward 6, then stop
 .speedSub1
     lda     monsterSpeed
     cmp     #6
-    beq     .skipSpeedSub   ; If speed is exactly 6, do nothing
-    bcc     .skipSpeedSub   ; If speed is below 6 (5 or 4), do nothing!
+    beq     .skipSpeedSub
+    bcc     .skipSpeedSub
     sec
     sbc     #1
     cmp     #6
     bcs     .storeSpeed
-    lda     #6              ; Floor at 6 if subtraction went too far
+    lda     #6
 .storeSpeed
     sta     monsterSpeed
 .skipSpeedSub
     rts
 
-; Collect-based: normal -2 above 6, then staged 6->5->4
 .speedSub50
     lda     monsterSpeed
     cmp     #6
-    bcc     .checkStage5    ; speed already below 6, check stage 5->4
-    beq     .checkStage6    ; speed exactly 6, check stage 6->5
-    ; speed > 6: subtract 2, floor at 6, reset counter
+    bcc     .checkStage5
+    beq     .checkStage6
     lda     #0
     sta     collectCount
     lda     monsterSpeed
@@ -1565,7 +1683,6 @@ AddScore
     rts
 
 .checkStage6
-    ; at speed 6: count collects until 5, then drop to 5
     inc     collectCount
     lda     collectCount
     cmp     #25
@@ -1578,10 +1695,9 @@ AddScore
     rts
 
 .checkStage5
-    ; below 6: only act if exactly 5
     lda     monsterSpeed
     cmp     #5
-    bne     .atFloor        ; speed is 4 or lower, done
+    bne     .atFloor
     inc     collectCount
     lda     collectCount
     cmp     #25
@@ -1596,7 +1712,6 @@ AddScore
     rts
 
 LoadScorePointers
-    ; ten-thousands: score+2 low nibble (always shown, even if 0)
     lda     score+2
     and     #$0F
     tax
@@ -1605,7 +1720,6 @@ LoadScorePointers
     lda     #>scoretable
     sta     scorepointers+1
 
-    ; thousands: score high nibble
     lda     score
     and     #$F0
     lsr
@@ -1616,14 +1730,12 @@ LoadScorePointers
     lda     scoretableIndex,x
     sta     scorepointers+2
 
-    ; hundreds: score low nibble
     lda     score
     and     #$0F
     tax
     lda     scoretableIndex,x
     sta     scorepointers+4
 
-    ; tens: score+1 high nibble
     lda     score+1
     and     #$F0
     lsr
@@ -1634,14 +1746,12 @@ LoadScorePointers
     lda     scoretableIndex,x
     sta     scorepointers+6
 
-    ; ones: score+1 low nibble
     lda     score+1
     and     #$0F
     tax
     lda     scoretableIndex,x
     sta     scorepointers+8
 
-    ; trailing blank slot
     lda     #<blank
     sta     scorepointers+10
     sta     scorepointers+12
@@ -1764,9 +1874,9 @@ blank
     .byte   %00000000
     .byte   %00000000
 
-; ===================
+;------------------------------------------------
 ; Text Graphic Data
-; ===================
+;------------------------------------------------
 LetterG
     .byte   %00111100
     .byte   %01100110
@@ -1890,12 +2000,12 @@ LetterL
     align 256
 PlayerGfx
     .byte   %00000000
-    .byte   %01100110  
-    .byte   %11111111  
-    .byte   %01111110  
-    .byte   %00111100  
-    .byte   %00111100  
-    .byte   %00011000  
+    .byte   %01100110
+    .byte   %11111111
+    .byte   %01111110
+    .byte   %00111100
+    .byte   %00111100
+    .byte   %00011000
     .byte   %00000000
 	align 256
 MonsterGfx
@@ -1945,17 +2055,19 @@ MonsterGfx
     .byte   %11111110, %11111110, %11111110, %11111110
 
 collectSpawnTable
-    .byte   100, 30
-    .byte   130, 50
-    .byte   90,  80
-    .byte   140, 100
-    .byte   110, 120
-    .byte   125, 140
+    .byte   95,  30
+    .byte   125, 50
+    .byte   110, 70
+    .byte   135, 90
+    .byte   145, 110
+    .byte   120, 125
+    .byte   140, 140
+    .byte   130, 40
 
     echo [*-$F000]d, " ROM bytes used"
     ORG    $FFFA
     .word  Start
     .word  Start
     .word  Start
-    
+
     END
